@@ -542,22 +542,110 @@ runTest();`;
       logger.info(`🚀 Attempting to launch browser in HEADED instrumented mode...`);
       logger.info(`🔍 Pre-launch browser check starting...`);
       
-      // Ensure browsers are installed first
+      // Ensure browsers are installed first with system dependencies
       try {
-        logger.info(`🔧 Installing Playwright browsers...`);
-        const installProcess = spawn('npx', ['playwright', 'install', 'chromium'], { 
+        logger.info(`🔧 Installing Playwright browsers with dependencies...`);
+        
+        // Install browsers with system dependencies
+        const installProcess = spawn('npx', ['playwright', 'install', '--with-deps', 'chromium'], { 
           stdio: 'pipe',
-          timeout: 60000
+          timeout: 120000 // Increase timeout for dependency installation
         });
         
-        await new Promise((resolve) => {
+        let installOutput = '';
+        installProcess.stdout?.on('data', (data) => {
+          installOutput += data.toString();
+          logger.info(`📦 Install output: ${data.toString().trim()}`);
+        });
+        
+        installProcess.stderr?.on('data', (data) => {
+          logger.warn(`📦 Install warning: ${data.toString().trim()}`);
+        });
+        
+        await new Promise((resolve, reject) => {
           installProcess.on('close', (code) => {
             logger.info(`🔧 Browser installation completed with code: ${code}`);
-            resolve(code);
+            if (code === 0) {
+              logger.info(`✅ Playwright browsers installed successfully`);
+              resolve(code);
+            } else {
+              logger.error(`❌ Browser installation failed with code: ${code}`);
+              // Try alternative installation method
+              logger.info(`🔄 Attempting alternative installation method...`);
+              resolve(code); // Continue anyway, let fallback methods handle it
+            }
+          });
+          
+          installProcess.on('error', (error) => {
+            logger.error(`❌ Browser installation process error: ${error.message}`);
+            resolve(1); // Continue with fallback
           });
         });
+        
+        // Verify browser installation
+        try {
+          const verifyProcess = spawn('npx', ['playwright', 'install', '--dry-run', 'chromium'], {
+            stdio: 'pipe',
+            timeout: 10000
+          });
+          
+          await new Promise((resolve) => {
+            verifyProcess.on('close', (code) => {
+              if (code === 0) {
+                logger.info(`✅ Browser installation verified successfully`);
+              } else {
+                logger.warn(`⚠️ Browser verification returned code: ${code}`);
+              }
+              resolve(code);
+            });
+          });
+        } catch (verifyError) {
+          logger.warn(`⚠️ Browser verification failed: ${verifyError}`);
+        }
+        
       } catch (installError: any) {
         logger.warn(`⚠️ Browser installation failed: ${installError.message}`);
+        
+        // Try manual installation as fallback
+        logger.info(`🔄 Attempting manual browser installation...`);
+        try {
+          const manualInstall = spawn('npm', ['run', 'postinstall'], { 
+            stdio: 'pipe',
+            timeout: 60000
+          });
+          
+          await new Promise((resolve) => {
+            manualInstall.on('close', (code) => {
+              logger.info(`🔧 Manual installation completed with code: ${code}`);
+              resolve(code);
+            });
+          });
+        } catch (manualError) {
+          logger.error(`❌ Manual installation also failed: ${manualError}`);
+        }
+      }
+      
+      // Verify browser binary exists
+      try {
+        const { promises: fs } = await import('fs');
+        const browserPath = path.join(process.cwd(), 'node_modules', 'playwright-core', '.local-browsers');
+        
+        try {
+          const browserDirs = await fs.readdir(browserPath);
+          logger.info(`🔍 Available browser installations: ${browserDirs.join(', ')}`);
+          
+          // Look for chromium installation
+          const chromiumDirs = browserDirs.filter(dir => dir.startsWith('chromium'));
+          if (chromiumDirs.length > 0) {
+            logger.info(`✅ Found Chromium installations: ${chromiumDirs.join(', ')}`);
+          } else {
+            logger.warn(`⚠️ No Chromium installations found in browser directory`);
+          }
+        } catch (browserDirError) {
+          logger.warn(`⚠️ Could not read browser directory: ${browserDirError}`);
+        }
+      } catch (fsError) {
+        logger.warn(`⚠️ File system error during browser check: ${fsError}`);
       }
       
       logger.info(`🌐 Initiating Chromium browser launch in HEADED mode...`);
