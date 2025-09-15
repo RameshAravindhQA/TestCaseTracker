@@ -447,12 +447,56 @@ runTest();`;
       } catch (error: any) {
         logger.error('Error checking Playwright availability:', error.message);
         
-        // If Playwright fails, suggest system browser alternatives
+        // If Playwright fails, try system browser launch as fallback
+        if (availableBrowsers.length > 0) {
+          logger.info('Playwright failed, attempting system browser launch...');
+          const browserResult = await this.launchSystemBrowser(config.url);
+          
+          if (browserResult.success) {
+            const recordingSession: RecordingSession = {
+              id: recordingId,
+              projectId: config.projectId,
+              moduleId: config.moduleId,
+              testCaseId: config.testCaseId,
+              url: config.url,
+              filename: `manual-test-${config.testCaseId}-${timestamp}.md`,
+              status: 'recording',
+              startTime: new Date(),
+              process: browserResult.process
+            };
+
+            this.activeSessions.set(recordingId, recordingSession);
+
+            return {
+              success: true,
+              message: `Playwright unavailable. Launched system browser instead. Please perform manual testing.`,
+              recordingId,
+              availableBrowsers
+            };
+          }
+        }
+
         return {
           success: false,
           message: `Playwright not available. Available alternatives: ${availableBrowsers.length > 0 ? availableBrowsers.join(', ') : 'No system browsers found'}. Try using system browser mode.`,
           availableBrowsers
         };
+      }
+
+      // Ensure virtual display is running
+      try {
+        logger.info(`🖥️ Setting up virtual display...`);
+        const xvfbProcess = spawn('Xvfb', [':99', '-screen', '0', '1920x1080x24'], {
+          stdio: 'pipe',
+          detached: true
+        });
+        xvfbProcess.unref();
+        
+        // Wait a moment for Xvfb to start
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        logger.info(`🖥️ Virtual display setup completed`);
+      } catch (xvfbError: any) {
+        logger.warn(`⚠️ Virtual display setup failed: ${xvfbError.message}`);
       }
 
       // Generate filename based on test case
@@ -504,6 +548,24 @@ runTest();`;
       logger.info(`🚀 Attempting to launch browser in instrumented mode...`);
       logger.info(`🔍 Pre-launch browser check starting...`);
       
+      // Ensure browsers are installed first
+      try {
+        logger.info(`🔧 Installing Playwright browsers...`);
+        const installProcess = spawn('npx', ['playwright', 'install', 'chromium'], { 
+          stdio: 'pipe',
+          timeout: 60000
+        });
+        
+        await new Promise((resolve) => {
+          installProcess.on('close', (code) => {
+            logger.info(`🔧 Browser installation completed with code: ${code}`);
+            resolve(code);
+          });
+        });
+      } catch (installError: any) {
+        logger.warn(`⚠️ Browser installation failed: ${installError.message}`);
+      }
+      
       // Check if browser binary exists
       try {
         const { spawn: checkSpawn } = await import('child_process');
@@ -544,7 +606,11 @@ runTest();`;
           PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
           NODE_ENV: 'development',
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '0',
-          DISPLAY: ':99'
+          DISPLAY: process.env.DISPLAY || ':0',
+          XVFB_WHD: '1920x1080x24',
+          PLAYWRIGHT_HEADLESS: 'false',
+          CHROME_DEVEL_SANDBOX: '/proc/self/ns',
+          CHROME_NO_SANDBOX: '1'
         }
       });
 
