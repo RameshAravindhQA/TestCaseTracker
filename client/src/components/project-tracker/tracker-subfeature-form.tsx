@@ -82,21 +82,60 @@ export function TrackerSubFeatureForm({
   const form = useForm<SubFeatureFormData>({
     resolver: zodResolver(subFeatureSchema),
     defaultValues: {
-      name: subFeature?.name || '',
-      description: subFeature?.description || '',
+      name: '',
+      description: '',
       featureId: featureId,
       projectId: projectId,
-      parentSubFeatureId: subFeature?.parentSubFeatureId || undefined,
-      status: subFeature?.status || 'Planning',
-      priority: subFeature?.priority || 'Medium',
-      workType: subFeature?.workType || 'Development',
-      department: subFeature?.department || '',
-      startDate: subFeature?.startDate || '',
-      endDate: subFeature?.endDate || '',
-      assignedToId: subFeature?.assignedToId || undefined,
-      estimatedHours: subFeature?.estimatedHours || undefined,
+      parentSubFeatureId: undefined,
+      status: 'Planning',
+      priority: 'Medium',
+      workType: 'Development',
+      department: '',
+      startDate: '',
+      endDate: '',
+      assignedToId: undefined,
+      estimatedHours: undefined,
     },
   });
+
+  // Reset form when subFeature prop changes
+  React.useEffect(() => {
+    if (subFeature) {
+      // Editing existing sub-feature
+      form.reset({
+        name: subFeature.name || '',
+        description: subFeature.description || '',
+        featureId: featureId,
+        projectId: projectId,
+        parentSubFeatureId: subFeature.parentSubFeatureId || undefined,
+        status: subFeature.status || 'Planning',
+        priority: subFeature.priority || 'Medium',
+        workType: subFeature.workType || 'Development',
+        department: subFeature.department || '',
+        startDate: subFeature.startDate || '',
+        endDate: subFeature.endDate || '',
+        assignedToId: subFeature.assignedToId || undefined,
+        estimatedHours: subFeature.estimatedHours || undefined,
+      });
+    } else {
+      // Creating new sub-feature
+      form.reset({
+        name: '',
+        description: '',
+        featureId: featureId,
+        projectId: projectId,
+        parentSubFeatureId: undefined,
+        status: 'Planning',
+        priority: 'Medium',
+        workType: 'Development',
+        department: '',
+        startDate: '',
+        endDate: '',
+        assignedToId: undefined,
+        estimatedHours: undefined,
+      });
+    }
+  }, [subFeature, featureId, projectId, form]);
 
   const handleSubmit = (data: SubFeatureFormData) => {
     onSubmit(data);

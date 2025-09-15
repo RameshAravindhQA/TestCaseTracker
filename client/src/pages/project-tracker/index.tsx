@@ -50,6 +50,7 @@ export default function ProjectTrackerPage() {
     priority: 'all',
     department: 'all',
   });
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch tracker projects
   const { data: projects, isLoading: projectsLoading } = useQuery<TrackerProject[]>({
@@ -300,6 +301,9 @@ export default function ProjectTrackerPage() {
                 onEdit={handleEditProject}
                 onDelete={handleDeleteProject}
                 onViewDetails={handleViewDetails}
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                itemsPerPage={10}
               />
             </div>
           </TabsContent>
