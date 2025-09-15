@@ -638,14 +638,14 @@ export interface IStorage {
   updateKanbanCard(id: number, cardData: Partial<KanbanCard>): Promise<KanbanCard | undefined>;
   deleteKanbanCard(id: number): Promise<boolean>;
 
-  // Custom Marker operations (re-declared for consistency)
+  // Custom marker operations (re-declared for consistency)
   createCustomMarker(data: InsertCustomMarker): Promise<CustomMarker>;
   getCustomMarkers(): Promise<CustomMarker[]>;
   getCustomMarkersByProject(projectId: number): Promise<CustomMarker[]>;
   updateCustomMarker(id: number, data: Partial<CustomMarker>): Promise<CustomMarker | null>;
   deleteCustomMarker(id: number): Promise<boolean>;
 
-  // Matrix Cell operations (re-declared for consistency)
+  // Matrix cell operations (re-declared for consistency)
   createMatrixCell(data: InsertMatrixCell): Promise<MatrixCell>;
   getMatrixCells(): Promise<MatrixCell[]>;
   getMatrixCellsByProject(projectId: number): Promise<MatrixCell[]>;
@@ -3061,8 +3061,10 @@ class MemStorage implements IStorage {
     return {
       totalProjects: projects.length,
       totalTestCases: testCases.length,
-      totalBugs: bugs.length,
-      totalUsers: users.length,
+      openBugs: bugs.filter(b => b.status !== 'Closed').length,
+      passRate: testCases.length > 0
+        ? (testCases.filter(tc => tc.status === 'Passed').length / testCases.length) * 100
+        : 0,
       testCaseStatusCounts: {
         passed: testCases.filter(tc => tc.status === 'Passed').length,
         failed: testCases.filter(tc => tc.status === 'Failed').length,
@@ -3074,7 +3076,8 @@ class MemStorage implements IStorage {
         major: bugs.filter(bug => bug.severity === 'Major').length,
         minor: bugs.filter(bug => bug.severity === 'Minor').length,
         trivial: bugs.filter(bug => bug.severity === 'Trivial').length,
-      }
+      },
+      totalUsers: users.length,
     };
   }
 
@@ -3719,7 +3722,7 @@ class MemStorage implements IStorage {
       ...marker,
       updatedAt: new Date()
     };
-    this.traceabilityMarkers[index] = updatedMarker;
+    this.traceabilityMatrixes[index] = updatedMarker;
     console.log(`Storage: Updated traceability marker with ID ${id}:`, updatedMarker);
     return updatedMarker;
   }
@@ -5370,7 +5373,7 @@ class MemStorage implements IStorage {
     if (index === -1) return null;
 
     const updatedTestCase = {
-      ...this.brdTestCases[index],
+      ...thisbrdTestCases[index],
       ...data,
       updatedAt: new Date()
     };
@@ -5546,78 +5549,63 @@ class MemStorage implements IStorage {
     let workLogs = this.trackerWorkLogs;
 
     if (filters) {
-      if (filters.projectId) {
-        workLogs = workLogs.filter(wl => wl.projectId === filters.projectId);
-      }
-      if (filters.featureId) {
-        workLogs = workLogs.filter(wl => wl.featureId === filters.featureId);
-      }
-      if (filters.subFeatureId) {
-        workLogs = workLogs.filter(wl => wl.subFeatureId === filters.subFeatureId);
-      }
-      if (filters.userId) {
-        workLogs = workLogs.filter(wl => wl.userId === filters.userId);
-      }
-      if (filters.startDate) {
-        workLogs = workLogs.filter(wl => wl.workDate >= filters.startDate!);
-      }
-      if (filters.endDate) {
-        workLogs = workLogs.filter(wl => wl.workDate <= filters.endDate!);
-      }
+      if (filters.projectId) workLogs = workLogs.filter(wl => wl.projectId === filters.projectId);
+      if (filters.featureId) workLogs = workLogs.filter(wl => wl.featureId === filters.featureId);
+      if (filters.subFeatureId) workLogs = workLogs.filter(wl => wl.subFeatureId === filters.subFeatureId);
+      if (filters.userId) workLogs = workLogs.filter(wl => wl.userId === filters.userId);
+      if (filters.startDate) workLogs = workLogs.filter(wl => wl.workDate >= filters.startDate!);
+      if (filters.endDate) workLogs = workLogs.filter(wl => wl.workDate <= filters.endDate!);
     }
 
     return workLogs.sort((a, b) => new Date(b.workDate).getTime() - new Date(a.workDate).getTime());
   }
 
   async createTrackerWorkLog(data: InsertTrackerWorkLog): Promise<TrackerWorkLog> {
-    const workLog: TrackerWorkLog = {
+    const newWorkLog: TrackerWorkLog = {
       id: this.nextTrackerWorkLogId++,
       ...data,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    this.trackerWorkLogs.push(workLog);
-    return workLog;
+    this.trackerWorkLogs.push(newWorkLog);
+    return newWorkLog;
   }
 
   // Timeline Extensions
   async createTrackerTimelineExtension(data: InsertTrackerTimelineExtension): Promise<TrackerTimelineExtension> {
-    const extension: TrackerTimelineExtension = {
+    const newExtension: TrackerTimelineExtension = {
       id: this.nextTrackerTimelineExtensionId++,
       ...data,
       createdAt: new Date().toISOString(),
     };
-    this.trackerTimelineExtensions.push(extension);
-    return extension;
+    this.trackerTimelineExtensions.push(newExtension);
+    return newExtension;
   }
 
   async getTrackerTimelineExtensions(entityType: string, entityId: number): Promise<TrackerTimelineExtension[]> {
-    return this.trackerTimelineExtensions.filter(
-      te => te.entityType === entityType && te.entityId === entityId
-    );
+    return this.trackerTimelineExtensions
+      .filter(ext => ext.entityType === entityType && ext.entityId === entityId);
   }
 
   // Dependencies
   async createTrackerDependency(data: InsertTrackerDependency): Promise<TrackerDependency> {
-    const dependency: TrackerDependency = {
+    const newDependency: TrackerDependency = {
       id: this.nextTrackerDependencyId++,
       ...data,
       createdAt: new Date().toISOString(),
     };
-    this.trackerDependencies.push(dependency);
-    return dependency;
+    this.trackerDependencies.push(newDependency);
+    return newDependency;
   }
 
   async getTrackerDependencies(entityType?: string, entityId?: number): Promise<TrackerDependency[]> {
     let dependencies = this.trackerDependencies;
-
     if (entityType && entityId) {
       dependencies = dependencies.filter(d => 
         (d.dependentType === entityType && d.dependentId === entityId) ||
         (d.blockerType === entityType && d.blockerId === entityId)
       );
     }
-
     return dependencies;
   }
 
@@ -5631,19 +5619,19 @@ class MemStorage implements IStorage {
   }
 
   async createTrackerCustomDropdown(data: InsertTrackerCustomDropdown): Promise<TrackerCustomDropdown> {
-    const dropdown: TrackerCustomDropdown = {
+    const newDropdown: TrackerCustomDropdown = {
       id: this.nextTrackerCustomDropdownId++,
       ...data,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    this.trackerCustomDropdowns.push(dropdown);
-    return dropdown;
+    this.trackerCustomDropdowns.push(newDropdown);
+    return newDropdown;
   }
 
   // Audit Logs
   async createTrackerAuditLog(data: InsertTrackerAuditLog): Promise<TrackerAuditLog> {
-    const newLog = {
+    const newLog: TrackerAuditLog = {
       ...data,
       id: this.nextTrackerAuditLogId++,
       createdAt: new Date().toISOString(),
@@ -6635,7 +6623,7 @@ class MemStorage implements IStorage {
       ...marker,
       updatedAt: new Date()
     };
-    this.traceabilityMatrixes[index] = updatedMarker;
+    this.traceabilityMarkers[index] = updatedMarker;
     console.log(`Storage: Updated traceability marker with ID ${id}:`, updatedMarker);
     return updatedMarker;
   }
