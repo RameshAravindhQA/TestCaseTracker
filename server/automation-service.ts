@@ -483,26 +483,8 @@ runTest();`;
         };
       }
 
-      // Set up virtual display for headed mode
-      try {
-        logger.info(`🖥️ Setting up virtual display for headed mode...`);
-        const xvfbProcess = spawn('Xvfb', [':99', '-screen', '0', '1920x1080x24'], {
-          stdio: 'pipe',
-          detached: true
-        });
-        xvfbProcess.unref();
-        
-        // Wait a moment for Xvfb to start
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        process.env.DISPLAY = ':99';
-        logger.info(`🖥️ Virtual display setup completed on :99`);
-      } catch (xvfbError: any) {
-        logger.error(`❌ Virtual display setup failed: ${xvfbError.message}`);
-        return {
-          success: false,
-          message: `Failed to setup virtual display for headed mode: ${xvfbError.message}`
-        };
-      }
+      // Skip virtual display setup - run in true headed mode
+      logger.info(`🖥️ Running in true headed mode without virtual display...`);
 
       // Generate filename based on test case
       const timestamp = Date.now();
@@ -593,14 +575,12 @@ runTest();`;
           PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
           NODE_ENV: 'development',
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '0',
-          DISPLAY: process.env.DISPLAY || ':99',
-          XVFB_WHD: '1920x1080x24',
           PLAYWRIGHT_HEADLESS: 'false',
-          CHROME_DEVEL_SANDBOX: '/proc/self/ns',
           CHROME_NO_SANDBOX: '1',
+          CHROME_DISABLE_DEV_SHM_USAGE: '1',
           // Force headed mode flags
           PLAYWRIGHT_CHROMIUM_USE_HEADLESS_NEW: 'false',
-          PLAYWRIGHT_DISABLE_DEV_SHM_USAGE: 'false'
+          PLAYWRIGHT_DISABLE_DEV_SHM_USAGE: 'true'
         }
       });
 
