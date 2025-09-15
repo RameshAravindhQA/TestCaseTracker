@@ -5488,7 +5488,7 @@ class MemStorage implements IStorage {
 
   async updateTrackerFeature(id: number, data: Partial<TrackerFeature>): Promise<TrackerFeature | null> {
     const index = this.trackerFeatures.findIndex(f => f.id === id);
-    ifindex === -1) return null;
+    if (index === -1) return null;
 
     this.trackerFeatures[index] = {
       ...this.trackerFeatures[index],
