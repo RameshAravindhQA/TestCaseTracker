@@ -105,6 +105,32 @@ import {
 
 import { desc, eq } from "drizzle-orm"; // Assuming drizzle-orm is used for schema operations
 
+// Mock syncGitHubComments function for MemStorage
+const syncGitHubComments = async (issueNumber: number, bugId: number, integration: any): Promise<any[]> => {
+  console.log(`Mock syncGitHubComments called for issue ${issueNumber}, bug ${bugId} with integration:`, integration);
+  // Return mock GitHub comments
+  return [
+    {
+      id: 101,
+      issue_number: issueNumber,
+      bug_id: bugId,
+      user: { login: 'github_user_1' },
+      body: 'This is the first comment from GitHub.',
+      created_at: '2023-10-27T10:00:00Z',
+      updated_at: '2023-10-27T10:00:00Z'
+    },
+    {
+      id: 102,
+      issue_number: issueNumber,
+      bug_id: bugId,
+      user: { login: 'github_user_2' },
+      body: 'Another comment from GitHub.',
+      created_at: '2023-10-27T11:00:00Z',
+      updated_at: '2023-10-27T11:00:00Z'
+    }
+  ];
+};
+
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
@@ -241,6 +267,7 @@ export interface IStorage {
 
   // GitHub Integration methods
   getGitHubConfig(projectId: number): Promise<any | undefined>;
+  getGitHubIntegration(projectId: number): Promise<any | undefined>;
   createGitHubConfig(data: any): Promise<any>;
   updateGitHubConfig(id: number, data: any): Promise<any | null>;
   createGitHubIssue(data: any): Promise<any>;
@@ -248,6 +275,12 @@ export interface IStorage {
   getGitHubIssueByBugId(bugId: number): Promise<any | undefined>;
   getGitHubIssueByGitHubId(githubId: number): Promise<any | undefined>;
   updateGitHubIssue(id: number, data: any): Promise<any | null>;
+  getGitHubComments(issueNumber: number): Promise<any[]>;
+  getGitHubComment(id: number): Promise<any | undefined>;
+  createGitHubComment(data: any): Promise<any>;
+  updateGitHubComment(id: number, data: any): Promise<any | null>;
+  deleteGitHubComment(id: number): Promise<boolean>;
+  syncGitHubCommentsForIssue(issueNumber: number, bugId: number): Promise<any[]>;
 
   // Notebook operations
   getNotebooks(userId: number): Promise<Notebook[]>;
@@ -487,6 +520,7 @@ export interface IStorage {
     endDate?: string;
   }): Promise<TrackerWorkLog[]>;
   createTrackerWorkLog(data: InsertTrackerWorkLog): Promise<TrackerWorkLog>;
+  deleteTrackerWorkLog(id: number): Promise<boolean>;
 
   createTrackerTimelineExtension(data: InsertTrackerTimelineExtension): Promise<TrackerTimelineExtension>;
   getTrackerTimelineExtensions(entityType: string, entityId: number): Promise<TrackerTimelineExtension[]>;
@@ -670,6 +704,7 @@ class MemStorage implements IStorage {
   private traceabilityMarkers: any[] = [];
   private githubConfigs: GitHubConfig[] = [];
   private githubIssues: any[] = [];
+  private githubComments: any[] = []; // Added for GitHub comments
   private projectMembers: ProjectMember[] = [];
   private sprints: Sprint[] = [];
   private kanbanColumns: KanbanColumn[] = [];
@@ -3357,7 +3392,7 @@ class MemStorage implements IStorage {
     return this.sprints.length < initialLength;
   }
 
-  // Kanban operations (re-declared, ensure consistency)
+  // Kanban operations (re-declared for consistency)
   async getKanbanColumns(projectId?: number, sprintId?: number): Promise<KanbanColumn[]> {
     let results = [...this.kanbanColumns];
 
@@ -3470,8 +3505,8 @@ class MemStorage implements IStorage {
     } else {
       const id = this.getNextId().toString();
       const newCell: MatrixCell = {
-        id,
         ...cell,
+        id,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -5453,14 +5488,14 @@ class MemStorage implements IStorage {
   // Tracker Sub-Features
   async getTrackerSubFeatures(featureId?: number, projectId?: number): Promise<TrackerSubFeature[]> {
     let subFeatures = this.trackerSubFeatures;
-    
+
     if (featureId) {
       subFeatures = subFeatures.filter(sf => sf.featureId === featureId);
     }
     if (projectId) {
       subFeatures = subFeatures.filter(sf => sf.projectId === projectId);
     }
-    
+
     return subFeatures;
   }
 
