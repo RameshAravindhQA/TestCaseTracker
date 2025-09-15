@@ -524,8 +524,7 @@ runTest();`;
         `--output=${outputPath}`,
         '--save-storage=state.json',
         '--browser=chromium',
-        '--viewport-size=1280,720',
-        '--headed=true'  // Force headed mode
+        '--viewport-size=1280,720'
       ];
       
       logger.info(`🖥️ Running in HEADED mode with visible browser window`);
@@ -533,12 +532,11 @@ runTest();`;
       logger.info(`Executing command: npx ${codegenArgs.join(' ')}`);
       
       // Log environment variables
-      logger.info(`Environment variables for HEADED mode:`, {
+      logger.info(`Environment variables for Playwright:`, {
         PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
         NODE_ENV: 'development',
         PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '0',
-        DISPLAY: process.env.DISPLAY || ':99',
-        PLAYWRIGHT_HEADLESS: 'false'
+        DISPLAY: process.env.DISPLAY || ':0'
       });
       
       logger.info(`🚀 Attempting to launch browser in HEADED instrumented mode...`);
@@ -575,12 +573,7 @@ runTest();`;
           PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
           NODE_ENV: 'development',
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '0',
-          PLAYWRIGHT_HEADLESS: 'false',
-          CHROME_NO_SANDBOX: '1',
-          CHROME_DISABLE_DEV_SHM_USAGE: '1',
-          // Force headed mode flags
-          PLAYWRIGHT_CHROMIUM_USE_HEADLESS_NEW: 'false',
-          PLAYWRIGHT_DISABLE_DEV_SHM_USAGE: 'true'
+          DISPLAY: process.env.DISPLAY || ':0'
         }
       });
 
