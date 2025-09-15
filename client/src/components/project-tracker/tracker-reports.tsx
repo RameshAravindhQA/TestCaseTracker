@@ -135,10 +135,15 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
       );
     }
 
-    // Work Type filter
+    // Work Type filter - check both sub-features and work logs
     if (selectedWorkType !== 'all') {
+      // Filter sub-features by work type
       filteredSFs = filteredSFs.filter(sf => sf.workType === selectedWorkType);
-      filteredWLs = filteredWLs.filter(wl => wl.workType === selectedWorkType);
+      // Filter work logs by work type OR get work logs for filtered sub-features
+      filteredWLs = filteredWLs.filter(wl => 
+        wl.workType === selectedWorkType || 
+        filteredSFs.some(sf => sf.id === wl.subFeatureId)
+      );
     }
 
     // Date range filter
@@ -563,15 +568,22 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
               </Select>
             </div>
 
-            {/* Export Buttons */}
+            {/* Reset Filters Button */}
             <div className="flex gap-2">
-              <Button variant="outline" onClick={exportToCSV}>
-                <FileDown className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
-              <Button variant="outline" onClick={exportToPDF}>
-                <FileDown className="h-4 w-4 mr-2" />
-                Export PDF
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSelectedFeature('all');
+                  setSelectedSubFeature('all');
+                  setSelectedDepartment('all');
+                  setSelectedStatus('all');
+                  setSelectedWorkType('all');
+                  setDateRange('all');
+                  setStartDate('');
+                  setEndDate('');
+                }}
+              >
+                Reset Filters
               </Button>
             </div>
           </div>

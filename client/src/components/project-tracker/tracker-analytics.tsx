@@ -26,35 +26,29 @@ export function TrackerAnalytics({ projectId, features, subFeatures, workLogs }:
   const [realTimeData, setRealTimeData] = useState<any[]>([]);
   const [selectedTimeRange, setSelectedTimeRange] = useState<'7d' | '30d' | '90d'>('7d');
 
-  // Real-time data based on actual project data
+  // Initialize real-time data based on actual project data - no auto-refresh
   useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date();
-      const completedSubFeatures = subFeatures?.filter(sf => sf.status === 'Completed').length || 0;
-      const totalSubFeatures = subFeatures?.length || 1;
-      const actualCompletionRate = Math.round((completedSubFeatures / totalSubFeatures) * 100);
-      
-      const todayLogs = workLogs?.filter(log => {
-        const logDate = new Date(log.createdAt);
-        const today = new Date();
-        return logDate.toDateString() === today.toDateString();
-      }).length || 0;
+    const completedSubFeatures = subFeatures?.filter(sf => sf.status === 'Completed').length || 0;
+    const totalSubFeatures = subFeatures?.length || 1;
+    const actualCompletionRate = Math.round((completedSubFeatures / totalSubFeatures) * 100);
+    
+    const todayLogs = workLogs?.filter(log => {
+      const logDate = new Date(log.createdAt || log.workDate);
+      const today = new Date();
+      return logDate.toDateString() === today.toDateString();
+    }).length || 0;
 
-      const newDataPoint = {
-        timestamp: now,
-        activeUsers: todayLogs + Math.floor(Math.random() * 5), // Base on today's logs + small variation
+    // Only initialize once with actual data
+    if (realTimeData.length === 0) {
+      const initialDataPoint = {
+        timestamp: new Date(),
+        activeUsers: todayLogs,
         completionRate: actualCompletionRate,
         workLogsCount: workLogs?.length || 0,
-        velocity: Math.min(todayLogs * 2, 20), // Based on actual work logs
+        velocity: todayLogs,
       };
-
-      setRealTimeData(prev => {
-        const updated = [...prev, newDataPoint];
-        return updated.slice(-20); // Keep last 20 data points
-      });
-    }, 10000); // Update every 10 seconds for real-time feel
-
-    return () => clearInterval(interval);
+      setRealTimeData([initialDataPoint]);
+    }
   }, [workLogs, subFeatures]);
 
   const handleRefresh = async () => {
@@ -69,19 +63,21 @@ export function TrackerAnalytics({ projectId, features, subFeatures, workLogs }:
   const totalSubFeatures = subFeatures?.length || 0;
   const totalWorkLogs = workLogs?.length || 0;
 
-  // Advanced status distribution
-  const featureStatusData = _.chain(features || [])
+  // Advanced status distribution - combine features and sub-features for better data
+  const featureStatusData = _.chain(subFeatures || [])
     .groupBy('status')
     .map((items, status) => ({
-      status,
+      status: status || 'Unknown',
       count: items.length,
-      percentage: totalFeatures > 0 ? Math.round((items.length / totalFeatures) * 100) : 0,
-      fill: getStatusColor(status)
+      percentage: totalSubFeatures > 0 ? Math.round((items.length / totalSubFeatures) * 100) : 0,
+      fill: getStatusColor(status || 'Unknown')
     }))
+    .filter(item => item.count > 0) // Only show statuses with actual data
     .value();
 
   // Work type productivity analysis - using real data only
   const workTypeProductivity = _.chain(workLogs || [])
+    .filter(log => log.workType) // Only include logs with work type
     .groupBy('workType')
     .map((logs, workType) => {
       const totalHours = _.sumBy(logs, log => parseFloat(log.hoursWorked) || 0);
@@ -98,6 +94,7 @@ export function TrackerAnalytics({ projectId, features, subFeatures, workLogs }:
         efficiency: efficiency
       };
     })
+    .filter(item => item.logsCount > 0) // Only show work types with actual data
     .value();
 
   // Time-based completion trends
@@ -125,8 +122,10 @@ export function TrackerAnalytics({ projectId, features, subFeatures, workLogs }:
   // Risk analysis data
   const riskAnalysis = analyzeProjectRisk(subFeatures, workLogs);
 
-  // Progress calculation
-  const completedSubFeatures = subFeatures?.filter(sf => sf.status === 'Completed').length || 0;
+  // Progress calculation - more accurate based on multiple completed statuses
+  const completedSubFeatures = subFeatures?.filter(sf => 
+    sf.status === 'Completed' || sf.status === 'Deployment' || sf.status === 'Testing'
+  ).length || 0;
   const overallProgress = totalSubFeatures > 0 ? Math.round((completedSubFeatures / totalSubFeatures) * 100) : 0;
 
   // Performance metrics
@@ -379,17 +378,24 @@ export function TrackerAnalytics({ projectId, features, subFeatures, workLogs }:
             <CardTitle>Project Risk Analysis</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" data={riskAnalysis}>
+            <ResponsiveContainer width="100%" height={350}>
+              <RadialBarChart cx="50%" cy="50%" innerRadius="20%" outerRadius="90%" data={riskAnalysis}>
                 <RadialBar 
                   minAngle={15} 
-                  label={{ position: 'insideStart', fill: '#fff' }}
+                  label={{ position: 'center', fill: '#000', fontSize: '12px' }}
                   background 
                   clockWise 
-                  dataKey="value" 
+                  dataKey="value"
+                  cornerRadius={5}
                 />
-                <Legend iconSize={10} width={120} height={140} layout="vertical" verticalAlign="middle" />
-                <Tooltip />
+                <Legend 
+                  iconSize={12} 
+                  layout="horizontal" 
+                  verticalAlign="bottom" 
+                  align="center"
+                  wrapperStyle={{ paddingTop: '20px' }}
+                />
+                <Tooltip formatter={(value) => [`${value}%`, 'Risk Level']} />
               </RadialBarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -522,15 +528,36 @@ function generateTimeBasedData(workLogs: any[], timeRange: string) {
     
     // Count actual work logs for this date
     const dayLogs = workLogs?.filter(log => {
-      const logDate = new Date(log.createdAt || log.logDate);
-      return format(logDate, 'MMM dd') === dateStr;
+      const logDate = new Date(log.createdAt || log.workDate);
+      const logDateStr = format(logDate, 'MMM dd');
+      return logDateStr === dateStr;
     }) || [];
     
-    // Distribute by work type or status
-    const planning = dayLogs.filter(log => log.workType === 'Planning' || log.status === 'Planning').length;
-    const design = dayLogs.filter(log => log.workType === 'Design' || log.status === 'Design').length;
-    const development = dayLogs.filter(log => log.workType === 'Development' || log.status === 'Development').length;
-    const testing = dayLogs.filter(log => log.workType === 'Testing' || log.status === 'Testing').length;
+    // Distribute by work type or status with better matching
+    const planning = dayLogs.filter(log => 
+      log.workType?.toLowerCase().includes('planning') || 
+      log.status?.toLowerCase().includes('planning') ||
+      log.workType === 'Analysis'
+    ).length;
+    
+    const design = dayLogs.filter(log => 
+      log.workType?.toLowerCase().includes('design') || 
+      log.status?.toLowerCase().includes('design') ||
+      log.workType === 'Designing'
+    ).length;
+    
+    const development = dayLogs.filter(log => 
+      log.workType === 'Development' || 
+      log.status === 'Development' ||
+      log.workType === 'Bug Fix'
+    ).length;
+    
+    const testing = dayLogs.filter(log => 
+      log.workType === 'QA' || 
+      log.workType === 'Testing' ||
+      log.status === 'Testing'
+    ).length;
+    
     const completed = dayLogs.filter(log => log.status === 'Completed').length;
     
     data.push({
