@@ -23,6 +23,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [workTypeFilter, setWorkTypeFilter] = useState('all');
+  const [featureFilter, setFeatureFilter] = useState('all');
   const [dateRange, setDateRange] = useState<{ start?: string; end?: string }>({});
   const [selectedWorkLog, setSelectedWorkLog] = useState<any>(null);
   const [showViewDialog, setShowViewDialog] = useState(false);
@@ -55,7 +56,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
     },
   });
 
-  // Fetch features for context (needed for CSV export)
+  // Fetch features for context and filtering
   const { data: features } = useQuery({
     queryKey: ['/api/tracker/features', projectId],
     queryFn: async () => {
@@ -93,12 +94,18 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
     return subFeatures?.find(sf => sf.id === subFeatureId)?.name || 'Unknown';
   };
 
+  const getFeatureName = (featureId: number) => {
+    return features?.find(f => f.id === featureId)?.name || 'Unknown';
+  };
+
   const filteredWorkLogs = workLogs?.filter((log: any) => {
     const matchesSearch = log.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         getSubFeatureName(log.subFeatureId).toLowerCase().includes(searchTerm.toLowerCase());
+                         getSubFeatureName(log.subFeatureId).toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         getFeatureName(log.featureId).toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || log.status === statusFilter;
     const matchesWorkType = workTypeFilter === 'all' || log.workType === workTypeFilter;
-    return matchesSearch && matchesStatus && matchesWorkType;
+    const matchesFeature = featureFilter === 'all' || log.featureId?.toString() === featureFilter;
+    return matchesSearch && matchesStatus && matchesWorkType && matchesFeature;
   }) || [];
 
   const totalHours = filteredWorkLogs.reduce((sum: number, log: any) => sum + (log.hoursWorked || 0), 0);
@@ -178,7 +185,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -188,6 +195,19 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                 className="pl-9"
               />
             </div>
+            <Select value={featureFilter} onValueChange={setFeatureFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by feature" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Features</SelectItem>
+                {features?.map((feature: any) => (
+                  <SelectItem key={feature.id} value={feature.id.toString()}>
+                    {feature.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="Filter by status" />
@@ -223,11 +243,13 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                   try {
                     const csvData = workLogs.map(log => ({
                       'Log ID': log.id,
-                      'Sub-Feature': subFeatures.find(sf => sf.id === log.subFeatureId)?.name || 'Unknown',
+                      'Feature': features?.find(f => f.id === log.featureId)?.name || 'Unknown',
+                      'Sub-Feature': subFeatures?.find(sf => sf.id === log.subFeatureId)?.name || 'Unknown',
                       'Work Type': log.workType || 'N/A',
                       'Hours Worked': log.hoursWorked || 0,
-                      'Date': new Date(log.logDate).toLocaleDateString(),
+                      'Date': new Date(log.workDate).toLocaleDateString(),
                       'Description': log.description || 'N/A',
+                      'Status': log.status || 'N/A',
                       'Created': new Date(log.createdAt).toLocaleDateString()
                     }));
 
@@ -296,6 +318,9 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                         />
                         <div>
                           <h4 className="font-medium">{getSubFeatureName(log.subFeatureId)}</h4>
+                          <p className="text-xs text-muted-foreground">
+                            Feature: {getFeatureName(log.featureId)}
+                          </p>
                           <p className="text-sm text-muted-foreground">
                             {format(new Date(log.workDate), 'MMM dd, yyyy')}
                           </p>

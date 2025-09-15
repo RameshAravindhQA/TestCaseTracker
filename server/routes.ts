@@ -1936,7 +1936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { projectId, featureId, subFeatureId, userId, startDate, endDate } = req.query;
       const requestingUser = req.session?.userId;
 
-      console.log(`[API] Getting timesheets with filters:`, {
+      console.log(`[API] Getting work logs with filters:`, {
         projectId: projectId ? parseInt(projectId as string) : undefined,
         featureId: featureId ? parseInt(featureId as string) : undefined,
         subFeatureId: subFeatureId ? parseInt(subFeatureId as string) : undefined,
@@ -1945,32 +1945,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endDate: endDate as string,
       });
 
-      let timeSheets: TimeSheet[];
+      // Use the tracker work logs method instead of timesheet methods
+      const filters: any = {};
+      if (projectId) filters.projectId = parseInt(projectId as string);
+      if (featureId) filters.featureId = parseInt(featureId as string);
+      if (subFeatureId) filters.subFeatureId = parseInt(subFeatureId as string);
+      if (userId) filters.userId = parseInt(userId as string);
+      if (startDate) filters.startDate = startDate as string;
+      if (endDate) filters.endDate = endDate as string;
 
-      if (userId) {
-        // Get timesheets for specific user
-        timeSheets = await storage.getUserTimeSheets(parseInt(userId as string));
-      } else if (projectId) {
-        // Get timesheets for specific project
-        timeSheets = await storage.getProjectTimeSheets(parseInt(projectId as string));
-      } else {
-        // Get all timesheets (admin view)
-        timeSheets = await storage.getTimeSheets();
-      }
+      const workLogs = await storage.getTrackerWorkLogs(filters);
 
-      // Apply folder filter if specified
-      if (folderId) {
-        const folderIdNum = parseInt(folderId as string);
-        timeSheets = timeSheets.filter(ts => ts.folderId === folderIdNum);
-      }
+      console.log(`[API] Returning ${workLogs.length} work logs for user ${requestingUser}:`,
+        workLogs.map(wl => ({ id: wl.id, projectId: wl.projectId, subFeatureId: wl.subFeatureId, description: wl.description })));
 
-      console.log(`[API] Returning ${timeSheets.length} timesheets for user ${requestingUser}:`,
-        timeSheets.map(ts => ({ id: ts.id, projectId: ts.projectId, userId: ts.userId, description: ts.description })));
-
-      res.json(timeSheets);
+      res.json(workLogs);
     } catch (error) {
-      console.error("Error fetching timesheets:", error);
-      res.status(500).json({ success: false, error: "Failed to fetch timesheets" });
+      console.error("Error fetching work logs:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch work logs" });
     }
   });
 
