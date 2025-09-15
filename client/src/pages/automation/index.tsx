@@ -75,6 +75,7 @@ export default function AutomationPage() {
   const [recordings, setRecordings] = useState<RecordingSession[]>([]);
   const [launchMode, setLaunchMode] = useState<string>('system-browser');
   const [preferredBrowser, setPreferredBrowser] = useState<string>('');
+  const [customBrowserPath, setCustomBrowserPath] = useState<string>('');
   const { toast } = useToast();
 
   // Health check function
@@ -226,7 +227,7 @@ export default function AutomationPage() {
 
   // Start recording mutation
   const startRecordingMutation = useMutation({
-    mutationFn: async ({ testCaseId, url, launchMode, preferredBrowser }: { testCaseId: string; url: string; launchMode: string; preferredBrowser: string }) => {
+    mutationFn: async ({ testCaseId, url, launchMode, preferredBrowser, customBrowserPath }: { testCaseId: string; url: string; launchMode: string; preferredBrowser: string; customBrowserPath?: string }) => {
       console.log('🎬 Starting recording for test case:', testCaseId, 'URL:', url, 'Mode:', launchMode, 'Browser:', preferredBrowser);
 
       const testCase = testCases.find((tc: TestCase) => tc.id === parseInt(String(testCaseId)));
@@ -251,7 +252,8 @@ export default function AutomationPage() {
             moduleId: selectedModule,
             testCaseId: parseInt(testCaseId),
             launchMode: launchMode,
-            preferredBrowser: preferredBrowser
+            preferredBrowser: preferredBrowser,
+            customBrowserPath: customBrowserPath
           })
         });
 
@@ -380,7 +382,8 @@ export default function AutomationPage() {
       testCaseId: selectedTestCase,
       url: recordingUrl.trim(),
       launchMode: launchMode,
-      preferredBrowser: preferredBrowser
+      preferredBrowser: preferredBrowser,
+      customBrowserPath: customBrowserPath.trim() || undefined
     });
 
     setIsRecordingDialogOpen(false);
@@ -861,6 +864,21 @@ export default function AutomationPage() {
                                         <p className="text-sm text-blue-800 font-medium mb-1">✅ Replit Environment Detected</p>
                                         <p className="text-sm text-blue-700">
                                           In Replit, the URL will automatically open in a new browser tab when you start recording. No browser selection needed!
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {launchMode === 'system-browser' && (
+                                      <div>
+                                        <Label className="text-sm font-medium mb-2">Custom Browser Path (Optional)</Label>
+                                        <Input
+                                          type="text"
+                                          placeholder="C:\Program Files\Google\Chrome\Application\chrome.exe"
+                                          value={customBrowserPath}
+                                          onChange={(e) => setCustomBrowserPath(e.target.value)}
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                          Leave empty to use system browser. Example: C:\Program Files\Google\Chrome\Application\chrome.exe
                                         </p>
                                       </div>
                                     )}

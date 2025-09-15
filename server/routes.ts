@@ -1,3 +1,5 @@
+Added `customBrowserPath` to the `automationService.startRecording` call.
+
 import express, { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -1509,7 +1511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requestId: id,
         newEndDate,
         extensionReason,
-        requestedById: req.session.userId
+        requestedById: req.session.userId!
       });
       res.status(201).json(extension);
     } catch (error) {
@@ -3308,12 +3310,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/automation/start-recording", isAuthenticated, async (req, res) => {
     try {
-      const { url, projectId, moduleId, testCaseId, launchMode, preferredBrowser } = req.body;
+      const { url, projectId, moduleId, testCaseId, launchMode, preferredBrowser, customBrowserPath } = req.body;
 
       if (!url) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'URL is required' 
+        return res.status(400).json({
+          success: false,
+          message: 'URL is required'
         });
       }
 
@@ -3332,8 +3334,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         projectId,
         moduleId,
         testCaseId,
-        launchMode,
-        preferredBrowser
+        launchMode: launchMode,
+        preferredBrowser: preferredBrowser,
+        customBrowserPath: customBrowserPath
       });
 
       if (result.success) {
@@ -3343,7 +3346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error("Start recording error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         message: "Internal server error while starting recording",
         error: error.message
@@ -3371,7 +3374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error("Stop recording error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         message: "Internal server error while stopping recording",
         error: error.message
@@ -3422,7 +3425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Return list of active sessions (simplified for now)
       const sessions = []; // In a real implementation, you'd get this from automationService
-      
+
       res.json({
         success: true,
         data: sessions,
@@ -3492,13 +3495,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check Playwright availability
       const { spawn } = await import('child_process');
       let playwrightStatus = 'not available';
-      
+
       try {
-        const testProcess = spawn('npx', ['playwright', '--version'], { 
+        const testProcess = spawn('npx', ['playwright', '--version'], {
           stdio: 'pipe',
           timeout: 5000
         });
-        
+
         await new Promise((resolve, reject) => {
           testProcess.on('close', (code) => {
             if (code === 0) {
@@ -3609,7 +3612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/automation/recordings", isAuthenticated, async (req, res) => {
     try {
       const recordings = await automationService.getRecordings();
-      
+
       res.json({
         success: true,
         data: recordings.map(filename => ({
@@ -6679,8 +6682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileType: document.fileType,
         fileSize: document.fileSize,
         fileName: document.fileName,
-        folderId: targetFolderId === null ? null : targetFolderId,
-        projectId: document.projectId,
+        folderId: targetFolderId === null ? null : targetFolderId,        projectId: document.projectId,
         uploadedById: req.session.userId!,
       };
 
@@ -7394,7 +7396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   apiRouter.post("/technology-options", isAuthenticated, async (req, res) => {
-    try{
+    try {
       const { name } = req.body;
       if (!name || name.trim() === '') {
         return res.status(400).json({ message: "Technology name is required" });

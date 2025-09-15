@@ -106,13 +106,13 @@ export class AutomationService {
   private async startSeleniumRecording(config: any): Promise<{ success: boolean; message: string; recordingId?: string }> {
     try {
       const recordingId = `selenium_${Date.now()}`;
-      
+
       // Generate Selenium script template
       const seleniumScript = this.generateSeleniumScript(config.url, config.testCaseId);
       const scriptPath = path.join(this.recordingsDir, `selenium-${config.testCaseId}-${Date.now()}.js`);
-      
+
       await fs.writeFile(scriptPath, seleniumScript);
-      
+
       return {
         success: true,
         message: `Selenium script template created at ${scriptPath}. You can modify and run this script manually.`,
@@ -130,14 +130,14 @@ export class AutomationService {
     const recordingId = `manual_${Date.now()}`;
     const timestamp = Date.now();
     const filename = `manual-test-${config.testCaseId}-${timestamp}.md`;
-    
+
     // Create manual test recording template
     const manualTemplate = this.generateManualTestTemplate(config);
     const outputPath = path.join(this.recordingsDir, filename);
-    
+
     try {
       await fs.writeFile(outputPath, manualTemplate);
-      
+
       const recordingSession: RecordingSession = {
         id: recordingId,
         projectId: config.projectId,
@@ -168,13 +168,13 @@ export class AutomationService {
   private async startCypressRecording(config: any): Promise<{ success: boolean; message: string; recordingId?: string }> {
     try {
       const recordingId = `cypress_${Date.now()}`;
-      
+
       // Generate Cypress test template
       const cypressTest = this.generateCypressTest(config.url, config.testCaseId);
       const scriptPath = path.join(this.recordingsDir, `cypress-${config.testCaseId}-${Date.now()}.cy.js`);
-      
+
       await fs.writeFile(scriptPath, cypressTest);
-      
+
       return {
         success: true,
         message: `Cypress test template created at ${scriptPath}. You can run this with 'npx cypress run' locally.`,
@@ -198,16 +198,16 @@ describe('Test Case ${testCaseId}', () => {
 
   it('should execute test case ${testCaseId}', () => {
     // Add your test steps here:
-    
+
     // Example test steps:
     // cy.get('[data-testid="username"]').type('testuser');
     // cy.get('[data-testid="password"]').type('password');
     // cy.get('[data-testid="submit"]').click();
     // cy.url().should('include', '/dashboard');
-    
+
     // Verify page loads
     cy.get('body').should('be.visible');
-    
+
     // Add assertions
     cy.title().should('not.be.empty');
   });
@@ -267,7 +267,7 @@ async function runTest() {
   let options = new chrome.Options();
   options.addArguments('--no-sandbox');
   options.addArguments('--disable-dev-shm-usage');
-  
+
   // Create driver
   let driver = await new Builder()
     .forBrowser('chrome')
@@ -277,17 +277,17 @@ async function runTest() {
   try {
     // Navigate to target URL
     await driver.get('${url}');
-    
+
     // Wait for page to load
     await driver.wait(until.titleContains(''), 5000);
-    
+
     // Add your test steps here:
     // Example: await driver.findElement(By.id('username')).sendKeys('testuser');
     // Example: await driver.findElement(By.id('password')).sendKeys('password');
     // Example: await driver.findElement(By.css('button[type="submit"]')).click();
-    
+
     console.log('Test completed successfully');
-    
+
   } catch (error) {
     console.error('Test failed:', error);
   } finally {
@@ -299,9 +299,9 @@ runTest();`;
   }
 
   // Launch browser with system command instead of Playwright
-  private async launchSystemBrowser(url: string, browserName?: string): Promise<{ success: boolean; process?: ChildProcess; message?: string }> {
+  private async launchSystemBrowser(url: string, browserName?: string, customBrowserPath?: string): Promise<{ success: boolean; process?: ChildProcess; message?: string }> {
     const availableBrowsers = await this.detectSystemBrowsers();
-    
+
     // For Replit environment, try xdg-open first
     if (process.env.REPL_ID || process.env.REPLIT) {
       try {
@@ -316,7 +316,7 @@ runTest();`;
         });
 
         browserProcess.unref();
-        
+
         return {
           success: true,
           process: browserProcess,
@@ -326,12 +326,42 @@ runTest();`;
         logger.warn('xdg-open failed in Replit, trying other methods:', error);
       }
     }
-    
+
+    if (customBrowserPath) {
+      try {
+        logger.info(`🚀 Attempting to launch browser from custom path: ${customBrowserPath} with URL: ${url}`);
+        const browserProcess = spawn(customBrowserPath, ['--new-window', url], {
+          stdio: 'ignore',
+          detached: true,
+          env: {
+            ...process.env,
+            DISPLAY: process.env.DISPLAY || ':0'
+          }
+        });
+
+        browserProcess.unref();
+
+        // Wait a moment to see if process starts successfully
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        if (!browserProcess.killed) {
+          logger.info(`✅ Successfully launched browser from custom path`);
+          return {
+            success: true,
+            process: browserProcess,
+            message: `Browser launched successfully from custom path`
+          };
+        }
+      } catch (error) {
+        logger.warn(`Failed to launch browser from custom path ${customBrowserPath}:`, error);
+      }
+    }
+
     if (availableBrowsers.length === 0) {
       // Try to launch with common browser commands even if not detected
       logger.info('No browsers detected via "which", attempting direct launch...');
       const fallbackBrowsers = ['google-chrome', 'chrome', 'chromium-browser', 'chromium', 'firefox', 'xdg-open'];
-      
+
       for (const browser of fallbackBrowsers) {
         try {
           logger.info(`🚀 Attempting to launch ${browser} directly with URL: ${url}`);
@@ -346,10 +376,10 @@ runTest();`;
           });
 
           browserProcess.unref();
-          
+
           // Wait a moment to see if process starts successfully
           await new Promise(resolve => setTimeout(resolve, 1000));
-          
+
           if (!browserProcess.killed) {
             logger.info(`✅ Successfully launched ${browser}`);
             return {
@@ -363,7 +393,7 @@ runTest();`;
           continue;
         }
       }
-      
+
       return {
         success: false,
         message: "No system browsers found. In Replit, the URL will open in a new tab automatically when you click 'Start Recording'."
@@ -373,7 +403,7 @@ runTest();`;
     // Choose browser (prefer Chrome/Chromium)
     const preferredOrder = ['chrome', 'google-chrome', 'chromium', 'chrome-stable', 'firefox'];
     const selectedBrowser = browserName || availableBrowsers.find(b => preferredOrder.includes(b)) || availableBrowsers[0];
-    
+
     const browserCommands: Record<string, string[]> = {
       'chrome': ['google-chrome', '--new-window', '--disable-web-security', '--disable-features=VizDisplayCompositor'],
       'google-chrome': ['google-chrome', '--new-window', '--disable-web-security'],
@@ -456,8 +486,8 @@ runTest();`;
 
       // If browser launch mode is requested, launch system browser
       if (config.launchMode === 'system-browser') {
-        const browserResult = await this.launchSystemBrowser(config.url, config.preferredBrowser);
-        
+        const browserResult = await this.launchSystemBrowser(config.url, config.preferredBrowser, config.customBrowserPath);
+
         if (!browserResult.success) {
           return {
             success: false,
@@ -497,17 +527,17 @@ runTest();`;
           stdio: 'pipe',
           timeout: 10000
         });
-        
+
         let versionOutput = '';
         testProcess.stdout?.on('data', (data) => {
           versionOutput += data.toString();
         });
-        
+
         testProcess.on('error', (error) => {
           logger.error('Playwright executable not found:', error.message);
           throw error;
         });
-        
+
         // Wait for version check to complete
         await new Promise((resolve, reject) => {
           testProcess.on('close', (code) => {
@@ -520,15 +550,15 @@ runTest();`;
           });
           testProcess.on('error', reject);
         });
-        
+
       } catch (error: any) {
         logger.error('Error checking Playwright availability:', error.message);
-        
+
         // If Playwright fails, try system browser launch as fallback
         if (availableBrowsers.length > 0) {
           logger.info('Playwright failed, attempting system browser launch...');
           const browserResult = await this.launchSystemBrowser(config.url);
-          
+
           if (browserResult.success) {
             const recordingSession: RecordingSession = {
               id: recordingId,
@@ -588,10 +618,10 @@ runTest();`;
       logger.info(`Output path: ${outputPath}`);
       logger.info(`Recording ID: ${recordingId}`);
       logger.info(`Display: ${process.env.DISPLAY}`);
-      
+
       // Force headed mode - no headless operation
       const shouldRunHeadless = false;
-      
+
       // Log the exact command being executed
       const codegenArgs = [
         'playwright',
@@ -603,11 +633,11 @@ runTest();`;
         '--browser=chromium',
         '--viewport-size=1280,720'
       ];
-      
+
       logger.info(`🖥️ Running in HEADED mode with visible browser window`);
-      
+
       logger.info(`Executing command: npx ${codegenArgs.join(' ')}`);
-      
+
       // Log environment variables
       logger.info(`Environment variables for Playwright:`, {
         PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
@@ -615,30 +645,30 @@ runTest();`;
         PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '0',
         DISPLAY: process.env.DISPLAY || ':0'
       });
-      
+
       logger.info(`🚀 Attempting to launch browser in HEADED instrumented mode...`);
       logger.info(`🔍 Pre-launch browser check starting...`);
-      
+
       // Install browsers without system dependencies (Replit-compatible)
       try {
         logger.info(`🔧 Installing Playwright browsers (Replit-compatible mode)...`);
-        
+
         // Install browsers without system dependencies
         const installProcess = spawn('npx', ['playwright', 'install', 'chromium'], { 
           stdio: 'pipe',
           timeout: 60000
         });
-        
+
         let installOutput = '';
         installProcess.stdout?.on('data', (data) => {
           installOutput += data.toString();
           logger.info(`📦 Install output: ${data.toString().trim()}`);
         });
-        
+
         installProcess.stderr?.on('data', (data) => {
           logger.warn(`📦 Install warning: ${data.toString().trim()}`);
         });
-        
+
         await new Promise((resolve) => {
           installProcess.on('close', (code) => {
             logger.info(`🔧 Browser installation completed with code: ${code}`);
@@ -649,26 +679,26 @@ runTest();`;
             }
             resolve(code);
           });
-          
+
           installProcess.on('error', (error) => {
             logger.error(`❌ Browser installation process error: ${error.message}`);
             resolve(1);
           });
         });
-        
+
       } catch (installError: any) {
         logger.warn(`⚠️ Browser installation failed: ${installError.message}`);
       }
-      
+
       // Verify browser binary exists
       try {
         const { promises: fs } = await import('fs');
         const browserPath = path.join(process.cwd(), 'node_modules', 'playwright-core', '.local-browsers');
-        
+
         try {
           const browserDirs = await fs.readdir(browserPath);
           logger.info(`🔍 Available browser installations: ${browserDirs.join(', ')}`);
-          
+
           // Look for chromium installation
           const chromiumDirs = browserDirs.filter(dir => dir.startsWith('chromium'));
           if (chromiumDirs.length > 0) {
@@ -682,13 +712,13 @@ runTest();`;
       } catch (fsError) {
         logger.warn(`⚠️ File system error during browser check: ${fsError}`);
       }
-      
+
       logger.info(`🌐 Initiating Chromium browser launch in HEADED mode...`);
       logger.info(`🎯 Target URL: ${config.url}`);
       logger.info(`📁 Recording output: ${outputPath}`);
       logger.info(`🖥️ Display: ${process.env.DISPLAY}`);
       logger.info(`👁️ Browser will be VISIBLE with recording interface`);
-      
+
       const codegenProcess = spawn('npx', codegenArgs, {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: { 
@@ -706,8 +736,8 @@ runTest();`;
 
       codegenProcess.stdout?.on('data', (data) => {
         const output = data.toString();
-        logger.info(`📤 Codegen stdout [${recordingId}]: ${output}`);
-        
+        logger.info(`followfollow Codegen stdout [${recordingId}]: ${output}`);
+
         // Enhanced browser launch detection
         if (output.includes('Connecting to browser') || output.includes('Browser launched')) {
           logger.info(`🌐 ✅ Browser connection initiated for session ${recordingId}`);
@@ -732,7 +762,7 @@ runTest();`;
       codegenProcess.stderr?.on('data', (data) => {
         const output = data.toString();
         logger.warn(`📥 Codegen stderr [${recordingId}]: ${output}`);
-        
+
         // Enhanced error detection
         if (output.includes('Host system is missing dependencies')) {
           logger.error(`❌ Browser dependencies missing for session ${recordingId}`);
@@ -741,21 +771,21 @@ runTest();`;
           recordingSession.endTime = new Date();
           this.activeSessions.set(recordingId, recordingSession);
         }
-        
+
         if (output.includes('Executable doesn\'t exist') || output.includes('npx playwright install')) {
           logger.error(`❌ Browser installation required for session ${recordingId}`);
           recordingSession.status = 'error';
           recordingSession.endTime = new Date();
           this.activeSessions.set(recordingId, recordingSession);
         }
-        
+
         if (output.includes('Failed to launch') || output.includes('Browser not found')) {
           logger.error(`❌ Browser launch failed for session ${recordingId}`);
           recordingSession.status = 'error';
           recordingSession.endTime = new Date();
           this.activeSessions.set(recordingId, recordingSession);
         }
-        
+
         // Check for successful browser connections
         if (output.includes('DevTools listening') || output.includes('Chrome DevTools Protocol')) {
           logger.info(`🔗 DevTools Protocol connection established for session ${recordingId}`);
@@ -782,18 +812,18 @@ runTest();`;
         recordingSession.endTime = new Date();
         recordingSession.status = code === 0 ? 'stopped' : 'error';
         this.activeSessions.set(recordingId, recordingSession);
-        
+
         logger.info(`🏁 Codegen process closed for session ${recordingId}:`);
         logger.info(`   Exit code: ${code}`);
         logger.info(`   Signal: ${signal || 'none'}`);
         logger.info(`   Duration: ${recordingSession.endTime.getTime() - recordingSession.startTime.getTime()}ms`);
-        
+
         if (code === 0) {
           logger.info(`✅ Recording completed successfully for session ${recordingId}`);
         } else {
           logger.error(`❌ Recording failed for session ${recordingId} (exit code: ${code})`);
         }
-        
+
         // Log file creation status
         if (recordingSession.outputPath) {
           import('fs').then(fs => {
@@ -1047,7 +1077,7 @@ runTest();`;
         suite.tests.forEach((test: any, testIndex: number) => {
           const status = test.outcome === 'passed' ? '✅ PASSED' : 
                         test.outcome === 'failed' ? '❌ FAILED' : '⚠️ SKIPPED';
-          
+
           report += `#### Test ${testIndex + 1}: ${test.title || 'Unnamed Test'}\n`;
           report += `**Status**: ${status}\n`;
           report += `**Duration**: ${test.duration || 0}ms\n\n`;
@@ -1058,7 +1088,7 @@ runTest();`;
             test.steps.forEach((step: any, stepIndex: number) => {
               const stepStatus = step.error ? '❌' : '✅';
               report += `${stepIndex + 1}. ${stepStatus} ${step.title}\n`;
-              
+
               if (step.error) {
                 report += `   - **Error**: ${step.error.message}\n`;
                 // Check for screenshots
@@ -1075,7 +1105,7 @@ runTest();`;
           if (test.outcome === 'failed' && test.error) {
             report += `**Error Details**:\n`;
             report += `\`\`\`\n${test.error.message}\n\`\`\`\n\n`;
-            
+
             if (test.error.stack) {
               report += `**Stack Trace**:\n`;
               report += `\`\`\`\n${test.error.stack}\n\`\`\`\n\n`;
