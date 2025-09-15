@@ -38,6 +38,9 @@ interface TrackerProjectTableProps {
   onEdit: (project: TrackerProject) => void;
   onDelete: (id: number) => void;
   onViewDetails: (projectId: number) => void;
+  currentPage?: number;
+  setCurrentPage?: (page: number) => void;
+  itemsPerPage?: number;
 }
 
 const statusColors = {
@@ -61,6 +64,9 @@ export function TrackerProjectTable({
   onEdit,
   onDelete,
   onViewDetails,
+  currentPage = 1,
+  setCurrentPage,
+  itemsPerPage = 10,
 }: TrackerProjectTableProps) {
   if (isLoading) {
     return (
@@ -86,6 +92,11 @@ export function TrackerProjectTable({
     );
   }
 
+  // Calculate pagination
+  const totalPages = Math.ceil(projects.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedProjects = projects.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <Card>
       <CardHeader>
@@ -107,7 +118,7 @@ export function TrackerProjectTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {projects.map((project) => (
+            {paginatedProjects.map((project) => (
               <TableRow key={project.id}>
                 <TableCell>
                   <div>
@@ -178,6 +189,31 @@ export function TrackerProjectTable({
             ))}
           </TableBody>
         </Table>
+        
+        {/* Projects Pagination */}
+        {totalPages > 1 && setCurrentPage && (
+          <div className="flex justify-center items-center gap-2 mt-6">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.max(currentPage - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-gray-600">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.min(currentPage + 1, totalPages))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

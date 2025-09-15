@@ -55,6 +55,11 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
   const [showSubFeatureViewDialog, setShowSubFeatureViewDialog] = useState(false);
   const [showWorkLogForm, setShowWorkLogForm] = useState(false);
   const [selectedWorkLog, setSelectedWorkLog] = useState<any>(null);
+  
+  // Pagination and search states for hierarchy
+  const [hierarchyCurrentPage, setHierarchyCurrentPage] = useState(1);
+  const [hierarchySearchTerm, setHierarchySearchTerm] = useState('');
+  const hierarchyItemsPerPage = 5;
 
   // Fetch project details
   const { data: project } = useQuery<TrackerProject>({
@@ -237,6 +242,17 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
     }
   };
 
+  const handleEditFeature = (feature: any) => {
+    setSelectedFeature(feature);
+    setShowFeatureForm(true);
+  };
+
+  const handleDeleteFeature = (featureId: number) => {
+    if (window.confirm('Are you sure you want to delete this feature? This will also delete all associated sub-features.')) {
+      deleteFeatureMutation.mutate(featureId);
+    }
+  };
+
   const handleEditSubFeature = (subFeature: any) => {
     setSelectedSubFeature(subFeature);
     setSelectedFeatureId(null); // Clear this when editing
@@ -379,13 +395,26 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Features & Sub-Features</CardTitle>
-                <Button onClick={() => {
-                  setSelectedFeature(null);
-                  setShowFeatureForm(true);
-                }}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Feature
-                </Button>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <Input
+                      placeholder="Search features..."
+                      value={hierarchySearchTerm}
+                      onChange={(e) => {
+                        setHierarchySearchTerm(e.target.value);
+                        setHierarchyCurrentPage(1);
+                      }}
+                      className="w-64"
+                    />
+                  </div>
+                  <Button onClick={() => {
+                    setSelectedFeature(null);
+                    setShowFeatureForm(true);
+                  }}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Feature
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -396,8 +425,25 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
                   <p className="text-muted-foreground">No features yet. Create your first feature to get started.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {features?.map((feature: any) => (
+                (() => {
+                  // Filter features based on search term
+                  const filteredFeatures = features?.filter((feature: any) => 
+                    feature.name.toLowerCase().includes(hierarchySearchTerm.toLowerCase()) ||
+                    feature.description?.toLowerCase().includes(hierarchySearchTerm.toLowerCase()) ||
+                    getFeatureSubFeatures(feature.id).some((sf: any) => 
+                      sf.name.toLowerCase().includes(hierarchySearchTerm.toLowerCase())
+                    )
+                  ) || [];
+                  
+                  // Calculate pagination
+                  const totalPages = Math.ceil(filteredFeatures.length / hierarchyItemsPerPage);
+                  const startIndex = (hierarchyCurrentPage - 1) * hierarchyItemsPerPage;
+                  const paginatedFeatures = filteredFeatures.slice(startIndex, startIndex + hierarchyItemsPerPage);
+                  
+                  return (
+                    <>
+                      <div className="space-y-4">
+                        {paginatedFeatures.map((feature: any) => (
                     <div key={feature.id} className="border rounded-lg p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -513,8 +559,36 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
+                        ))}
+                      </div>
+                      
+                      {/* Hierarchy Pagination */}
+                      {totalPages > 1 && (
+                        <div className="flex justify-center items-center gap-2 mt-6">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setHierarchyCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={hierarchyCurrentPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          <span className="text-sm text-gray-600">
+                            Page {hierarchyCurrentPage} of {totalPages} ({filteredFeatures.length} features)
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setHierarchyCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={hierarchyCurrentPage === totalPages}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()
               )}
             </CardContent>
           </Card>

@@ -620,19 +620,38 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
             </div>
 
             {/* Reset and Export Buttons */}
-            <div className="flex items-end gap-2 col-span-1 md:col-span-2 lg:col-span-1">
-              <Button variant="secondary" onClick={resetFilters} className="flex-1">
-                <Filter className="h-4 w-4 mr-2" />
-                Reset Filters
-              </Button>
-              <Button onClick={exportToCSV} className="flex-1">
-                <FileDown className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
-              <Button onClick={exportToPDF} className="flex-1">
-                <FileDown className="h-4 w-4 mr-2" />
-                Export PDF
-              </Button>
+            <div className="col-span-1 md:col-span-3 lg:col-span-4">
+              <div className="flex items-center gap-2 justify-end">
+                <Button variant="secondary" onClick={resetFilters}>
+                  <Filter className="h-4 w-4 mr-2" />
+                  Reset Filters
+                </Button>
+                <Button onClick={exportToCSV} variant="outline">
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+                <Button onClick={exportToPDF} variant="outline">
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export PDF
+                </Button>
+                <Button 
+                  onClick={generateSummaryReport}
+                  disabled={isGeneratingReport}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {isGeneratingReport ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Create Final Report
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -823,6 +842,268 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
             </Button>
           ))}
         </div>
+      )}
+
+      {/* Progress Dialog */}
+      {isGeneratingReport && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="w-96">
+            <CardContent className="p-8 text-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+              <h3 className="text-lg font-semibold mb-2">Generating Final Project Report</h3>
+              <div className="space-y-2 text-sm text-gray-600">
+                <div className="flex items-center justify-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  <span>Collecting project data...</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <BarChart className="h-4 w-4" />
+                  <span>Processing analytics...</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <Target className="h-4 w-4" />
+                  <span>Compiling final report...</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Final Report Display */}
+      {showSummaryReport && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-center text-2xl font-bold text-blue-600">
+              📊 Final Project Tracker Report
+            </CardTitle>
+            <div className="text-center text-sm text-gray-500">
+              Generated on {format(new Date(), 'MMMM dd, yyyy at HH:mm')}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-8">
+              {/* Project Overview */}
+              <div>
+                <h3 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">
+                  🏢 Project Overview
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+                    <h4 className="font-semibold text-blue-800">Project Name</h4>
+                    <p className="text-lg">{project?.name || 'Unknown Project'}</p>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+                    <h4 className="font-semibold text-green-800">Status</h4>
+                    <Badge className="bg-green-100 text-green-800">{project?.status || 'Active'}</Badge>
+                  </div>
+                  <div className="bg-purple-50 p-4 rounded-lg border-l-4 border-purple-500">
+                    <h4 className="font-semibold text-purple-800">Timeline</h4>
+                    <p className="text-sm">
+                      {project?.startDate && project?.endDate 
+                        ? `${format(new Date(project.startDate), 'MMM dd')} - ${format(new Date(project.endDate), 'MMM dd, yyyy')}`
+                        : 'Not set'
+                      }
+                    </p>
+                  </div>
+                </div>
+                {project?.description && (
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-gray-800 mb-2">Description</h4>
+                    <p className="text-gray-600">{project.description}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Features Summary */}
+              <div>
+                <h3 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">
+                  🎯 Features Summary ({features?.length || 0} Total)
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-300 rounded-lg">
+                    <thead>
+                      <tr className="bg-blue-600 text-white">
+                        <th className="border border-gray-300 px-4 py-3 text-left">Feature Name</th>
+                        <th className="border border-gray-300 px-4 py-3 text-left">Status</th>
+                        <th className="border border-gray-300 px-4 py-3 text-left">Sub-Features</th>
+                        <th className="border border-gray-300 px-4 py-3 text-left">Start Date</th>
+                        <th className="border border-gray-300 px-4 py-3 text-left">End Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {features?.map((feature: any, index: number) => {
+                        const featureSubFeatures = subFeatures?.filter(sf => sf.featureId === feature.id) || [];
+                        return (
+                          <tr key={feature.id} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                            <td className="border border-gray-300 px-4 py-3 font-medium">{feature.name}</td>
+                            <td className="border border-gray-300 px-4 py-3">
+                              <StatusBadge status={feature.status} />
+                            </td>
+                            <td className="border border-gray-300 px-4 py-3 text-center">
+                              <Badge variant="outline">{featureSubFeatures.length}</Badge>
+                            </td>
+                            <td className="border border-gray-300 px-4 py-3">
+                              {feature.startDate ? format(new Date(feature.startDate), 'MMM dd, yyyy') : 'Not set'}
+                            </td>
+                            <td className="border border-gray-300 px-4 py-3">
+                              {feature.endDate ? format(new Date(feature.endDate), 'MMM dd, yyyy') : 'Not set'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Sub-Features by Department */}
+              <div>
+                <h3 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">
+                  🏢 Department-wise Sub-Features
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-300 rounded-lg">
+                    <thead>
+                      <tr className="bg-green-600 text-white">
+                        <th className="border border-gray-300 px-4 py-3 text-left">Department</th>
+                        <th className="border border-gray-300 px-4 py-3 text-center">Total Tasks</th>
+                        <th className="border border-gray-300 px-4 py-3 text-center">Completed</th>
+                        <th className="border border-gray-300 px-4 py-3 text-center">In Progress</th>
+                        <th className="border border-gray-300 px-4 py-3 text-center">Pending</th>
+                        <th className="border border-gray-300 px-4 py-3 text-center">Progress</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {_.chain(subFeatures || [])
+                        .groupBy('department')
+                        .map((items, department) => {
+                          const completed = items.filter(item => item.status === 'Completed').length;
+                          const inProgress = items.filter(item => ['Development', 'Testing'].includes(item.status)).length;
+                          const pending = items.filter(item => ['Planning', 'Design'].includes(item.status)).length;
+                          const progress = items.length > 0 ? Math.round((completed / items.length) * 100) : 0;
+                          return {
+                            department: department || 'Unassigned',
+                            total: items.length,
+                            completed,
+                            inProgress,
+                            pending,
+                            progress
+                          };
+                        })
+                        .value()
+                        .map((dept, index) => (
+                          <tr key={dept.department} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                            <td className="border border-gray-300 px-4 py-3 font-medium">{dept.department}</td>
+                            <td className="border border-gray-300 px-4 py-3 text-center">{dept.total}</td>
+                            <td className="border border-gray-300 px-4 py-3 text-center">
+                              <Badge className="bg-green-100 text-green-800">{dept.completed}</Badge>
+                            </td>
+                            <td className="border border-gray-300 px-4 py-3 text-center">
+                              <Badge className="bg-yellow-100 text-yellow-800">{dept.inProgress}</Badge>
+                            </td>
+                            <td className="border border-gray-300 px-4 py-3 text-center">
+                              <Badge className="bg-gray-100 text-gray-800">{dept.pending}</Badge>
+                            </td>
+                            <td className="border border-gray-300 px-4 py-3 text-center">
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                  <div 
+                                    className="bg-green-500 h-2 rounded-full" 
+                                    style={{ width: `${dept.progress}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-sm font-medium">{dept.progress}%</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Status-wise Summary */}
+              <div>
+                <h3 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">
+                  📈 Status-wise Summary
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-300 rounded-lg">
+                    <thead>
+                      <tr className="bg-purple-600 text-white">
+                        <th className="border border-gray-300 px-4 py-3 text-left">Status</th>
+                        <th className="border border-gray-300 px-4 py-3 text-center">Sub-Features</th>
+                        <th className="border border-gray-300 px-4 py-3 text-center">Work Logs</th>
+                        <th className="border border-gray-300 px-4 py-3 text-center">Total Hours</th>
+                        <th className="border border-gray-300 px-4 py-3 text-center">Percentage</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {_.chain(subFeatures || [])
+                        .groupBy('status')
+                        .map((items, status) => {
+                          const statusWorkLogs = filteredWorkLogs.filter(wl => 
+                            items.some(item => item.id === wl.subFeatureId)
+                          );
+                          const totalHours = statusWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+                          const percentage = (subFeatures?.length || 0) > 0 ? Math.round((items.length / (subFeatures?.length || 1)) * 100) : 0;
+                          return {
+                            status,
+                            count: items.length,
+                            workLogs: statusWorkLogs.length,
+                            hours: totalHours,
+                            percentage
+                          };
+                        })
+                        .value()
+                        .map((statusItem, index) => (
+                          <tr key={statusItem.status} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                            <td className="border border-gray-300 px-4 py-3">
+                              <StatusBadge status={statusItem.status} />
+                            </td>
+                            <td className="border border-gray-300 px-4 py-3 text-center font-medium">{statusItem.count}</td>
+                            <td className="border border-gray-300 px-4 py-3 text-center">{statusItem.workLogs}</td>
+                            <td className="border border-gray-300 px-4 py-3 text-center">{statusItem.hours}h</td>
+                            <td className="border border-gray-300 px-4 py-3 text-center">
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                  <div 
+                                    className="bg-purple-500 h-2 rounded-full" 
+                                    style={{ width: `${statusItem.percentage}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-sm font-medium">{statusItem.percentage}%</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Final Actions */}
+              <div className="text-center pt-6 border-t">
+                <div className="flex justify-center gap-4">
+                  <Button onClick={exportToPDF} className="bg-red-600 hover:bg-red-700">
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Download as PDF
+                  </Button>
+                  <Button onClick={exportToCSV} variant="outline">
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Export as CSV
+                  </Button>
+                  <Button onClick={() => setShowSummaryReport(false)} variant="outline">
+                    Close Report
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
