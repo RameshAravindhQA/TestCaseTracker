@@ -87,9 +87,17 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
   // Cast workLogsData to the correct type
   const workLogs: TrackerWorkLog[] = workLogsData || [];
 
-  // Get unique departments and work types from the provided subFeatures and workLogs
-  const departments = [...new Set(subFeatures.map(sf => sf.department).filter(Boolean))];
-  const workTypes = [...new Set(subFeatures.map(sf => sf.workType).filter(Boolean))];
+  // Get all available departments and work types (not just from existing data)
+  const allDepartments = ['Frontend', 'Backend', 'Mobile', 'Quality Assurance', 'DevOps', 'UI/UX', 'Business Analysis', 'Testing'];
+  const allWorkTypes = ['Development', 'QA', 'DevOps', 'Designing', 'Analysis', 'Documentation', 'User Story', 'Change Request', 'Bug Fix', 'Feature Request'];
+  
+  // Also include departments and work types from existing data
+  const existingDepartments = [...new Set(subFeatures.map(sf => sf.department).filter(Boolean))];
+  const existingWorkTypes = [...new Set(subFeatures.map(sf => sf.workType).filter(Boolean))];
+  
+  // Combine all departments and work types
+  const departments = [...new Set([...allDepartments, ...existingDepartments])];
+  const workTypes = [...new Set([...allWorkTypes, ...existingWorkTypes])];
   const statuses = ['Planning', 'Design', 'Development', 'Testing', 'Deployment', 'Completed', 'Blocked', 'On Hold'];
 
   // Apply all filters to get filtered data
