@@ -19,6 +19,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { autoTable } from 'jspdf-autotable';
 import { toast } from '@/components/ui/use-toast';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 interface TrackerReportsProps {
   projectId?: number;
@@ -654,9 +655,11 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                             <td className="border border-gray-200 px-4 py-2">{sf.name}</td>
                             <td className="border border-gray-200 px-4 py-2">{sf.department || '-'}</td>
                             <td className="border border-gray-200 px-4 py-2">
-                              <Badge variant="outline">{sf.status}</Badge>
+                              <StatusBadge status={sf.status} />
                             </td>
-                            <td className="border border-gray-200 px-4 py-2">{sf.workType}</td>
+                            <td className="border border-gray-200 px-4 py-2">
+                              <StatusBadge status={sf.workType} />
+                            </td>
                             <td className="border border-gray-200 px-4 py-2">{sf.estimatedHours || 0}h</td>
                             <td className="border border-gray-200 px-4 py-2">{totalHours}h</td>
                           </tr>
@@ -692,9 +695,11 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                             <td className="border border-gray-200 px-4 py-2">{subFeature?.name || 'Unknown'}</td>
                             <td className="border border-gray-200 px-4 py-2">{wl.workDate}</td>
                             <td className="border border-gray-200 px-4 py-2">{wl.hoursWorked}h</td>
-                            <td className="border border-gray-200 px-4 py-2">{wl.workType}</td>
                             <td className="border border-gray-200 px-4 py-2">
-                              <Badge variant="outline">{wl.status}</Badge>
+                              <StatusBadge status={wl.workType} />
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2">
+                              <StatusBadge status={wl.status} />
                             </td>
                             <td className="border border-gray-200 px-4 py-2">{wl.description}</td>
                           </tr>
