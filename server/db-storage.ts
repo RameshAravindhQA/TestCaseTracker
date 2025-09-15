@@ -1287,15 +1287,56 @@ export class DatabaseStorage implements IStorage {
 
   // Request Audit Logs operations
   async getRequestAuditLogs(requestId: number): Promise<any[]> {
-    // For now, return empty array as we don't have audit logs table
-    // This can be implemented when audit logs table is added
-    return [];
+    try {
+      // Get all activities related to this request
+      const activities = await db.select()
+        .from(activities)
+        .where(and(
+          eq(activities.entityType, 'resource_request'),
+          eq(activities.entityId, requestId)
+        ))
+        .orderBy(desc(activities.timestamp));
+
+      // Transform activities to audit log format
+      return activities.map(activity => ({
+        id: activity.id,
+        requestId: requestId,
+        userId: activity.userId,
+        action: activity.action.toUpperCase(),
+        details: activity.details || activity.action,
+        timestamp: activity.timestamp,
+        createdAt: activity.timestamp
+      }));
+    } catch (error) {
+      console.error('Error fetching request audit logs:', error);
+      return [];
+    }
   }
 
   async createRequestAuditLog(auditLog: any): Promise<any> {
-    // For now, return the audit log object as-is
-    // This can be implemented when audit logs table is added
-    return { ...auditLog, id: Date.now(), createdAt: new Date() };
+    try {
+      // Create activity record for audit trail
+      const activity = await this.createActivity({
+        userId: auditLog.userId,
+        entityType: 'resource_request',
+        entityId: auditLog.requestId,
+        action: auditLog.action.toLowerCase(),
+        details: auditLog.details
+      });
+
+      return {
+        id: activity.id,
+        requestId: auditLog.requestId,
+        userId: auditLog.userId,
+        action: auditLog.action,
+        details: auditLog.details,
+        timestamp: activity.timestamp,
+        createdAt: activity.timestamp
+      };
+    } catch (error) {
+      console.error('Error creating request audit log:', error);
+      throw error;
+    }
   }
 
   // Tracker Work Log operations
@@ -1335,6 +1376,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(trackerWorkLogs.id, id))
       .returning();
     return updatedWorkLog;
+  }
+
+  async deleteTrackerWorkLog(id: number): Promise<boolean> {
+    await db.delete(trackerWorkLogs).where(eq(trackerWorkLogs.id, id));
+    return true;
   }
 }
 

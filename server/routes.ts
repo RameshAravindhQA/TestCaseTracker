@@ -1593,14 +1593,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Request not found" });
       }
 
-      // Check if request can be reopened (must be closed/rejected)
-      if (!['Closed', 'Rejected'].includes(request.status)) {
-        return res.status(400).json({ message: "Only closed or rejected requests can be reopened" });
+      // Check if request can be reopened (must be closed/rejected/completed)
+      if (!['Closed', 'Rejected', 'Completed', 'Cancelled'].includes(request.status)) {
+        return res.status(400).json({ message: "Only closed, rejected, completed, or cancelled requests can be reopened" });
       }
 
-      // Update the request status to Open
+      const previousStatus = request.status;
+
+      // Update the request status to Reopened
       const updatedRequest = await storage.updateResourceRequest(id, {
-        status: 'Open',
+        status: 'Reopened',
         reopenedById: req.session.userId,
         reopenedDate: new Date().toISOString(),
         reopenReason: reason,
@@ -1613,7 +1615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityType: "resource_request",
         entityId: id,
         action: 'reopened',
-        details: `Request reopened. Reason: ${reason}`
+        details: `Request reopened from ${previousStatus}. Reason: ${reason}`
       });
 
       // Create audit log
@@ -1621,7 +1623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requestId: id,
         userId: req.session.userId,
         action: 'REOPENED',
-        details: `Request reopened. Reason: ${reason}`,
+        details: `Request reopened from ${previousStatus}. Reason: ${reason}`,
         timestamp: new Date().toISOString()
       });
 
