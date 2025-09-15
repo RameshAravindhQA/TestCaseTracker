@@ -1529,83 +1529,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Note: Approval logic is handled by the PUT endpoint below
-
   // Update request status for approval/rejection
   apiRouter.put("/resource-requests/:id/approve", isAuthenticated, async (req, res) => {
     try {
-      const requestId = parseInt(req.params.id);
+      const id = parseInt(req.params.id);
       const { status, comments } = req.body;
-      const userId = req.session.userId;
 
-      // Update the request status
-      const updatedRequest = await storage.updateResourceRequest(requestId, {
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+
+      const request = await storage.getResourceRequest(id);
+      if (!request) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+
+      // Update the request
+      const updatedRequest = await storage.updateResourceRequest(id, {
         status,
-        comments,
-        reviewedBy: userId,
-        reviewDate: new Date()
+        approvedById: req.session.userId,
+        approvalDate: new Date().toISOString(),
+        approvalComments: comments,
+        updatedAt: new Date().toISOString()
       });
 
-      if (!updatedRequest) {
-        return res.status(404).json({ error: "Request not found" });
-      }
+      // Create activity log
+      await storage.createActivity({
+        userId: req.session.userId!,
+        entityType: "resource_request",
+        entityId: id,
+        action: status === 'Approved' ? 'approved' : 'rejected',
+        details: `Request ${status.toLowerCase()}${comments ? `: ${comments}` : ''}`
+      });
 
       // Create audit log
       await storage.createRequestAuditLog({
-        requestId,
-        userId,
-        action: `Status changed to ${status}`,
-        oldValue: null,
-        newValue: status,
-        comments,
-        timestamp: new Date()
+        requestId: id,
+        userId: req.session.userId,
+        action: status === 'Approved' ? 'APPROVED' : 'REJECTED',
+        details: comments || `Request ${status.toLowerCase()}`,
+        timestamp: new Date().toISOString()
       });
 
       res.json(updatedRequest);
     } catch (error) {
       console.error("Update request status error:", error);
-      res.status(500).json({ error: "Failed to update request status" });
+      res.status(500).json({ message: "Failed to update request status" });
     }
   });
 
   // Reopen request endpoint
-  apiRouter.put("/resource-requests/:id/reopen", isAuthenticated, async (req, res) => {
+  apiRouter.post("/resource-requests/:id/reopen", isAuthenticated, async (req, res) => {
     try {
-      const requestId = parseInt(req.params.id);
+      const id = parseInt(req.params.id);
       const { reason } = req.body;
-      const userId = req.session.userId;
 
-      // Get current request
-      const currentRequest = await storage.getResourceRequest(requestId);
-      if (!currentRequest) {
-        return res.status(404).json({ error: "Request not found" });
+      if (!reason || reason.trim() === '') {
+        return res.status(400).json({ message: "Reason is required to reopen request" });
       }
 
-      const oldStatus = currentRequest.status;
+      const request = await storage.getResourceRequest(id);
+      if (!request) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+
+      // Check if request can be reopened (must be closed/rejected)
+      if (!['Closed', 'Rejected'].includes(request.status)) {
+        return res.status(400).json({ message: "Only closed or rejected requests can be reopened" });
+      }
 
       // Update the request status to Open
-      const updatedRequest = await storage.updateResourceRequest(requestId, {
+      const updatedRequest = await storage.updateResourceRequest(id, {
         status: 'Open',
-        reopenedBy: userId,
-        reopenDate: new Date(),
-        reopenReason: reason
+        reopenedById: req.session.userId,
+        reopenedDate: new Date().toISOString(),
+        reopenReason: reason,
+        updatedAt: new Date().toISOString()
       });
 
-      // Create audit log for reopening
+      // Create activity log
+      await storage.createActivity({
+        userId: req.session.userId!,
+        entityType: "resource_request",
+        entityId: id,
+        action: 'reopened',
+        details: `Request reopened. Reason: ${reason}`
+      });
+
+      // Create audit log
       await storage.createRequestAuditLog({
-        requestId,
-        userId,
-        action: 'Request Reopened',
-        oldValue: oldStatus,
-        newValue: 'Open',
-        comments: reason,
-        timestamp: new Date()
+        requestId: id,
+        userId: req.session.userId,
+        action: 'REOPENED',
+        details: `Request reopened. Reason: ${reason}`,
+        timestamp: new Date().toISOString()
       });
 
       res.json(updatedRequest);
     } catch (error) {
       console.error("Reopen request error:", error);
-      res.status(500).json({ error: "Failed to reopen request" });
+      res.status(500).json({ message: "Failed to reopen request" });
     }
   });
 
@@ -2891,7 +2914,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public users endpoint for messenger (limited data)
+  // Public users endpoint for messenger
   apiRouter.get("/users/public", isAuthenticated, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
@@ -4009,7 +4032,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Project not found" });
       }
 
-      // Check if user has admin access to this project
+      // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const userMembership = projectMembers.find(member => member.userId === req.session.userId);
@@ -5379,7 +5402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if module exists if changed
-      if (req.body.moduleId && req.body.moduleId !== bug.moduleId) {
+      if (req.body.body.moduleId && req.body.moduleId !== bug.moduleId) {
         const module = await storage.getModule(req.body.moduleId);
         if (!module || module.projectId !== bug.projectId) {
           return res.status(400).json({ message: "Invalid module ID" });

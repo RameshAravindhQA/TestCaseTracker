@@ -26,26 +26,36 @@ export function TrackerAnalytics({ projectId, features, subFeatures, workLogs }:
   const [realTimeData, setRealTimeData] = useState<any[]>([]);
   const [selectedTimeRange, setSelectedTimeRange] = useState<'7d' | '30d' | '90d'>('7d');
 
-  // Real-time data simulation
+  // Real-time data based on actual project data
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
+      const completedSubFeatures = subFeatures?.filter(sf => sf.status === 'Completed').length || 0;
+      const totalSubFeatures = subFeatures?.length || 1;
+      const actualCompletionRate = Math.round((completedSubFeatures / totalSubFeatures) * 100);
+      
+      const todayLogs = workLogs?.filter(log => {
+        const logDate = new Date(log.createdAt);
+        const today = new Date();
+        return logDate.toDateString() === today.toDateString();
+      }).length || 0;
+
       const newDataPoint = {
         timestamp: now,
-        activeUsers: Math.floor(Math.random() * 100) + 50,
-        completionRate: Math.floor(Math.random() * 30) + 70,
+        activeUsers: todayLogs + Math.floor(Math.random() * 5), // Base on today's logs + small variation
+        completionRate: actualCompletionRate,
         workLogsCount: workLogs?.length || 0,
-        velocity: Math.floor(Math.random() * 20) + 10,
+        velocity: Math.min(todayLogs * 2, 20), // Based on actual work logs
       };
 
       setRealTimeData(prev => {
         const updated = [...prev, newDataPoint];
         return updated.slice(-20); // Keep last 20 data points
       });
-    }, 3000); // Update every 3 seconds
+    }, 10000); // Update every 10 seconds for real-time feel
 
     return () => clearInterval(interval);
-  }, [workLogs]);
+  }, [workLogs, subFeatures]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -70,18 +80,22 @@ export function TrackerAnalytics({ projectId, features, subFeatures, workLogs }:
     }))
     .value();
 
-  // Work type productivity analysis
+  // Work type productivity analysis - using real data only
   const workTypeProductivity = _.chain(workLogs || [])
     .groupBy('workType')
     .map((logs, workType) => {
       const totalHours = _.sumBy(logs, log => parseFloat(log.hoursWorked) || 0);
       const avgHours = logs.length > 0 ? totalHours / logs.length : 0;
+      // Calculate efficiency based on completed vs total work
+      const completedLogs = logs.filter(log => log.status === 'Completed').length;
+      const efficiency = logs.length > 0 ? Math.round((completedLogs / logs.length) * 100) : 0;
+      
       return {
-        workType,
+        workType: workType || 'General',
         totalHours: Math.round(totalHours * 10) / 10,
         avgHours: Math.round(avgHours * 10) / 10,
         logsCount: logs.length,
-        efficiency: Math.round((totalHours / logs.length) * 100) / 100
+        efficiency: efficiency
       };
     })
     .value();
@@ -95,16 +109,17 @@ export function TrackerAnalytics({ projectId, features, subFeatures, workLogs }:
   // Velocity chart data
   const velocityData = generateVelocityData(workLogs);
 
-  // Department workload distribution
+  // Department workload distribution - using real data
   const departmentWorkload = _.chain(subFeatures || [])
     .groupBy('department')
     .map((items, department) => ({
       department: department || 'Unassigned',
       count: items.length,
       completed: items.filter(item => item.status === 'Completed').length,
-      inProgress: items.filter(item => item.status === 'Development').length,
-      pending: items.filter(item => item.status === 'Planning').length
+      inProgress: items.filter(item => ['Development', 'In Progress', 'Testing'].includes(item.status)).length,
+      pending: items.filter(item => ['Planning', 'Not Started', 'Design'].includes(item.status)).length
     }))
+    .filter(dept => dept.count > 0) // Only show departments with actual work
     .value();
 
   // Risk analysis data
@@ -505,13 +520,26 @@ function generateTimeBasedData(workLogs: any[], timeRange: string) {
     const date = subDays(new Date(), i);
     const dateStr = format(date, 'MMM dd');
     
+    // Count actual work logs for this date
+    const dayLogs = workLogs?.filter(log => {
+      const logDate = new Date(log.createdAt || log.logDate);
+      return format(logDate, 'MMM dd') === dateStr;
+    }) || [];
+    
+    // Distribute by work type or status
+    const planning = dayLogs.filter(log => log.workType === 'Planning' || log.status === 'Planning').length;
+    const design = dayLogs.filter(log => log.workType === 'Design' || log.status === 'Design').length;
+    const development = dayLogs.filter(log => log.workType === 'Development' || log.status === 'Development').length;
+    const testing = dayLogs.filter(log => log.workType === 'Testing' || log.status === 'Testing').length;
+    const completed = dayLogs.filter(log => log.status === 'Completed').length;
+    
     data.push({
       date: dateStr,
-      Planning: Math.floor(Math.random() * 10),
-      Design: Math.floor(Math.random() * 15),
-      Development: Math.floor(Math.random() * 20),
-      Testing: Math.floor(Math.random() * 12),
-      Completed: Math.floor(Math.random() * 8),
+      Planning: planning,
+      Design: design,
+      Development: development,
+      Testing: testing,
+      Completed: completed,
     });
   }
   
@@ -520,18 +548,28 @@ function generateTimeBasedData(workLogs: any[], timeRange: string) {
 
 function generateBurndownData(subFeatures: any[], workLogs: any[]) {
   const data = [];
-  const totalWork = subFeatures?.length || 10;
+  const totalWork = subFeatures?.length || 1;
+  const completedWork = subFeatures?.filter(sf => sf.status === 'Completed').length || 0;
   
   for (let i = 7; i >= 0; i--) {
     const date = format(subDays(new Date(), i), 'MMM dd');
-    const completed = Math.floor((7 - i) * totalWork / 8);
-    const remaining = totalWork - completed;
+    const targetDate = subDays(new Date(), i);
+    
+    // Count completed work up to this date
+    const completedByDate = subFeatures?.filter(sf => {
+      if (sf.status !== 'Completed' || !sf.updatedAt) return false;
+      const completionDate = new Date(sf.updatedAt);
+      return completionDate <= targetDate;
+    }).length || 0;
+    
+    const remaining = totalWork - completedByDate;
+    const ideal = Math.floor(totalWork * (7 - i) / 7);
     
     data.push({
       date,
-      completed,
-      remaining,
-      ideal: Math.floor(totalWork * (7 - i) / 7)
+      completed: completedByDate,
+      remaining: Math.max(0, remaining),
+      ideal: Math.max(0, totalWork - ideal)
     });
   }
   
@@ -540,15 +578,33 @@ function generateBurndownData(subFeatures: any[], workLogs: any[]) {
 
 function generateVelocityData(workLogs: any[]) {
   const data = [];
-  const periods = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+  const now = new Date();
   
-  periods.forEach((period, index) => {
+  // Generate data for last 4 weeks
+  for (let week = 3; week >= 0; week--) {
+    const weekStart = subDays(now, (week + 1) * 7);
+    const weekEnd = subDays(now, week * 7);
+    
+    // Count work logs in this week
+    const weekLogs = workLogs?.filter(log => {
+      const logDate = new Date(log.createdAt || log.logDate);
+      return logDate >= weekStart && logDate <= weekEnd;
+    }) || [];
+    
+    // Calculate velocity as hours worked or story points
+    const velocity = weekLogs.reduce((sum, log) => {
+      return sum + (parseFloat(log.hoursWorked) || 1);
+    }, 0);
+    
+    // Target velocity based on team capacity (adjust as needed)
+    const targetVelocity = 40; // 40 hours per week target
+    
     data.push({
-      period,
-      velocity: Math.floor(Math.random() * 20) + 10 + index * 2,
-      targetVelocity: 15 + index,
+      period: `Week ${4 - week}`,
+      velocity: Math.round(velocity),
+      targetVelocity,
     });
-  });
+  }
   
   return data;
 }
@@ -567,11 +623,41 @@ function calculatePerformanceMetrics(workLogs: any[], subFeatures: any[]) {
   const completedSubFeatures = subFeatures?.filter(sf => sf.status === 'Completed').length || 0;
   const totalSubFeatures = subFeatures?.length || 1;
   
+  // Calculate velocity trend by comparing recent vs older work
+  const now = new Date();
+  const lastWeek = subDays(now, 7);
+  const previousWeek = subDays(now, 14);
+  
+  const recentLogs = workLogs?.filter(log => new Date(log.createdAt || log.logDate) >= lastWeek) || [];
+  const previousLogs = workLogs?.filter(log => {
+    const logDate = new Date(log.createdAt || log.logDate);
+    return logDate >= previousWeek && logDate < lastWeek;
+  }) || [];
+  
+  const recentHours = recentLogs.reduce((sum, log) => sum + (parseFloat(log.hoursWorked) || 0), 0);
+  const previousHours = previousLogs.reduce((sum, log) => sum + (parseFloat(log.hoursWorked) || 0), 0);
+  
+  const velocityTrend = previousHours > 0 ? ((recentHours - previousHours) / previousHours) * 100 : 0;
+  
+  // Calculate productivity growth
+  const completedThisWeek = subFeatures?.filter(sf => {
+    if (sf.status !== 'Completed' || !sf.updatedAt) return false;
+    return new Date(sf.updatedAt) >= lastWeek;
+  }).length || 0;
+  
+  const completedPrevWeek = subFeatures?.filter(sf => {
+    if (sf.status !== 'Completed' || !sf.updatedAt) return false;
+    const completionDate = new Date(sf.updatedAt);
+    return completionDate >= previousWeek && completionDate < lastWeek;
+  }).length || 0;
+  
+  const productivityGrowth = completedPrevWeek > 0 ? ((completedThisWeek - completedPrevWeek) / completedPrevWeek) * 100 : 0;
+  
   return {
-    velocityTrend: Math.floor(Math.random() * 20) - 10,
-    productivityGrowth: Math.floor(Math.random() * 30) - 15,
-    completionRate: (completedSubFeatures / totalSubFeatures) * 100,
-    averageHoursPerSubFeature: totalHours / (totalSubFeatures || 1),
+    velocityTrend: Math.round(velocityTrend * 10) / 10,
+    productivityGrowth: Math.round(productivityGrowth * 10) / 10,
+    completionRate: Math.round((completedSubFeatures / totalSubFeatures) * 100),
+    averageHoursPerSubFeature: Math.round((totalHours / (completedSubFeatures || 1)) * 10) / 10,
   };
 }
 

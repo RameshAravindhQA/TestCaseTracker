@@ -1285,6 +1285,19 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Request Audit Logs operations
+  async getRequestAuditLogs(requestId: number): Promise<any[]> {
+    // For now, return empty array as we don't have audit logs table
+    // This can be implemented when audit logs table is added
+    return [];
+  }
+
+  async createRequestAuditLog(auditLog: any): Promise<any> {
+    // For now, return the audit log object as-is
+    // This can be implemented when audit logs table is added
+    return { ...auditLog, id: Date.now(), createdAt: new Date() };
+  }
+
   // Tracker Work Log operations
   async getTrackerWorkLogs(filters: any = {}): Promise<TrackerWorkLog[]> {
     let query = db.select().from(trackerWorkLogs);

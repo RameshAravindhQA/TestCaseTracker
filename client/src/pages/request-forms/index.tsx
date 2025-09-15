@@ -1024,256 +1024,64 @@ function RequestFormsPageContent() {
 
             {/* Request Attachments Dialog */}
             <Dialog open={isAttachmentsDialogOpen} onOpenChange={setIsAttachmentsDialogOpen}>
-              <DialogContent className="max-w-4xl">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Request Attachments</DialogTitle>
+                  <DialogDescription>
+                    View and manage attachments for this request
+                  </DialogDescription>
                 </DialogHeader>
                 {selectedRequest && (
-                  <RequestAttachments
-                    requestId={selectedRequest.id}
-                    onClose={() => setIsAttachmentsDialogOpen(false)}
-                  />
+                  <RequestAttachments requestId={selectedRequest.id} />
                 )}
               </DialogContent>
             </Dialog>
 
-            {/* Request View Dialog */}
-            <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            {/* Reopen Request Dialog */}
+            <Dialog open={isReopenDialogOpen} onOpenChange={setIsReopenDialogOpen}>
+              <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Request Details</DialogTitle>
+                  <DialogTitle>Reopen Request</DialogTitle>
+                  <DialogDescription>
+                    Provide a reason for reopening this request
+                  </DialogDescription>
                 </DialogHeader>
-                {selectedRequest && (
-                  <div className="space-y-6">
-                    {/* Request Header */}
-                    <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                      <div>
-                        <h3 className="font-semibold text-lg">{selectedRequest.title}</h3>
-                        <p className="text-sm text-gray-600">{selectedRequest.requestId}</p>
-                      </div>
-                      <div className="text-right">
-                        <Badge className={getStatusColor(selectedRequest.status)}>
-                          {selectedRequest.status}
-                        </Badge>
-                        <Badge className={`${getPriorityColor(selectedRequest.priority)} ml-2`}>
-                          {selectedRequest.priority}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* Request Details Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-sm">Basic Information</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div>
-                            <label className="text-xs font-medium text-gray-500">Department</label>
-                            <p className="text-sm">{selectedRequest.department}</p>
-                          </div>
-                          <div>
-                            <label className="text-xs font-medium text-gray-500">Request Type</label>
-                            <p className="text-sm">{selectedRequest.requestType}</p>
-                          </div>
-                          <div>
-                            <label className="text-xs font-medium text-gray-500">Project</label>
-                            <p className="text-sm">
-                              {projects.find(p => p.id === selectedRequest.projectId)?.projectName || 'N/A'}
-                            </p>
-                          </div>
-                          <div>
-                            <label className="text-xs font-medium text-gray-500">Estimated Hours</label>
-                            <p className="text-sm">{selectedRequest.estimatedHours}h</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-sm">Timeline</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div>
-                            <label className="text-xs font-medium text-gray-500">Start Date</label>
-                            <p className="text-sm">{formatDate(selectedRequest.startDate)}</p>
-                          </div>
-                          <div>
-                            <label className="text-xs font-medium text-gray-500">End Date</label>
-                            <p className="text-sm">{formatDate(selectedRequest.endDate)}</p>
-                          </div>
-                          <div>
-                            <label className="text-xs font-medium text-gray-500">Duration</label>
-                            <p className="text-sm">
-                              {calculateDuration(selectedRequest.startDate, selectedRequest.endDate)} days
-                            </p>
-                          </div>
-                          <div>
-                            <label className="text-xs font-medium text-gray-500">Lead</label>
-                            <p className="text-sm">
-                              {selectedRequest.leadId
-                                ? employees.find(emp => emp.id === selectedRequest.leadId)?.firstName + ' ' +
-                                employees.find(emp => emp.id === selectedRequest.leadId)?.lastName
-                                : 'Not assigned'
-                              }
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    {/* Description */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm">Description</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm leading-relaxed">{selectedRequest.description}</p>
-                      </CardContent>
-                    </Card>
-
-                    {/* Skills and Technologies */}
-                    {(selectedRequest.skillsRequired?.length > 0 || selectedRequest.technologies?.length > 0) && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-sm">Skills & Technologies</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          {selectedRequest.skillsRequired?.length > 0 && (
-                            <div>
-                              <label className="text-xs font-medium text-gray-500">Required Skills</label>
-                              <div className="flex flex-wrap gap-2 mt-1">
-                                {selectedRequest.skillsRequired.map((skill: string, index: number) => (
-                                  <Badge key={index} variant="outline">{skill}</Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {selectedRequest.technologies?.length > 0 && (
-                            <div>
-                              <label className="text-xs font-medium text-gray-500">Technologies</label>
-                              <div className="flex flex-wrap gap-2 mt-1">
-                                {selectedRequest.technologies.map((tech: string, index: number) => (
-                                  <Badge key={index} variant="secondary">{tech}</Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* Additional Details */}
-                    {(selectedRequest.deliverables || selectedRequest.acceptanceCriteria || selectedRequest.additionalNotes) && (
-                      <div className="grid grid-cols-1 gap-4">
-                        {selectedRequest.deliverables && (
-                          <Card>
-                            <CardHeader>
-                              <CardTitle className="text-sm">Deliverables</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <p className="text-sm leading-relaxed">{selectedRequest.deliverables}</p>
-                            </CardContent>
-                          </Card>
-                        )}
-                        {selectedRequest.acceptanceCriteria && (
-                          <Card>
-                            <CardHeader>
-                              <CardTitle className="text-sm">Acceptance Criteria</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <p className="text-sm leading-relaxed">{selectedRequest.acceptanceCriteria}</p>
-                            </CardContent>
-                          </Card>
-                        )}
-                        {selectedRequest.additionalNotes && (
-                          <Card>
-                            <CardHeader>
-                              <CardTitle className="text-sm">Additional Notes</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <p className="text-sm leading-relaxed">{selectedRequest.additionalNotes}</p>
-                            </CardContent>
-                          </Card>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="flex justify-end gap-2 pt-4 border-t">
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setIsViewDialogOpen(false);
-                          setIsCommentsDialogOpen(true);
-                        }}
-                      >
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        Comments
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setIsViewDialogOpen(false);
-                          setIsAttachmentsDialogOpen(true);
-                        }}
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Attachments
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          setIsViewDialogOpen(false);
-                          setEditingRequest(selectedRequest);
-                          setIsFormDialogOpen(true);
-                        }}
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit Request
-                      </Button>
-                      {['Completed', 'Cancelled', 'Rejected', 'Closed'].includes(selectedRequest.status) && (
-                        <Button
-                          variant="secondary"
-                          onClick={() => {
-                            setIsViewDialogOpen(false);
-                            setIsReopenDialogOpen(true);
-                          }}
-                        >
-                          <History className="h-4 w-4 mr-2" />
-                          Reopen Request
-                        </Button>
-                      )}
-                    </div>
-
-                    {/* Audit Logs Section */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm">Audit Trail</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {auditLogs.length === 0 ? (
-                            <p className="text-sm text-gray-500">No audit logs available</p>
-                          ) : (
-                            auditLogs.map((log, index) => (
-                              <div key={index} className="text-xs p-2 bg-gray-50 rounded">
-                                <div className="flex justify-between">
-                                  <span className="font-medium">{log.action}</span>
-                                  <span className="text-gray-500">
-                                    {format(new Date(log.timestamp), 'MMM dd, HH:mm')}
-                                  </span>
-                                </div>
-                                {log.comments && (
-                                  <p className="text-gray-600 mt-1">{log.comments}</p>
-                                )}
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="reopenReason">Reason for Reopening</Label>
+                    <Textarea
+                      id="reopenReason"
+                      placeholder="Please provide a detailed reason for reopening this request..."
+                      value={reopenReason}
+                      onChange={(e) => setReopenReason(e.target.value)}
+                      rows={4}
+                    />
                   </div>
-                )}
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsReopenDialogOpen(false);
+                        setReopenReason('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (selectedRequest && reopenReason.trim()) {
+                          reopenMutation.mutate({
+                            id: selectedRequest.id,
+                            reason: reopenReason
+                          });
+                        }
+                      }}
+                      disabled={!reopenReason.trim() || reopenMutation.isPending}
+                    >
+                      {reopenMutation.isPending ? "Reopening..." : "Reopen Request"}
+                    </Button>
+                  </div>
+                </div>
               </DialogContent>
             </Dialog>
           </>
@@ -1314,60 +1122,6 @@ function RequestFormsPageContent() {
                    approvalAction === 'approve' ? 'Approve' : 'Reject'}
                 </Button>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Reopen Request Dialog */}
-        <Dialog open={isReopenDialogOpen} onOpenChange={setIsReopenDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Reopen Request</DialogTitle>
-              <DialogDescription>
-                Please provide a reason for reopening this request. This action will be logged in the audit trail.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="reopenReason">Reason for Reopening</Label>
-                <Textarea
-                  id="reopenReason"
-                  placeholder="Enter the reason for reopening this request..."
-                  value={reopenReason}
-                  onChange={(e) => setReopenReason(e.target.value)}
-                  rows={4}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsReopenDialogOpen(false);
-                  setReopenReason('');
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  if (!reopenReason.trim()) {
-                    toast({
-                      title: "Reason required",
-                      description: "Please provide a reason for reopening the request.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  reopenMutation.mutate({
-                    id: selectedRequest!.id,
-                    reason: reopenReason,
-                  });
-                }}
-                disabled={reopenMutation.isPending || !reopenReason.trim()}
-              >
-                {reopenMutation.isPending ? 'Reopening...' : 'Reopen Request'}
-              </Button>
             </div>
           </DialogContent>
         </Dialog>
