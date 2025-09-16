@@ -21,6 +21,25 @@ import { autoTable } from 'jspdf-autotable';
 import { toast } from '@/hooks/use-toast';
 import { StatusBadge } from '@/components/ui/status-badge';
 import _ from 'lodash'; // Import lodash
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  AreaChart,
+  Area,
+  ComposedChart
+} from 'recharts';
+
 
 // Define interfaces for clarity
 interface TrackerSubFeature {
@@ -500,11 +519,11 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
         const subFeature = filteredSubFeatures.find(sf => sf.id === wl.subFeatureId);
         const feature = features.find(f => f.id === subFeature?.featureId);
         const days = ((wl.hoursWorked || 0) / 8).toFixed(2);
-        
+
         return [
           `#${wl.id}`,
           wl.workDate,
-          feature?.name || 'N/A',
+          feature?.name || subFeature?.name || 'Unknown Feature',
           subFeature?.name || 'N/A',
           wl.workType || 'N/A',
           `${wl.hoursWorked || 0}h`,
@@ -542,7 +561,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
       features.forEach(feature => {
         const featureSubFeatures = filteredSubFeatures.filter(sf => sf.featureId === feature.id);
-        
+
         featureSubFeatures.forEach(subFeature => {
           const subFeatureWorkLogs = filteredWorkLogs.filter(wl => wl.subFeatureId === subFeature.id);
           const actualHours = subFeatureWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
@@ -569,8 +588,9 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
       // Add total row
       const totalHourVariance = totalActualHours - totalEstHours;
+      const totalDayVariance = (totalActualHours - totalEstHours) / 8;
       const totalVariancePercent = totalEstHours > 0 ? Math.round((totalHourVariance / totalEstHours) * 100) : 0;
-      
+
       numericalSummaryData.push([
         'TOTAL SUMMARY',
         `${features.length} Features`,
@@ -1168,12 +1188,12 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                   const subFeature = filteredSubFeatures.find(sf => sf.id === wl.subFeatureId);
                   const feature = features.find(f => f.id === subFeature?.featureId);
                   const days = (wl.hoursWorked || 0) / 8;
-                  
+
                   return (
                     <tr key={wl.id} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                       <td className="border border-gray-200 px-4 py-2 font-mono text-sm">#{wl.id}</td>
                       <td className="border border-gray-200 px-4 py-2 text-sm">{wl.workDate}</td>
-                      <td className="border border-gray-200 px-4 py-2 text-sm font-medium">{feature?.name || 'N/A'}</td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm font-medium">{feature?.name || subFeature?.name || 'Unknown Feature'}</td>
                       <td className="border border-gray-200 px-4 py-2 text-sm">{subFeature?.name || 'N/A'}</td>
                       <td className="border border-gray-200 px-4 py-2 text-sm">
                         <StatusBadge status={wl.workType} />
@@ -1197,7 +1217,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
               </tbody>
             </table>
           </div>
-          
+
           {/* Work Log Summary */}
           <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
@@ -1261,7 +1281,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
                   features.forEach(feature => {
                     const featureSubFeatures = filteredSubFeatures.filter(sf => sf.featureId === feature.id);
-                    
+
                     featureSubFeatures.forEach((subFeature, index) => {
                       const subFeatureWorkLogs = filteredWorkLogs.filter(wl => wl.subFeatureId === subFeature.id);
                       const actualHours = subFeatureWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
@@ -1363,7 +1383,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                 }).length} tasks
               </div>
             </div>
-            
+
             <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
               <h4 className="font-semibold text-green-800 mb-2">Under-Estimated Tasks</h4>
               <p className="text-sm text-green-600 mb-2">
@@ -1377,7 +1397,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                 }).length} tasks
               </div>
             </div>
-            
+
             <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
               <h4 className="font-semibold text-blue-800 mb-2">Accurate Estimates</h4>
               <p className="text-sm text-blue-600 mb-2">

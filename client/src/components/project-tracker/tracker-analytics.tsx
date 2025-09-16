@@ -28,7 +28,8 @@ import {
   AlertCircle,
   BarChart3,
   Calendar,
-  Refresh
+  Refresh,
+  RefreshCw
 } from 'lucide-react';
 import { format, subDays, isValid } from 'date-fns';
 import _ from 'lodash';
