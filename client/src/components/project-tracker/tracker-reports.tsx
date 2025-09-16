@@ -1099,9 +1099,8 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                         </tr>
                       </thead>
                       <tbody>
-                        {_.chain(subFeatures || [])
-                          .groupBy('department')
-                          .map((items, department) => {
+                        {_.orderBy(
+                          _.map(_.groupBy(subFeatures || [], 'department'), (items, department) => {
                             const completed = items.filter(item => item.status === 'Completed').length;
                             const inProgress = items.filter(item => ['Planning', 'Design', 'Development', 'Testing'].includes(item.status)).length;
                             const pending = items.filter(item => ['Planning', 'Design'].includes(item.status)).length;
@@ -1120,9 +1119,10 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                               totalHours,
                               avgHours
                             };
-                          })
-                          .orderBy(['total'], ['desc'])
-                          .value()
+                          }),
+                          ['total'], 
+                          ['desc']
+                        )
                           .map((dept, index) => (
                             <tr key={dept.department} className={index % 2 === 0 ? 'bg-gray-50 hover:bg-gray-100' : 'bg-white hover:bg-gray-50'}>
                               <td className="border border-gray-300 px-6 py-4 font-semibold">{dept.department}</td>
@@ -1174,29 +1174,31 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                         </tr>
                       </thead>
                       <tbody>
-                        {_.chain(subFeatures || [])
-                          .groupBy('status')
-                          .map((items, status) => {
-                            const statusWorkLogs = filteredWorkLogs.filter(wl => 
-                              items.some(item => item.id === wl.subFeatureId)
-                            );
-                            const totalHours = statusWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
-                            const avgHours = statusWorkLogs.length > 0 ? Math.round((totalHours / statusWorkLogs.length) * 10) / 10 : 0;
-                            const workingDays = Math.round(totalHours / 8 * 10) / 10;
-                            const percentage = (subFeatures?.length || 0) > 0 ? Math.round((items.length / (subFeatures?.length || 1)) * 100) : 0;
-                            return {
-                              status,
-                              count: items.length,
-                              workLogs: statusWorkLogs.length,
-                              hours: totalHours,
-                              avgHours,
-                              workingDays,
-                              percentage
-                            };
-                          })
-                          .filter(item => item.subFeatures > 0 || item.workLogs > 0)
-                          .orderBy(['subFeatures'], ['desc'])
-                          .value()
+                        {_.orderBy(
+                          _.filter(
+                            _.map(_.groupBy(subFeatures || [], 'status'), (items, status) => {
+                              const statusWorkLogs = filteredWorkLogs.filter(wl => 
+                                items.some(item => item.id === wl.subFeatureId)
+                              );
+                              const totalHours = statusWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+                              const avgHours = statusWorkLogs.length > 0 ? Math.round((totalHours / statusWorkLogs.length) * 10) / 10 : 0;
+                              const workingDays = Math.round(totalHours / 8 * 10) / 10;
+                              const percentage = (subFeatures?.length || 0) > 0 ? Math.round((items.length / (subFeatures?.length || 1)) * 100) : 0;
+                              return {
+                                status,
+                                count: items.length,
+                                workLogs: statusWorkLogs.length,
+                                hours: totalHours,
+                                avgHours,
+                                workingDays,
+                                percentage
+                              };
+                            }),
+                            item => item.count > 0 || item.workLogs > 0
+                          ),
+                          ['count'], 
+                          ['desc']
+                        )
                           .map((statusData, index) => (
                             <tr key={statusData.status} className={index % 2 === 0 ? 'bg-gray-50 hover:bg-gray-100' : 'bg-white hover:bg-gray-50'}>
                               <td className="border border-gray-300 px-6 py-4">
@@ -1245,9 +1247,8 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                       </tr>
                     </thead>
                     <tbody>
-                      {_.chain(filteredWorkLogs)
-                        .groupBy('workType')
-                        .map((logs, workType) => {
+                      {_.orderBy(
+                        _.map(_.groupBy(filteredWorkLogs, 'workType'), (logs, workType) => {
                           const totalHours = logs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
                           const avgHours = logs.length > 0 ? Math.round((totalHours / logs.length) * 10) / 10 : 0;
                           const workingDays = Math.round(totalHours / 8 * 10) / 10;
@@ -1262,9 +1263,10 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                             workingDays,
                             percentage
                           };
-                        })
-                        .value()
-                        .orderBy(['hours'], ['desc'])
+                        }),
+                        ['hours'], 
+                        ['desc']
+                      )
                         .map((workTypeItem, index) => (
                           <tr key={workTypeItem.workType} className={index % 2 === 0 ? 'bg-gray-50 hover:bg-gray-100' : 'bg-white hover:bg-gray-50'}>
                             <td className="border border-gray-300 px-6 py-4">
