@@ -351,7 +351,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
       doc.rect(0, 0, 210, 40, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
-      doc.text('📊 Comprehensive Project Tracker Report', 105, 25, { align: 'center' });
+      doc.text('Comprehensive Project Tracker Report', 105, 25, { align: 'center' });
 
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(12);
@@ -364,7 +364,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
       doc.rect(14, yPos, 180, 50, 'F');
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text('📋 Executive Summary', 18, yPos + 10);
+      doc.text('Executive Summary', 18, yPos + 10);
 
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
@@ -389,12 +389,12 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text('🏢 Project Information & Scope', 14, yPos);
+      doc.text('Project Information & Scope', 14, yPos);
       yPos += 15;
 
       doc.setFillColor(245, 245, 245);
       doc.rect(14, yPos, 180, 40, 'F');
-      
+
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.text(`Project Name: ${project?.name || 'Unknown Project'}`, 18, yPos + 10);
@@ -412,7 +412,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text(`🎯 Features Breakdown & Analysis (${features?.length || 0} Total)`, 14, yPos);
+      doc.text(`Features Breakdown & Analysis (${features?.length || 0} Total)`, 14, yPos);
       yPos += 10;
 
       // Features table
@@ -452,7 +452,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text('🏢 Department-wise Distribution', 14, yPos);
+      doc.text('Department-wise Distribution', 14, yPos);
       yPos += 10;
 
       const deptAnalysis = _.map(_.groupBy(subFeatures || [], 'department'), (items, department) => {
@@ -489,7 +489,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text('🔧 Work Types & Effort Distribution', 14, yPos);
+      doc.text('Work Types & Effort Distribution', 14, yPos);
       yPos += 10;
 
       const workTypeAnalysis = _.map(_.groupBy(filteredWorkLogs, 'workType'), (logs, workType) => {
@@ -525,7 +525,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text('📅 Timeline & Performance Analysis', 14, yPos);
+      doc.text('Timeline & Performance Analysis', 14, yPos);
       yPos += 15;
 
       doc.setFillColor(255, 251, 235);
@@ -553,7 +553,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text('💡 Key Recommendations & Next Steps', 14, yPos);
+      doc.text('Key Recommendations & Next Steps', 14, yPos);
       yPos += 15;
 
       doc.setFillColor(248, 250, 252);
@@ -565,7 +565,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
       const blockedTasks = subFeatures?.filter(sf => sf.status === 'Blocked').length || 0;
       const pendingTasks = subFeatures?.filter(sf => !['Completed', 'Cancelled'].includes(sf.status)).length || 0;
 
-      doc.text('🎯 Key Recommendations:', 18, yPos + 10);
+      doc.text('Key Recommendations:', 18, yPos + 10);
       doc.text(`• Focus on completing ${developmentTasks} development tasks in progress`, 22, yPos + 18);
       doc.text(`• Review ${blockedTasks} blocked items to unblock dependencies`, 22, yPos + 26);
       doc.text('• Allocate resources based on department performance metrics', 22, yPos + 34);
@@ -1031,7 +1031,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="text-center text-3xl font-bold text-blue-600">
-              📊 Comprehensive Project Tracker Report
+              Comprehensive Project Tracker Report
             </CardTitle>
             <div className="text-center text-sm text-gray-500">
               Generated on {format(new Date(), 'MMMM dd, yyyy at HH:mm')} | Total Pages: Multi-section Analysis
@@ -1042,7 +1042,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
               {/* Executive Summary */}
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border-l-4 border-blue-500">
                 <h3 className="text-2xl font-bold mb-4 text-blue-800 flex items-center gap-2">
-                  📋 Executive Summary
+                  Executive Summary
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                   <div className="bg-white p-4 rounded-lg shadow-sm">
@@ -1080,7 +1080,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
               {/* Project Overview */}
               <div>
                 <h3 className="text-2xl font-bold mb-6 text-gray-800 border-b-2 border-blue-500 pb-2">
-                  🏢 Project Information & Scope
+                  Project Information & Scope
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                   <div className="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-500 shadow-sm">
@@ -1119,7 +1119,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
               {/* Detailed Features Analysis */}
               <div>
                 <h3 className="text-2xl font-bold mb-6 text-gray-800 border-b-2 border-green-500 pb-2">
-                  🎯 Features Breakdown & Analysis ({features?.length || 0} Total)
+                  Features Breakdown & Analysis ({features?.length || 0} Total)
                 </h3>
                 <div className="overflow-x-auto shadow-sm rounded-lg">
                   <table className="w-full border-collapse bg-white">
@@ -1190,12 +1190,12 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
               {/* Detailed Sub-Features Analysis */}
               <div>
                 <h3 className="text-2xl font-bold mb-6 text-gray-800 border-b-2 border-purple-500 pb-2">
-                  📋 Sub-Features Detailed Analysis ({subFeatures?.length || 0} Total)
+                  Sub-Features Detailed Analysis ({subFeatures?.length || 0} Total)
                 </h3>
 
                 {/* Sub-Features by Department */}
                 <div className="mb-8">
-                  <h4 className="text-xl font-semibold mb-4 text-purple-700">🏢 Department-wise Distribution</h4>
+                  <h4 className="text-xl font-semibold mb-4 text-purple-700">Department-wise Distribution</h4>
                   <div className="overflow-x-auto shadow-sm rounded-lg">
                     <table className="w-full border-collapse bg-white">
                       <thead>
@@ -1271,7 +1271,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
                 {/* Sub-Features by Status */}
                 <div className="mb-8">
-                  <h4 className="text-xl font-semibold mb-4 text-purple-700">📊 Status-wise Analysis</h4>
+                  <h4 className="text-xl font-semibold mb-4 text-purple-700">Status-wise Analysis</h4>
                   <div className="overflow-x-auto shadow-sm rounded-lg">
                     <table className="w-full border-collapse bg-white">
                       <thead>
@@ -1344,7 +1344,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
               {/* Work Types Analysis */}
               <div>
                 <h3 className="text-2xl font-bold mb-6 text-gray-800 border-b-2 border-orange-500 pb-2">
-                  🔧 Work Types & Effort Distribution
+                  Work Types & Effort Distribution
                 </h3>
                 <div className="overflow-x-auto shadow-sm rounded-lg">
                   <table className="w-full border-collapse bg-white">
@@ -1410,7 +1410,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
               {/* Timeline Analysis */}
               <div>
                 <h3 className="text-2xl font-bold mb-6 text-gray-800 border-b-2 border-indigo-500 pb-2">
-                  📅 Timeline & Performance Analysis
+                  Timeline & Performance Analysis
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                   <div className="bg-indigo-50 p-6 rounded-lg border-l-4 border-indigo-500 shadow-sm">
@@ -1447,11 +1447,11 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
               {/* Recommendations & Next Steps */}
               <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-6 rounded-lg border-l-4 border-gray-500">
                 <h3 className="text-2xl font-bold mb-4 text-gray-800 flex items-center gap-2">
-                  💡 Recommendations & Next Steps
+                  Recommendations & Next Steps
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h4 className="font-semibold text-gray-700 mb-3">🎯 Key Recommendations</h4>
+                    <h4 className="font-semibold text-gray-700 mb-3">Key Recommendations</h4>
                     <ul className="list-disc list-inside text-gray-600 space-y-2">
                       <li>Focus on completing {subFeatures?.filter(sf => sf.status === 'Development').length || 0} development tasks in progress</li>
                       <li>Review {subFeatures?.filter(sf => sf.status === 'Blocked').length || 0} blocked items to unblock dependencies</li>
@@ -1460,7 +1460,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                     </ul>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-700 mb-3">📋 Immediate Actions</h4>
+                    <h4 className="font-semibold text-gray-700 mb-3">Immediate Actions</h4>
                     <ul className="list-disc list-inside text-gray-600 space-y-2">
                       <li>Schedule review meetings for features with &lt; 50% completion</li>
                       <li>Update estimated hours for tasks with significant time variance</li>
@@ -1473,7 +1473,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
               {/* Export Actions */}
               <div className="text-center pt-8 border-t-2 border-gray-200">
-                <h4 className="text-lg font-semibold mb-4 text-gray-700">📄 Export Options</h4>
+                <h4 className="text-lg font-semibold mb-4 text-gray-700">Export Options</h4>
                 <div className="flex justify-center gap-4 flex-wrap">
                   <Button onClick={exportToPDF} className="bg-red-600 hover:bg-red-700 px-6 py-3">
                     <FileDown className="h-5 w-5 mr-2" />
