@@ -1,27 +1,18 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DialogFooter } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { X, Users } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import { ColorPicker } from '@/components/ui/color-picker';
 
 const subFeatureSchema = z.object({
@@ -36,8 +27,9 @@ const subFeatureSchema = z.object({
   department: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
-  assignedToId: z.number().optional(),
+  assignedEmployeeIds: z.array(z.number()).optional(),
   estimatedHours: z.number().optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 type SubFeatureFormData = z.infer<typeof subFeatureSchema>;
@@ -79,6 +71,20 @@ export function TrackerSubFeatureForm({
   const [customWorkTypes, setCustomWorkTypes] = React.useState(defaultWorkTypes);
   const [showAddWorkType, setShowAddWorkType] = React.useState(false);
   const [newWorkType, setNewWorkType] = React.useState({ name: '', color: '#3b82f6' });
+  const [tags, setTags] = useState<string[]>(subFeature?.tags || []);
+  const [newTag, setNewTag] = useState('');
+  const [selectedEmployees, setSelectedEmployees] = useState<number[]>(subFeature?.assignedEmployeeIds || []);
+
+  // Fetch employees data
+  const { data: employees = [] } = useQuery({
+    queryKey: ['/api/employees'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/employees');
+      if (!response.ok) throw new Error('Failed to fetch employees');
+      return response.json();
+    },
+  });
+
   const form = useForm<SubFeatureFormData>({
     resolver: zodResolver(subFeatureSchema),
     defaultValues: {
@@ -93,8 +99,9 @@ export function TrackerSubFeatureForm({
       department: '',
       startDate: '',
       endDate: '',
-      assignedToId: undefined,
+      assignedEmployeeIds: [],
       estimatedHours: undefined,
+      tags: [],
     },
   });
 
@@ -114,11 +121,14 @@ export function TrackerSubFeatureForm({
         department: subFeature.department || '',
         startDate: subFeature.startDate || '',
         endDate: subFeature.endDate || '',
-        assignedToId: subFeature.assignedToId || undefined,
+        assignedEmployeeIds: subFeature.assignedEmployeeIds || [],
         estimatedHours: subFeature.estimatedHours || undefined,
+        tags: subFeature.tags || [],
       };
       form.reset(formData);
-      
+      setSelectedEmployees(subFeature.assignedEmployeeIds || []);
+      setTags(subFeature.tags || []);
+
       // Force set individual field values to ensure they're displayed
       setTimeout(() => {
         form.setValue('status', subFeature.status || 'Planning');
@@ -140,14 +150,50 @@ export function TrackerSubFeatureForm({
         department: '',
         startDate: '',
         endDate: '',
-        assignedToId: undefined,
+        assignedEmployeeIds: [],
         estimatedHours: undefined,
+        tags: [],
       });
+      setSelectedEmployees([]);
+      setTags([]);
     }
   }, [subFeature, featureId, projectId, form]);
 
-  const handleSubmit = (data: SubFeatureFormData) => {
-    onSubmit(data);
+  const handleSubmit = (data: any) => {
+    const formData = {
+      ...data,
+      tags,
+      assignedEmployeeIds: selectedEmployees,
+      estimatedHours: data.estimatedHours ? Number(data.estimatedHours) : undefined,
+      parentSubFeatureId: data.parentSubFeatureId ? Number(data.parentSubFeatureId) : undefined,
+    };
+    onSubmit(formData);
+  };
+
+  const handleEmployeeToggle = (employeeId: number) => {
+    setSelectedEmployees(prev => 
+      prev.includes(employeeId)
+        ? prev.filter(id => id !== employeeId)
+        : [...prev, employeeId]
+    );
+  };
+
+  const getSelectedEmployeeNames = () => {
+    return employees
+      .filter((emp: any) => selectedEmployees.includes(emp.id))
+      .map((emp: any) => `${emp.firstName} ${emp.lastName}`)
+      .join(', ');
+  };
+
+  const handleAddTag = () => {
+    if (newTag.trim() && !tags.includes(newTag.trim())) {
+      setTags([...tags, newTag.trim()]);
+    }
+    setNewTag('');
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
   return (
@@ -256,7 +302,7 @@ export function TrackerSubFeatureForm({
                       </div>
                     </SelectContent>
                   </Select>
-                  
+
                   {showAddWorkType && (
                     <div className="border rounded-lg p-3 space-y-3 bg-gray-50">
                       <div className="flex items-center gap-2">
@@ -398,6 +444,84 @@ export function TrackerSubFeatureForm({
               </FormItem>
             )}
           />
+        </div>
+
+        {/* Assigned Employees */}
+        <div className="space-y-3">
+          <FormLabel className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Assigned Employees ({selectedEmployees.length})
+          </FormLabel>
+
+          {selectedEmployees.length > 0 && (
+            <div className="text-sm text-gray-600 p-2 bg-gray-50 rounded-md">
+              <strong>Selected:</strong> {getSelectedEmployeeNames()}
+            </div>
+          )}
+
+          <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2">
+            {employees.map((employee: any) => (
+              <div key={employee.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`employee-${employee.id}`}
+                  checked={selectedEmployees.includes(employee.id)}
+                  onCheckedChange={() => handleEmployeeToggle(employee.id)}
+                />
+                <label 
+                  htmlFor={`employee-${employee.id}`} 
+                  className="text-sm font-medium cursor-pointer flex-1"
+                >
+                  {employee.firstName} {employee.lastName}
+                  {employee.department && (
+                    <span className="text-xs text-gray-500 ml-2">
+                      ({employee.department})
+                    </span>
+                  )}
+                </label>
+                {employee.profilePicture && (
+                  <img
+                    src={employee.profilePicture}
+                    alt={`${employee.firstName} ${employee.lastName}`}
+                    className="h-6 w-6 rounded-full object-cover"
+                  />
+                )}
+              </div>
+            ))}
+            {employees.length === 0 && (
+              <p className="text-sm text-gray-500 text-center py-4">
+                No employees available. Add employees in the Employee Management module.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Tags */}
+        <div className="space-y-2">
+          <FormLabel>Tags</FormLabel>
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                {tag}
+                <button type="button" onClick={() => handleRemoveTag(tag)} className="ml-1 text-red-500 hover:text-red-700">
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Add a tag"
+              value={newTag}
+              onChange={(e) => setNewTag(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddTag();
+                }
+              }}
+            />
+            <Button type="button" onClick={handleAddTag}>Add</Button>
+          </div>
         </div>
 
         <FormField

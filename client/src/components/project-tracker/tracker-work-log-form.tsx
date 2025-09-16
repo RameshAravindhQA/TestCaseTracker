@@ -23,6 +23,8 @@ import {
 import { DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, User } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
 const workLogSchema = z.object({
   workDate: z.string().min(1, 'Work date is required'),
@@ -30,6 +32,7 @@ const workLogSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   workType: z.string().min(1, 'Work type is required'),
   status: z.enum(['In Progress', 'Completed', 'Blocked']),
+  assignedEmployeeId: z.number().optional(),
 });
 
 type WorkLogFormData = z.infer<typeof workLogSchema>;
@@ -51,14 +54,25 @@ export function TrackerWorkLogForm({
   onCancel,
   isLoading,
 }: TrackerWorkLogFormProps) {
-  const form = useForm<WorkLogFormData>({
+  // Fetch employees data
+  const { data: employees = [] } = useQuery({
+    queryKey: ['/api/employees'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/employees');
+      if (!response.ok) throw new Error('Failed to fetch employees');
+      return response.json();
+    },
+  });
+
+  const form = useForm<z.infer<typeof workLogSchema>>({
     resolver: zodResolver(workLogSchema),
     defaultValues: {
       workDate: workLog?.workDate || new Date().toISOString().split('T')[0],
       hoursWorked: workLog?.hoursWorked || 1,
       description: workLog?.description || '',
-      workType: workLog?.workType || 'Development',
+      workType: workLog?.workType || '',
       status: workLog?.status || 'In Progress',
+      assignedEmployeeId: workLog?.assignedEmployeeId || undefined,
     },
   });
 
@@ -205,6 +219,50 @@ export function TrackerWorkLogForm({
                       <SelectItem value="In Progress">In Progress</SelectItem>
                       <SelectItem value="Completed">Completed</SelectItem>
                       <SelectItem value="Blocked">Blocked</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="assignedEmployeeId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Assigned Employee</FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                    defaultValue={field.value?.toString()}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select employee" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {employees.map((employee: any) => (
+                        <SelectItem key={employee.id} value={employee.id.toString()}>
+                          <div className="flex items-center gap-2">
+                            {employee.profilePicture ? (
+                              <img
+                                src={employee.profilePicture}
+                                alt={`${employee.firstName} ${employee.lastName}`}
+                                className="h-6 w-6 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-6 w-6 rounded-full bg-gray-300 flex items-center justify-center text-xs">
+                                {employee.firstName?.[0]}{employee.lastName?.[0]}
+                              </div>
+                            )}
+                            <span>{employee.firstName} {employee.lastName}</span>
+                            {employee.department && (
+                              <span className="text-xs text-gray-500">({employee.department})</span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

@@ -206,7 +206,7 @@ export default function ProjectTrackerPage() {
         <div className="mb-6 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="p-2 bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-500 rounded-xl shadow-lg">
-              <Target className="h-8 w-8 text-white" />
+              <Activity className="h-8 w-8 text-white" />
             </div>
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Project Tracker</h1>
@@ -237,7 +237,7 @@ export default function ProjectTrackerPage() {
               Dashboard
             </TabsTrigger>
             <TabsTrigger value="projects" className="flex items-center gap-2">
-              <Target className="h-4 w-4" />
+              <Users className="h-4 w-4" />
               Projects
             </TabsTrigger>
             <TabsTrigger value="reports" className="flex items-center gap-2">

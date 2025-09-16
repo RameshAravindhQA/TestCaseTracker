@@ -72,6 +72,15 @@ interface TrackerReportsProps {
 }
 
 export function TrackerReports({ projectId, features = [], subFeatures = [] }: TrackerReportsProps) {
+  // Fetch employees data for showing assigned names
+  const { data: employeesData } = useQuery({
+    queryKey: ['/api/employees'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/employees');
+      if (!response.ok) throw new Error('Failed to fetch employees');
+      return response.json();
+    },
+  });
   const [reportType, setReportType] = useState('summary');
   const [dateRange, setDateRange] = useState('all');
   const [selectedFeature, setSelectedFeature] = useState('all');
@@ -1031,6 +1040,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                     <thead>
                       <tr className="bg-gray-50">
                         <th className="border border-gray-200 px-4 py-2 text-left">Name</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left">Assigned To</th>
                         <th className="border border-gray-200 px-4 py-2 text-left">Department</th>
                         <th className="border border-gray-200 px-4 py-2 text-left">Status</th>
                         <th className="border border-gray-200 px-4 py-2 text-left">Work Type</th>
@@ -1046,9 +1056,18 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                         const totalHours = subFeatureWorkLogs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
                         const totalDays = totalHours / 8; // Assuming 8 hours per day
 
+                        // Get assigned employees for this sub-feature
+                        const assignedEmployeeNames = sf.assignedEmployeeIds ? 
+                          employeesData?.filter((emp: any) => sf.assignedEmployeeIds.includes(emp.id))
+                            .map((emp: any) => `${emp.firstName} ${emp.lastName}`)
+                            .join(', ') || '-' : '-';
+
                         return (
                           <tr key={sf.id}>
                             <td className="border border-gray-200 px-4 py-2">{sf.name}</td>
+                            <td className="border border-gray-200 px-4 py-2 text-sm">
+                              {assignedEmployeeNames}
+                            </td>
                             <td className="border border-gray-200 px-4 py-2">{sf.department || '-'}</td>
                             <td className="border border-gray-200 px-4 py-2">
                               <StatusBadge status={sf.status} />
@@ -1077,6 +1096,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                       <tr className="bg-gray-50">
                         <th className="border border-gray-200 px-4 py-2 text-left">Log ID</th>
                         <th className="border border-gray-200 px-4 py-2 text-left">Sub-Feature</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left">Assigned To</th>
                         <th className="border border-gray-200 px-4 py-2 text-left">Date</th>
                         <th className="border border-gray-200 px-4 py-2 text-left">Hours</th>
                         <th className="border border-gray-200 px-4 py-2 text-left">Work Type</th>
@@ -1094,10 +1114,16 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
                         return paginatedGroupLogs.map((wl) => {
                           const subFeature = group.subFeatures.find(sf => sf.id === wl.subFeatureId);
+                          const assignedEmployee = employeesData?.find((emp: any) => emp.id === wl.assignedEmployeeId);
+                          const assignedName = assignedEmployee ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}` : 'Unassigned';
+                          
                           return (
                             <tr key={wl.id}>
                               <td className="border border-gray-200 px-4 py-2">#{wl.id}</td>
                               <td className="border border-gray-200 px-4 py-2">{subFeature?.name || 'Unknown'}</td>
+                              <td className="border border-gray-200 px-4 py-2 text-sm font-medium">
+                                {assignedName}
+                              </td>
                               <td className="border border-gray-200 px-4 py-2">{wl.workDate}</td>
                               <td className="border border-gray-200 px-4 py-2">{wl.hoursWorked}h</td>
                               <td className="border border-gray-200 px-4 py-2">
@@ -1204,6 +1230,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                   <th className="border border-gray-200 px-4 py-3 text-left">Date</th>
                   <th className="border border-gray-200 px-4 py-3 text-left">Feature</th>
                   <th className="border border-gray-200 px-4 py-3 text-left">Sub-Feature</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Assigned To</th>
                   <th className="border border-gray-200 px-4 py-3 text-left">Work Type</th>
                   <th className="border border-gray-200 px-4 py-3 text-left">Hours</th>
                   <th className="border border-gray-200 px-4 py-3 text-left">Days</th>
@@ -1215,6 +1242,8 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                 {filteredWorkLogs.map((wl, index) => {
                   const subFeature = filteredSubFeatures.find(sf => sf.id === wl.subFeatureId);
                   const feature = features.find(f => f.id === subFeature?.featureId);
+                  const assignedEmployee = employeesData?.find((emp: any) => emp.id === wl.assignedEmployeeId);
+                  const assignedName = assignedEmployee ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}` : 'Unassigned';
                   const days = (wl.hoursWorked || 0) / 8;
 
                   return (
@@ -1223,6 +1252,9 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                       <td className="border border-gray-200 px-4 py-2 text-sm">{wl.workDate}</td>
                       <td className="border border-gray-200 px-4 py-2 text-sm font-medium">{feature?.name || 'Unknown Feature'}</td>
                       <td className="border border-gray-200 px-4 py-2 text-sm">{subFeature?.name || 'N/A'}</td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-purple-600">
+                        {assignedName}
+                      </td>
                       <td className="border border-gray-200 px-4 py-2 text-sm">
                         <StatusBadge status={wl.workType} />
                       </td>
@@ -1234,7 +1266,15 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                       <td className="border border-gray-200 px-4 py-2 text-sm max-w-xs truncate">{wl.description}</td>
                     </tr>
                   );
-                })}
+                })}</td>
+                  )}
+                  {filteredWorkLogs.length === 0 && (
+                    <tr>
+                      <td colSpan={10} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                        No work logs found matching the current filters
+                      </td>
+                    </tr>
+                  )}
                 {filteredWorkLogs.length === 0 && (
                   <tr>
                     <td colSpan={9} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
