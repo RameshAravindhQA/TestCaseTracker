@@ -455,20 +455,24 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
       doc.text('Department-wise Distribution', 14, yPos);
       yPos += 10;
 
-      const deptAnalysis = _.map(_.groupBy(subFeatures || [], 'department'), (items, department) => {
-        const completed = items.filter(item => item.status === 'Completed').length;
-        const progress = items.length > 0 ? Math.round((completed / items.length) * 100) : 0;
-        const deptWorkLogs = filteredWorkLogs.filter(wl => items.some(item => item.id === wl.subFeatureId));
-        const totalHours = deptWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+      const deptAnalysis = _.chain(subFeatures || [])
+        .groupBy('department')
+        .map((items, department) => {
+          const completed = items.filter(item => item.status === 'Completed').length;
+          const progress = items.length > 0 ? Math.round((completed / items.length) * 100) : 0;
+          const deptWorkLogs = filteredWorkLogs.filter(wl => items.some(item => item.id === wl.subFeatureId));
+          const totalHours = deptWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
 
-        return [
-          department || 'Unassigned',
-          items.length.toString(),
-          completed.toString(),
-          `${totalHours}h`,
-          `${progress}%`
-        ];
-      });
+          return [
+            department || 'Unassigned',
+            items.length.toString(),
+            completed.toString(),
+            `${totalHours}h`,
+            `${progress}%`
+          ];
+        })
+        .orderBy(['total'], ['desc'])
+        .value();
 
       autoTable(doc, {
         startY: yPos,
@@ -1211,8 +1215,9 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                         </tr>
                       </thead>
                       <tbody>
-                        {_.orderBy(
-                          _.map(_.groupBy(subFeatures || [], 'department'), (items, department) => {
+                        {_.chain(subFeatures || [])
+                          .groupBy('department')
+                          .map((items, department) => {
                             const completed = items.filter(item => item.status === 'Completed').length;
                             const inProgress = items.filter(item => ['Planning', 'Design', 'Development', 'Testing'].includes(item.status)).length;
                             const pending = items.filter(item => ['Planning', 'Design'].includes(item.status)).length;
@@ -1231,10 +1236,9 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                               totalHours,
                               avgHours
                             };
-                          }),
-                          ['total'], 
-                          ['desc']
-                        )
+                          })
+                          .orderBy(['total'], ['desc'])
+                          .value()
                           .map((dept, index) => (
                             <tr key={dept.department} className={index % 2 === 0 ? 'bg-gray-50 hover:bg-gray-100' : 'bg-white hover:bg-gray-50'}>
                               <td className="border border-gray-300 px-6 py-4 font-semibold">{dept.department}</td>
