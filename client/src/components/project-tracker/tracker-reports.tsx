@@ -346,134 +346,246 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
       const doc = new jsPDF();
 
-      // Add title and project info
-      doc.setFontSize(18);
-      doc.text(`${project?.name || 'Project'} - Work Logs Report`, 14, 20);
+      // Title Page
+      doc.setFillColor(59, 130, 246);
+      doc.rect(0, 0, 210, 40, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.text('📊 Comprehensive Project Tracker Report', 105, 25, { align: 'center' });
+
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(12);
+      doc.text(`Generated on ${format(new Date(), 'MMMM dd, yyyy at HH:mm')}`, 105, 50, { align: 'center' });
+
+      let yPos = 70;
+
+      // Executive Summary
+      doc.setFillColor(240, 248, 255);
+      doc.rect(14, yPos, 180, 50, 'F');
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text('📋 Executive Summary', 18, yPos + 10);
 
       doc.setFontSize(10);
-      doc.text(`Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}`, 14, 30);
-      doc.text(`Date Range: ${dateRange === 'custom' && startDate && endDate ? 
-        `${startDate} to ${endDate}` : dateRange}`, 14, 35);
-      doc.text(`Applied Filters:`, 14, 40);
-      doc.text(`• Feature: ${selectedFeature === 'all' ? 'All Features' : features.find(f => f.id.toString() === selectedFeature)?.name || 'Unknown'}`, 20, 45);
-      doc.text(`• Sub-Feature: ${selectedSubFeature === 'all' ? 'All Sub-Features' : filteredSubFeatures.find(sf => sf.id.toString() === selectedSubFeature)?.name || 'Unknown'}`, 20, 50);
-      doc.text(`• Department: ${selectedDepartment === 'all' ? 'All Departments' : selectedDepartment}`, 20, 55);
-      doc.text(`• Status: ${selectedStatus === 'all' ? 'All Statuses' : selectedStatus}`, 20, 60);
-      doc.text(`• Work Type: ${selectedWorkType === 'all' ? 'All Work Types' : selectedWorkType}`, 20, 65);
-
-      let yPosition = 75;
-
-      // Summary statistics
+      doc.setFont("helvetica", "normal");
       const totalHours = filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
-      const totalLogs = filteredWorkLogs.length;
-      const totalSubFeatures = filteredSubFeatures.length;
-      const totalDays = totalHours / 8; // Assuming 8 hours per day
+      const completionRate = subFeatures ? Math.round((subFeatures.filter(sf => sf.status === 'Completed').length / Math.max(subFeatures.length, 1)) * 100) : 0;
+      const activeFeatures = Object.keys(groupedData).length;
 
-      doc.setFontSize(14);
-      doc.text('Summary Statistics', 14, yPosition);
-      yPosition += 10;
+      yPos += 20;
+      doc.text(`Project Completion: ${completionRate}%`, 18, yPos);
+      doc.text(`Total Hours Logged: ${totalHours}h`, 18, yPos + 8);
+      doc.text(`Active Features: ${activeFeatures}`, 18, yPos + 16);
+      doc.text(`Work Logs: ${filteredWorkLogs.length}`, 18, yPos + 24);
+      doc.text(`Total Development Days: ${Math.round(totalHours / 8)} working days`, 18, yPos + 32);
 
+      yPos += 60;
+
+      // Project Information & Scope
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text('🏢 Project Information & Scope', 14, yPos);
+      yPos += 15;
+
+      doc.setFillColor(245, 245, 245);
+      doc.rect(14, yPos, 180, 40, 'F');
+      
       doc.setFontSize(10);
-      doc.text(`Total Sub-Features: ${totalSubFeatures}`, 14, yPosition);
-      doc.text(`Total Work Logs: ${totalLogs}`, 14, yPosition + 5);
-      doc.text(`Total Hours Logged: ${totalHours}h (${totalDays.toFixed(2)} days)`, 14, yPosition + 10);
-      yPosition += 25;
+      doc.setFont("helvetica", "normal");
+      doc.text(`Project Name: ${project?.name || 'Unknown Project'}`, 18, yPos + 10);
+      doc.text(`Project ID: #${project?.id || 'N/A'}`, 18, yPos + 18);
+      doc.text(`Status: ${project?.status || 'Active'}`, 18, yPos + 26);
+      doc.text(`Created: ${project?.createdAt ? format(new Date(project.createdAt), 'MMM dd, yyyy') : 'N/A'}`, 18, yPos + 34);
 
-      // Feature-wise detailed report
-      Object.values(groupedData).forEach((group: any) => {
-        // Check if we need a new page
-        if (yPosition > 250) {
-          doc.addPage();
-          yPosition = 20;
-        }
+      yPos += 55;
 
-        doc.setFontSize(14);
-        doc.text(`Feature: ${group.feature.name}`, 14, yPosition);
-        yPosition += 10;
+      // Features Breakdown & Analysis
+      if (yPos > 200) {
+        doc.addPage();
+        yPos = 20;
+      }
 
-        // Sub-features table
-        if (group.subFeatures.length > 0) {
-          const subFeatureTableData = group.subFeatures.map(sf => {
-            const subFeatureWorkLogs = group.workLogs.filter(wl => wl.subFeatureId === sf.id);
-            const totalHours = subFeatureWorkLogs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
-            const totalDays = totalHours / 8; // Assuming 8 hours per day
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text(`🎯 Features Breakdown & Analysis (${features?.length || 0} Total)`, 14, yPos);
+      yPos += 10;
 
-            return [
-              sf.name,
-              sf.department || '',
-              sf.status,
-              sf.workType,
-              `${sf.estimatedHours || 0}h`,
-              `${(sf.estimatedHours ? sf.estimatedHours / 8 : 0).toFixed(2)}d`, // Convert estimated hours to days
-              `${totalHours}h`,
-              `${totalDays.toFixed(2)}d` // Display actual days
-            ];
-          });
+      // Features table
+      const featuresTableData = features?.map((feature: any) => {
+        const featureSubFeatures = subFeatures?.filter(sf => sf.featureId === feature.id) || [];
+        const featureWorkLogs = filteredWorkLogs.filter(wl => featureSubFeatures.some(sf => sf.id === wl.subFeatureId));
+        const featureTotalHours = featureWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+        const completedSubFeatures = featureSubFeatures.filter(sf => sf.status === 'Completed').length;
+        const progress = featureSubFeatures.length > 0 ? Math.round((completedSubFeatures / featureSubFeatures.length) * 100) : 0;
 
-          autoTable(doc, {
-            startY: yPosition,
-            head: [['Sub-Feature', 'Department', 'Status', 'Work Type', 'Est. Hours', 'Est. Days', 'Actual Hours', 'Actual Days']],
-            body: subFeatureTableData,
-            styles: { fontSize: 8 },
-            headStyles: { fillColor: [41, 128, 185] },
-            margin: { left: 14 }
-          });
+        return [
+          feature.name,
+          feature.status,
+          featureSubFeatures.length.toString(),
+          featureWorkLogs.length.toString(),
+          `${featureTotalHours}h`,
+          `${progress}%`
+        ];
+      }) || [];
 
-          yPosition = (doc as any).lastAutoTable.finalY + 10;
-        }
-
-        // Work logs table
-        if (group.workLogs.length > 0) {
-          // Check if we need a new page for work logs
-          if (yPosition > 220) {
-            doc.addPage();
-            yPosition = 20;
-          }
-
-          doc.setFontSize(12);
-          doc.text('Work Logs:', 14, yPosition);
-          yPosition += 5;
-
-          const workLogTableData = group.workLogs.map(wl => {
-            const subFeature = group.subFeatures.find(sf => sf.id === wl.subFeatureId);
-            return [
-              wl.id.toString(),
-              subFeature?.name || 'Unknown',
-              wl.workDate,
-              `${wl.hoursWorked}h`,
-              wl.workType,
-              wl.status,
-              wl.description.substring(0, 30) + (wl.description.length > 30 ? '...' : '')
-            ];
-          });
-
-          autoTable(doc, {
-            startY: yPosition,
-            head: [['Log ID', 'Sub-Feature', 'Date', 'Hours', 'Work Type', 'Status', 'Description']],
-            body: workLogTableData,
-            styles: { fontSize: 7 },
-            headStyles: { fillColor: [46, 125, 50] },
-            margin: { left: 14 }
-          });
-
-          yPosition = (doc as any).lastAutoTable.finalY + 15;
-        }
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Feature Name', 'Status', 'Sub-Features', 'Work Logs', 'Hours', 'Progress']],
+        body: featuresTableData,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [59, 130, 246] },
+        margin: { left: 14 }
       });
 
-      // Save the PDF
-      const filename = `${project?.name || 'project'}-tracker-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      yPos = (doc as any).lastAutoTable.finalY + 20;
+
+      // Department-wise Distribution
+      if (yPos > 200) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text('🏢 Department-wise Distribution', 14, yPos);
+      yPos += 10;
+
+      const deptAnalysis = _.map(_.groupBy(subFeatures || [], 'department'), (items, department) => {
+        const completed = items.filter(item => item.status === 'Completed').length;
+        const progress = items.length > 0 ? Math.round((completed / items.length) * 100) : 0;
+        const deptWorkLogs = filteredWorkLogs.filter(wl => items.some(item => item.id === wl.subFeatureId));
+        const totalHours = deptWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+
+        return [
+          department || 'Unassigned',
+          items.length.toString(),
+          completed.toString(),
+          `${totalHours}h`,
+          `${progress}%`
+        ];
+      });
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Department', 'Total Tasks', 'Completed', 'Total Hours', 'Progress']],
+        body: deptAnalysis,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [34, 197, 94] },
+        margin: { left: 14 }
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 20;
+
+      // Work Types & Effort Distribution
+      if (yPos > 200) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text('🔧 Work Types & Effort Distribution', 14, yPos);
+      yPos += 10;
+
+      const workTypeAnalysis = _.map(_.groupBy(filteredWorkLogs, 'workType'), (logs, workType) => {
+        const totalHours = logs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+        const totalProjectHours = filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+        const percentage = totalProjectHours > 0 ? Math.round((totalHours / totalProjectHours) * 100) : 0;
+
+        return [
+          workType || 'Unspecified',
+          logs.length.toString(),
+          `${totalHours}h`,
+          `${Math.round(totalHours / 8 * 10) / 10} days`,
+          `${percentage}%`
+        ];
+      });
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Work Type', 'Work Logs', 'Total Hours', 'Working Days', '% of Total']],
+        body: workTypeAnalysis,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [249, 115, 22] },
+        margin: { left: 14 }
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 20;
+
+      // Timeline & Performance Analysis
+      if (yPos > 200) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text('📅 Timeline & Performance Analysis', 14, yPos);
+      yPos += 15;
+
+      doc.setFillColor(255, 251, 235);
+      doc.rect(14, yPos, 180, 50, 'F');
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const totalWorkDays = Math.round(totalHours / 8);
+      const uniqueWorkDates = _.uniqBy(filteredWorkLogs, 'workDate').length;
+      const avgDailyHours = uniqueWorkDates > 0 ? Math.round((totalHours / uniqueWorkDates) * 10) / 10 : 0;
+
+      doc.text(`Total Work Days: ${totalWorkDays} days`, 18, yPos + 10);
+      doc.text(`Average Daily Hours: ${avgDailyHours}h`, 18, yPos + 18);
+      doc.text(`Completion Rate: ${completionRate}%`, 18, yPos + 26);
+      doc.text(`Log Frequency: ${filteredWorkLogs.length > 0 ? Math.round((filteredWorkLogs.length / Math.max(uniqueWorkDates, 1)) * 10) / 10 : 0} logs/day`, 18, yPos + 34);
+      doc.text(`Active Work Rate: ${subFeatures ? Math.round((subFeatures.filter(sf => ['Development', 'Testing'].includes(sf.status)).length / Math.max(subFeatures.length, 1)) * 100) : 0}%`, 18, yPos + 42);
+
+      yPos += 70;
+
+      // Key Recommendations
+      if (yPos > 200) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text('💡 Key Recommendations & Next Steps', 14, yPos);
+      yPos += 15;
+
+      doc.setFillColor(248, 250, 252);
+      doc.rect(14, yPos, 180, 60, 'F');
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const developmentTasks = subFeatures?.filter(sf => sf.status === 'Development').length || 0;
+      const blockedTasks = subFeatures?.filter(sf => sf.status === 'Blocked').length || 0;
+      const pendingTasks = subFeatures?.filter(sf => !['Completed', 'Cancelled'].includes(sf.status)).length || 0;
+
+      doc.text('🎯 Key Recommendations:', 18, yPos + 10);
+      doc.text(`• Focus on completing ${developmentTasks} development tasks in progress`, 22, yPos + 18);
+      doc.text(`• Review ${blockedTasks} blocked items to unblock dependencies`, 22, yPos + 26);
+      doc.text('• Allocate resources based on department performance metrics', 22, yPos + 34);
+      doc.text('• Consider increasing daily logging frequency for better tracking', 22, yPos + 42);
+      doc.text(`• Create detailed timeline for remaining ${pendingTasks} tasks`, 22, yPos + 50);
+
+      // Save the comprehensive PDF
+      const filename = `${project?.name || 'project'}-comprehensive-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
       doc.save(filename);
 
       toast({
-        title: "Export Successful",
-        description: `PDF report has been downloaded as ${filename}`,
+        title: "Comprehensive Report Generated",
+        description: `Complete project analysis has been downloaded as ${filename}`,
       });
 
     } catch (error) {
       console.error('PDF Export Error:', error);
       toast({
         title: "Export Failed",
-        description: "Failed to generate PDF report. Please try again.",
+        description: "Failed to generate comprehensive PDF report. Please try again.",
         variant: "destructive",
       });
     }
