@@ -17,7 +17,8 @@ import {
   Pie,
   Cell,
   AreaChart,
-  Area
+  Area,
+  ComposedChart
 } from 'recharts';
 import {
   Activity,
