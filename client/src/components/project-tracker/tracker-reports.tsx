@@ -66,12 +66,13 @@ interface TrackerWorkLog {
 }
 
 interface TrackerReportsProps {
-  projectId?: number;
+  projects?: any[];
+  selectedProjectId?: number;
   features?: any[];
   subFeatures?: TrackerSubFeature[]; // Use the defined interface
 }
 
-export function TrackerReports({ projectId, features = [], subFeatures = [] }: TrackerReportsProps) {
+export function TrackerReports({ projects = [], selectedProjectId, features = [], subFeatures = [] }: TrackerReportsProps) {
   const [reportType, setReportType] = useState('summary');
   const [dateRange, setDateRange] = useState('all');
   const [selectedFeature, setSelectedFeature] = useState('all');
@@ -85,27 +86,29 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
   const [currentPage, setCurrentPage] = useState(1); // State for pagination
   const [isGeneratingReport, setIsGeneratingReport] = useState(false); // State for loading indicator
   const [showSummaryReport, setShowSummaryReport] = useState(false); // State to show summary report
+  const [selectedProject, setSelectedProject] = useState<number | null>(selectedProjectId || null);
 
   // Fetch project details
   const { data: project } = useQuery({
-    queryKey: [`/api/tracker/projects/${projectId}`],
+    queryKey: [`/api/tracker/projects/${selectedProject}`],
     queryFn: async () => {
-      if (!projectId) return null;
-      const response = await apiRequest('GET', `/api/tracker/projects/${projectId}`);
+      if (!selectedProject) return null;
+      const response = await apiRequest('GET', `/api/tracker/projects/${selectedProject}`);
       if (!response.ok) throw new Error('Failed to fetch project');
       return response.json();
     },
-    enabled: !!projectId,
+    enabled: !!selectedProject,
   });
 
   // Fetch work logs for reports
   const { data: workLogsData } = useQuery({
-    queryKey: [`/api/tracker/work-logs`, projectId],
+    queryKey: [`/api/tracker/work-logs`, selectedProject],
     queryFn: async () => {
-      const response = await apiRequest('GET', `/api/tracker/work-logs?projectId=${projectId || ''}`);
+      const response = await apiRequest('GET', `/api/tracker/work-logs?projectId=${selectedProject || ''}`);
       if (!response.ok) throw new Error('Failed to fetch work logs');
       return response.json();
     },
+    enabled: !!selectedProject,
   });
 
   // Cast workLogsData to the correct type
@@ -748,6 +751,28 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {/* Project Filter */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Project:</Label>
+              <Select value={selectedProject?.toString() || ''} onValueChange={(value) => {
+                setSelectedProject(value ? parseInt(value) : null);
+                setSelectedFeature('all'); // Reset other filters when project changes
+                setSelectedSubFeature('all');
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Project" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Projects</SelectItem>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id.toString()}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Feature Filter */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Feature:</Label>

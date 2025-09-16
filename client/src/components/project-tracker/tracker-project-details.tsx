@@ -660,7 +660,7 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
         </TabsContent>
 
         <TabsContent value="reports">
-          <TrackerReports projectId={projectId} features={features} subFeatures={subFeatures} />
+          <TrackerReports projects={[project]} selectedProjectId={projectId} features={features} subFeatures={subFeatures} />
         </TabsContent>
       </Tabs>
 
