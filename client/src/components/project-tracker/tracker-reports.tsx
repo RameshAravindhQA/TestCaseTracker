@@ -1193,7 +1193,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                     <tr key={wl.id} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                       <td className="border border-gray-200 px-4 py-2 font-mono text-sm">#{wl.id}</td>
                       <td className="border border-gray-200 px-4 py-2 text-sm">{wl.workDate}</td>
-                      <td className="border border-gray-200 px-4 py-2 text-sm font-medium">{feature?.name || subFeature?.name || 'Unknown Feature'}</td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm font-medium">{feature?.name || 'Unknown Feature'}</td>
                       <td className="border border-gray-200 px-4 py-2 text-sm">{subFeature?.name || 'N/A'}</td>
                       <td className="border border-gray-200 px-4 py-2 text-sm">
                         <StatusBadge status={wl.workType} />

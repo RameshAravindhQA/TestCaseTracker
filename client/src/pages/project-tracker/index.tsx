@@ -38,11 +38,17 @@ interface TrackerProject {
 }
 
 export default function ProjectTrackerPage() {
-  const { toast } = useToast();
+  // Get project ID from URL params if available
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlProjectId = urlParams.get('projectId');
+
+  const [selectedProject, setSelectedProject] = useState<number | null>(
+    urlProjectId ? parseInt(urlProjectId) : null
+  );
+  const [showProjectForm, setShowProjectForm] = useState(false);
+  const [editingProject, setEditingProject] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('projects');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showProjectForm, setShowProjectForm] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<TrackerProject | null>(null);
   const [showProjectDetails, setShowProjectDetails] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [filters, setFilters] = useState({
@@ -309,7 +315,7 @@ export default function ProjectTrackerPage() {
           </TabsContent>
 
           <TabsContent value="reports">
-            <TrackerReports projects={projects || []} />
+            <TrackerReports projects={projects || []} selectedProjectId={selectedProjectId} />
           </TabsContent>
         </Tabs>
 

@@ -114,7 +114,7 @@ export function TrackerProjectTable({
               <TableHead>Priority</TableHead>
               <TableHead>Timeline</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead className="w-[50px]">Actions</TableHead>
+              <TableHead className="w-[150px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -160,36 +160,66 @@ export function TrackerProjectTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onViewDetails(project.id)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onEdit(project)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => onDelete(project.id)}
-                        className="text-red-600"
-                      >
-                        <Trash className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onViewDetails(project.id)}
+                      className="h-8 w-8 p-0"
+                      title="View Details"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEdit(project)}
+                      className="h-8 w-8 p-0"
+                      title="Edit Project"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDelete(project.id)}
+                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                      title="Delete Project"
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">More options</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => onEdit(project)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onDelete(project.id)}
+                          className="text-red-600"
+                        >
+                          <Trash className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onViewDetails(project.id)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          Details
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-        
+
         {/* Projects Pagination */}
         {totalPages > 1 && setCurrentPage && (
           <div className="flex justify-center items-center gap-2 mt-6">
@@ -201,7 +231,7 @@ export function TrackerProjectTable({
             >
               Previous
             </Button>
-            
+
             {/* Page Numbers */}
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -215,7 +245,7 @@ export function TrackerProjectTable({
                 } else {
                   pageNum = currentPage - 2 + i;
                 }
-                
+
                 return (
                   <Button
                     key={pageNum}
@@ -229,7 +259,7 @@ export function TrackerProjectTable({
                 );
               })}
             </div>
-            
+
             <span className="text-sm text-gray-600 mx-2">
               Page {currentPage} of {totalPages}
             </span>
