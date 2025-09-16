@@ -13,6 +13,25 @@ import { apiRequest } from '@/lib/queryClient';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 
+// Status Badge Component (assuming this exists and is imported or defined elsewhere)
+const StatusBadge = ({ status }: { status: string }) => {
+  let colorClass = '';
+  switch (status) {
+    case 'In Progress':
+      colorClass = 'bg-yellow-100 text-yellow-800';
+      break;
+    case 'Completed':
+      colorClass = 'bg-green-100 text-green-800';
+      break;
+    case 'Blocked':
+      colorClass = 'bg-red-100 text-red-800';
+      break;
+    default:
+      colorClass = 'bg-gray-100 text-gray-800';
+  }
+  return <Badge className={colorClass}>{status}</Badge>;
+};
+
 interface WorkLogsListProps {
   projectId?: number;
   featureId?: number;
@@ -25,6 +44,8 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
   const [statusFilter, setStatusFilter] = useState('all');
   const [workTypeFilter, setWorkTypeFilter] = useState('all');
   const [featureFilter, setFeatureFilter] = useState('all');
+  const [subFeatureFilter, setSubFeatureFilter] = useState('all');
+  const [employeeFilter, setEmployeeFilter] = useState('all');
   const [dateRange, setDateRange] = useState<{ start?: string; end?: string }>({});
   const [selectedWorkLog, setSelectedWorkLog] = useState<any>(null);
   const [showViewDialog, setShowViewDialog] = useState(false);
@@ -37,12 +58,14 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
 
   // Fetch work logs
   const { data: workLogs, isLoading } = useQuery({
-    queryKey: ['/api/tracker/work-logs', { projectId, featureId, subFeatureId }],
+    queryKey: ['/api/tracker/work-logs', { projectId, featureId, subFeatureId, subFeatureFilter, employeeFilter }],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (projectId) params.append('projectId', projectId.toString());
       if (featureId) params.append('featureId', featureId.toString());
       if (subFeatureId) params.append('subFeatureId', subFeatureId.toString());
+      if (subFeatureFilter !== 'all') params.append('subFeatureId', subFeatureFilter);
+      if (employeeFilter !== 'all') params.append('assignedEmployeeId', employeeFilter);
 
       const response = await apiRequest('GET', `/api/tracker/work-logs?${params}`);
       if (!response.ok) throw new Error('Failed to fetch work logs');
@@ -50,7 +73,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
     },
   });
 
-  // Fetch sub-features for context
+  // Fetch sub-features for context and filtering
   const { data: subFeatures } = useQuery({
     queryKey: ['/api/tracker/sub-features', projectId],
     queryFn: async () => {
@@ -68,6 +91,16 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
       if (!projectId) return [];
       const response = await apiRequest('GET', `/api/tracker/features?projectId=${projectId}`);
       if (!response.ok) throw new Error('Failed to fetch features');
+      return response.json();
+    },
+  });
+
+  // Fetch employees for filtering
+  const { data: employeesData } = useQuery({
+    queryKey: ['/api/employees'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/employees`);
+      if (!response.ok) throw new Error('Failed to fetch employees');
       return response.json();
     },
   });
@@ -120,23 +153,37 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
     },
   });
 
-  const getSubFeatureName = (subFeatureId: number) => {
+  // Function to get sub-feature name
+  const getSubFeatureName = (subFeatureId: number | undefined) => {
+    if (!subFeatureId) return 'N/A';
     return subFeatures?.find(sf => sf.id === subFeatureId)?.name || 'Unknown';
   };
 
-  const getFeatureName = (featureId: number) => {
+  // Function to get feature name
+  const getFeatureName = (featureId: number | undefined) => {
+    if (!featureId) return 'N/A';
     return features?.find(f => f.id === featureId)?.name || 'Unknown';
+  };
+
+  // Function to get employee name
+  const getEmployeeName = (employeeId: number | undefined) => {
+    if (!employeeId) return 'Unassigned';
+    const employee = employeesData?.find((emp: any) => emp.id === employeeId);
+    return employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown';
   };
 
   const filteredWorkLogs = workLogs?.filter((log: any) => {
     const matchesSearch = searchTerm === '' ||
                           log.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           getSubFeatureName(log.subFeatureId).toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          getFeatureName(log.featureId).toLowerCase().includes(searchTerm.toLowerCase());
+                          getFeatureName(log.featureId).toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          getEmployeeName(log.assignedEmployeeId).toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || log.status === statusFilter;
     const matchesWorkType = workTypeFilter === 'all' || log.workType === workTypeFilter;
     const matchesFeature = featureFilter === 'all' || log.featureId?.toString() === featureFilter;
-    return matchesSearch && matchesStatus && matchesWorkType && matchesFeature;
+    const matchesSubFeature = subFeatureFilter === 'all' || log.subFeatureId?.toString() === subFeatureFilter;
+    const matchesEmployee = employeeFilter === 'all' || log.assignedEmployeeId?.toString() === employeeFilter;
+    return matchesSearch && matchesStatus && matchesWorkType && matchesFeature && matchesSubFeature && matchesEmployee;
   }) || [];
 
   const totalHours = filteredWorkLogs.reduce((sum: number, log: any) => sum + (log.hoursWorked || 0), 0);
@@ -180,8 +227,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
 
   // Highlight search terms
   const highlightText = (text: string, highlight: string) => {
-    if (!highlight) return text;
-
+    if (!highlight || !text) return text;
     const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
     return parts.map((part, index) =>
       part.toLowerCase() === highlight.toLowerCase() ?
@@ -231,11 +277,11 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div className="relative">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div className="relative col-span-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search work logs..."
+                placeholder="Search logs, features, sub-features, employees..."
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -253,6 +299,32 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                 {features?.map((feature: any) => (
                   <SelectItem key={feature.id} value={feature.id.toString()}>
                     {feature.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={subFeatureFilter} onValueChange={setSubFeatureFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by sub-feature" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sub-Features</SelectItem>
+                {subFeatures?.map((subFeature: any) => (
+                  <SelectItem key={subFeature.id} value={subFeature.id.toString()}>
+                    {subFeature.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by employee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Employees</SelectItem>
+                {employeesData?.map((employee: any) => (
+                  <SelectItem key={employee.id} value={employee.id.toString()}>
+                    {employee.firstName} {employee.lastName}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -309,6 +381,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                       'Hours Worked',
                       'Work Date',
                       'Status',
+                      'Assigned To',
                       'Description',
                       'Created Date'
                     ];
@@ -322,6 +395,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                       log.hoursWorked || 0,
                       new Date(log.workDate).toLocaleDateString(),
                       `"${log.status || 'N/A'}"`,
+                      `"${getEmployeeName(log.assignedEmployeeId).replace(/"/g, '""')}"`,
                       `"${(log.description || 'N/A').replace(/"/g, '""')}"`,
                       new Date(log.createdAt).toLocaleDateString()
                     ]);
@@ -443,6 +517,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                                 <th>Hours</th>
                                 <th>Date</th>
                                 <th>Status</th>
+                                <th>Assigned To</th>
                                 <th>Description</th>
                               </tr>
                             </thead>
@@ -456,6 +531,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                                   <td style="font-weight: bold;">${log.hoursWorked || 0}h</td>
                                   <td>${new Date(log.workDate).toLocaleDateString()}</td>
                                   <td><span class="status-badge ${log.status?.toLowerCase().replace(' ', '-') || ''}">${log.status || 'N/A'}</span></td>
+                                  <td>${getEmployeeName(log.assignedEmployeeId)}</td>
                                   <td>${(log.description || 'N/A').substring(0, 80)}${log.description && log.description.length > 80 ? '...' : ''}</td>
                                 </tr>
                               `).join('')}
@@ -547,14 +623,14 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                     </p>
 
                     {/* Metadata */}
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {log.hoursWorked}h worked
                       </div>
                       <div className="flex items-center gap-1">
                         <User className="h-3 w-3" />
-                        User #{log.userId}
+                        Assigned to: {getEmployeeName(log.assignedEmployeeId)}
                       </div>
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
@@ -692,6 +768,10 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                   </Badge>
                 </div>
                 <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Assigned To</h4>
+                  <p className="mt-1">{getEmployeeName(selectedWorkLog.assignedEmployeeId)}</p>
+                </div>
+                <div>
                   <h4 className="font-semibold text-sm text-muted-foreground">Created</h4>
                   <p className="mt-1">{format(new Date(selectedWorkLog.createdAt), 'MMM dd, yyyy HH:mm')}</p>
                 </div>
@@ -739,6 +819,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                     projectId: projectId,
                     subFeatureId: editingWorkLog.subFeatureId,
                     featureId: editingWorkLog.featureId,
+                    assignedEmployeeId: data.assignedEmployeeId || editingWorkLog.assignedEmployeeId,
                   }
                 });
               }}

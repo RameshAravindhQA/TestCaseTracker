@@ -72,6 +72,18 @@ interface TrackerReportsProps {
 }
 
 export function TrackerReports({ projectId, features = [], subFeatures = [] }: TrackerReportsProps) {
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(projectId || null);
+
+  // Fetch all projects for dropdown
+  const { data: projects } = useQuery({
+    queryKey: ['/api/tracker/projects'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/tracker/projects');
+      if (!response.ok) throw new Error('Failed to fetch projects');
+      return response.json();
+    },
+  });
+
   // Fetch employees data for showing assigned names
   const { data: employeesData } = useQuery({
     queryKey: ['/api/employees'],
@@ -81,6 +93,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
       return response.json();
     },
   });
+  
   const [reportType, setReportType] = useState('summary');
   const [dateRange, setDateRange] = useState('all');
   const [selectedFeature, setSelectedFeature] = useState('all');
@@ -95,23 +108,50 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
   const [isGeneratingReport, setIsGeneratingReport] = useState(false); // State for loading indicator
   const [showSummaryReport, setShowSummaryReport] = useState(false); // State to show summary report
 
+  // Fetch project-specific data when project changes
+  const { data: projectFeatures } = useQuery({
+    queryKey: [`/api/tracker/features`, selectedProjectId],
+    queryFn: async () => {
+      if (!selectedProjectId) return [];
+      const response = await apiRequest('GET', `/api/tracker/features?projectId=${selectedProjectId}`);
+      if (!response.ok) throw new Error('Failed to fetch features');
+      return response.json();
+    },
+    enabled: !!selectedProjectId,
+  });
+
+  const { data: projectSubFeatures } = useQuery({
+    queryKey: [`/api/tracker/sub-features`, selectedProjectId],
+    queryFn: async () => {
+      if (!selectedProjectId) return [];
+      const response = await apiRequest('GET', `/api/tracker/sub-features?projectId=${selectedProjectId}`);
+      if (!response.ok) throw new Error('Failed to fetch sub-features');
+      return response.json();
+    },
+    enabled: !!selectedProjectId,
+  });
+
+  // Use project-specific data or passed props
+  const currentFeatures = selectedProjectId ? (projectFeatures || []) : features;
+  const currentSubFeatures = selectedProjectId ? (projectSubFeatures || []) : subFeatures;
+
   // Fetch project details
   const { data: project } = useQuery({
-    queryKey: [`/api/tracker/projects/${projectId}`],
+    queryKey: [`/api/tracker/projects/${selectedProjectId}`],
     queryFn: async () => {
-      if (!projectId) return null;
-      const response = await apiRequest('GET', `/api/tracker/projects/${projectId}`);
+      if (!selectedProjectId) return null;
+      const response = await apiRequest('GET', `/api/tracker/projects/${selectedProjectId}`);
       if (!response.ok) throw new Error('Failed to fetch project');
       return response.json();
     },
-    enabled: !!projectId,
+    enabled: !!selectedProjectId,
   });
 
   // Fetch work logs for reports
   const { data: workLogsData } = useQuery({
-    queryKey: [`/api/tracker/work-logs`, projectId],
+    queryKey: [`/api/tracker/work-logs`, selectedProjectId],
     queryFn: async () => {
-      const response = await apiRequest('GET', `/api/tracker/work-logs?projectId=${projectId || ''}`);
+      const response = await apiRequest('GET', `/api/tracker/work-logs?projectId=${selectedProjectId || ''}`);
       if (!response.ok) throw new Error('Failed to fetch work logs');
       return response.json();
     },
@@ -163,7 +203,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
   // Apply all filters to get filtered data
   const getFilteredData = () => {
-    let filteredSFs = [...subFeatures];
+    let filteredSFs = [...currentSubFeatures];
     let filteredWLs = workLogs || [];
 
     // Feature filter
@@ -268,14 +308,14 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
   // Get filtered sub-features based on selected feature for the dropdown
   const filteredSubFeaturesForDropdown = selectedFeature === 'all' 
-    ? subFeatures 
-    : subFeatures.filter(sf => sf.featureId.toString() === selectedFeature);
+    ? currentSubFeatures 
+    : currentSubFeatures.filter(sf => sf.featureId.toString() === selectedFeature);
 
   // Group data by features for structured reports
   const getGroupedData = () => {
     const grouped = {};
 
-    features.forEach(feature => {
+    currentFeatures.forEach(feature => {
       const featureSubFeatures = filteredSubFeatures.filter(sf => sf.featureId === feature.id);
       const featureWorkLogs = filteredWorkLogs.filter(wl => 
         featureSubFeatures.some(sf => sf.id === wl.subFeatureId)
@@ -625,6 +665,50 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
       yPos = (doc as any).lastAutoTable.finalY + 20;
 
+      // Employee-wise Work Summary
+      if (yPos > 200) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text('Employee-wise Work Summary', 14, yPos);
+      yPos += 10;
+
+      const employeeSummaryData = _.chain(filteredWorkLogs)
+        .groupBy('assignedEmployeeId')
+        .map((logs, employeeId) => {
+          const employee = employeesData?.find((emp: any) => emp.id.toString() === employeeId);
+          const totalHours = logs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
+          const totalDays = totalHours / 8;
+          const avgHours = logs.length > 0 ? totalHours / logs.length : 0;
+          const workTypes = _.uniq(logs.map(log => log.workType).filter(Boolean)).join(', ');
+          
+          return [
+            employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown Employee',
+            employee?.department || 'N/A',
+            logs.length.toString(),
+            `${totalHours}h`,
+            `${totalDays.toFixed(2)}d`,
+            `${avgHours.toFixed(1)}h`,
+            workTypes || 'N/A'
+          ];
+        })
+        .orderBy(['3'], ['desc']) // Sort by total hours (index 3)
+        .value();
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Employee', 'Department', 'Total Logs', 'Total Hours', 'Total Days', 'Avg Hours/Log', 'Work Types']],
+        body: employeeSummaryData,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [34, 197, 94] },
+        margin: { left: 14 }
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 20;
+
       // Work Types & Effort Distribution
       if (yPos > 200) {
         doc.addPage();
@@ -764,23 +848,23 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
             <div className="space-y-2">
               <Label className="text-sm font-medium">Project:</Label>
               <Select 
-                value={projectId ? projectId.toString() : 'all'} 
+                value={selectedProjectId ? selectedProjectId.toString() : 'all'} 
                 onValueChange={(value) => {
-                  // Handle project selection change if needed, assuming projectId is passed down
-                  // For now, assuming projectId is fixed for this view or managed elsewhere.
-                  // If you need a project dropdown here, you'd fetch projects and use this select.
-                  console.log("Project selection changed:", value);
+                  const newProjectId = value === 'all' ? null : parseInt(value);
+                  setSelectedProjectId(newProjectId);
+                  // Reset other filters when project changes
+                  setSelectedFeature('all');
+                  setSelectedSubFeature('all');
                 }}
-                disabled // Disable if projectId is already set and we are filtering for a specific project
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Project" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Projects</SelectItem>
-                  {/* Assuming you have a way to get a list of projects */}
-                  {/* Example: {projects.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)} */}
-                  {project && <SelectItem key={project.id} value={project.id.toString()}>{project.name}</SelectItem>}
+                  {projects && projects.map(p => (
+                    <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -797,7 +881,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Features</SelectItem>
-                  {features.map((feature) => (
+                  {currentFeatures.map((feature) => (
                     <SelectItem key={feature.id} value={feature.id.toString()}>
                       {feature.name}
                     </SelectItem>
@@ -1212,6 +1296,101 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
           </Card>
         </div>
       )}
+
+      {/* Employee-wise Work Summary */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Employee-wise Work Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse border border-gray-200">
+              <thead>
+                <tr className="bg-gradient-to-r from-green-500 to-blue-600 text-white">
+                  <th className="border border-gray-200 px-4 py-3 text-left">Employee</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Department</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Total Work Logs</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Total Hours</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Total Days</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Avg Hours/Log</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Work Types</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Status Distribution</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const employeeSummary = _.chain(filteredWorkLogs)
+                    .groupBy('assignedEmployeeId')
+                    .map((logs, employeeId) => {
+                      const employee = employeesData?.find((emp: any) => emp.id.toString() === employeeId);
+                      const totalHours = logs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
+                      const totalDays = totalHours / 8;
+                      const avgHours = logs.length > 0 ? totalHours / logs.length : 0;
+                      const workTypes = _.uniq(logs.map(log => log.workType).filter(Boolean));
+                      const statusCounts = _.countBy(logs, 'status');
+                      
+                      return {
+                        employee: employee || { firstName: 'Unknown', lastName: 'Employee', department: 'N/A' },
+                        totalLogs: logs.length,
+                        totalHours,
+                        totalDays,
+                        avgHours,
+                        workTypes,
+                        statusCounts
+                      };
+                    })
+                    .orderBy(['totalHours'], ['desc'])
+                    .value();
+
+                  return employeeSummary.map((summary, index) => (
+                    <tr key={summary.employee.id || index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                      <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-blue-600">
+                        {summary.employee.firstName} {summary.employee.lastName}
+                      </td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm">
+                        <Badge variant="outline">{summary.employee.department || 'N/A'}</Badge>
+                      </td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm text-center font-bold">
+                        {summary.totalLogs}
+                      </td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm text-center font-bold text-green-600">
+                        {summary.totalHours}h
+                      </td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm text-center font-bold text-purple-600">
+                        {summary.totalDays.toFixed(2)}d
+                      </td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm text-center">
+                        {summary.avgHours.toFixed(1)}h
+                      </td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm">
+                        <div className="flex flex-wrap gap-1">
+                          {summary.workTypes.map(type => (
+                            <Badge key={type} variant="secondary" className="text-xs">
+                              {type}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm">
+                        <div className="flex flex-wrap gap-1">
+                          {Object.entries(summary.statusCounts).map(([status, count]) => (
+                            <Badge key={status} variant="outline" className="text-xs">
+                              {status}: {count}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ));
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Work Log Report Table */}
       <Card className="mt-6">

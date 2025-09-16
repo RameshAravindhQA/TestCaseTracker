@@ -54,6 +54,9 @@ export function TrackerWorkLogForm({
   onCancel,
   isLoading,
 }: TrackerWorkLogFormProps) {
+  const [employeeSearchQuery, setEmployeeSearchQuery] = React.useState('');
+  const [selectedDepartmentFilter, setSelectedDepartmentFilter] = React.useState('all');
+
   // Fetch employees data
   const { data: employees = [] } = useQuery({
     queryKey: ['/api/employees'],
@@ -63,6 +66,21 @@ export function TrackerWorkLogForm({
       return response.json();
     },
   });
+
+  // Filter employees based on search and department
+  const filteredEmployees = employees.filter((employee: any) => {
+    const matchesSearch = employeeSearchQuery === '' || 
+      `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(employeeSearchQuery.toLowerCase()) ||
+      employee.email.toLowerCase().includes(employeeSearchQuery.toLowerCase());
+    
+    const matchesDepartment = selectedDepartmentFilter === 'all' || 
+      employee.department === selectedDepartmentFilter;
+    
+    return matchesSearch && matchesDepartment;
+  });
+
+  // Get unique departments from employees
+  const availableDepartments = [...new Set(employees.map((emp: any) => emp.department).filter(Boolean))];
 
   const form = useForm<z.infer<typeof workLogSchema>>({
     resolver: zodResolver(workLogSchema),
@@ -232,39 +250,63 @@ export function TrackerWorkLogForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Assigned Employee</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                    defaultValue={field.value?.toString()}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select employee" />
+                  <div className="space-y-2">
+                    <Input
+                      placeholder="Search employees by name or email..."
+                      value={employeeSearchQuery}
+                      onChange={(e) => setEmployeeSearchQuery(e.target.value)}
+                      className="text-sm"
+                    />
+                    <Select value={selectedDepartmentFilter} onValueChange={setSelectedDepartmentFilter}>
+                      <SelectTrigger className="text-sm">
+                        <SelectValue placeholder="Filter by department" />
                       </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {employees.map((employee: any) => (
-                        <SelectItem key={employee.id} value={employee.id.toString()}>
-                          <div className="flex items-center gap-2">
-                            {employee.profilePicture ? (
-                              <img
-                                src={employee.profilePicture}
-                                alt={`${employee.firstName} ${employee.lastName}`}
-                                className="h-6 w-6 rounded-full object-cover"
-                              />
-                            ) : (
-                              <div className="h-6 w-6 rounded-full bg-gray-300 flex items-center justify-center text-xs">
-                                {employee.firstName?.[0]}{employee.lastName?.[0]}
-                              </div>
-                            )}
-                            <span>{employee.firstName} {employee.lastName}</span>
-                            {employee.department && (
-                              <span className="text-xs text-gray-500">({employee.department})</span>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      <SelectContent>
+                        <SelectItem value="all">All Departments</SelectItem>
+                        {availableDepartments.map((dept) => (
+                          <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      onValueChange={(value) => field.onChange(parseInt(value))}
+                      value={field.value?.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select employee" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {filteredEmployees.map((employee: any) => (
+                          <SelectItem key={employee.id} value={employee.id.toString()}>
+                            <div className="flex items-center gap-2">
+                              {employee.profilePicture ? (
+                                <img
+                                  src={employee.profilePicture}
+                                  alt={`${employee.firstName} ${employee.lastName}`}
+                                  className="h-6 w-6 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="h-6 w-6 rounded-full bg-gray-300 flex items-center justify-center text-xs">
+                                  {employee.firstName?.[0]}{employee.lastName?.[0]}
+                                </div>
+                              )}
+                              <span>{employee.firstName} {employee.lastName}</span>
+                              {employee.department && (
+                                <span className="text-xs text-gray-500">({employee.department})</span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                        {filteredEmployees.length === 0 && employeeSearchQuery && (
+                          <SelectItem value="" disabled>
+                            No employees found matching "{employeeSearchQuery}"
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

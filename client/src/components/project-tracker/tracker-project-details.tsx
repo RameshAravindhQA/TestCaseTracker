@@ -96,6 +96,17 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
     },
   });
 
+  // Fetch employees for dropdowns and assignment display
+  const { data: employeesData } = useQuery({
+    queryKey: ['/api/employees'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/employees');
+      if (!response.ok) throw new Error('Failed to fetch employees');
+      return response.json();
+    },
+    enabled: !!projectId // Only fetch if projectId is available
+  });
+
   // Create feature mutation
   const createFeatureMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -760,6 +771,22 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
                   <p className="mt-1">{selectedSubFeature.endDate || 'Not set'}</p>
                 </div>
               </div>
+              
+              {/* Added for displaying assigned employees */}
+              {selectedSubFeature.assignedEmployeeIds && selectedSubFeature.assignedEmployeeIds.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="font-semibold text-sm text-muted-foreground mb-2">Assigned Employees</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {employeesData?.filter((emp: any) => selectedSubFeature.assignedEmployeeIds.includes(emp.id))
+                      .map((emp: any) => (
+                        <Badge key={emp.id} variant="outline" className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {emp.firstName} {emp.lastName}
+                        </Badge>
+                      )) || <p className="text-sm text-muted-foreground">No employees assigned</p>}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

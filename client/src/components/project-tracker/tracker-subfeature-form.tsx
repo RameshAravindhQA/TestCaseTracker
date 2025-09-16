@@ -74,6 +74,8 @@ export function TrackerSubFeatureForm({
   const [tags, setTags] = useState<string[]>(subFeature?.tags || []);
   const [newTag, setNewTag] = useState('');
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>(subFeature?.assignedEmployeeIds || []);
+  const [employeeSearchQuery, setEmployeeSearchQuery] = useState('');
+  const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState('all');
 
   // Fetch employees data
   const { data: employees = [] } = useQuery({
@@ -84,6 +86,21 @@ export function TrackerSubFeatureForm({
       return response.json();
     },
   });
+
+  // Filter employees based on search and department
+  const filteredEmployees = employees.filter((employee: any) => {
+    const matchesSearch = employeeSearchQuery === '' || 
+      `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(employeeSearchQuery.toLowerCase()) ||
+      employee.email.toLowerCase().includes(employeeSearchQuery.toLowerCase());
+    
+    const matchesDepartment = selectedDepartmentFilter === 'all' || 
+      employee.department === selectedDepartmentFilter;
+    
+    return matchesSearch && matchesDepartment;
+  });
+
+  // Get unique departments from employees
+  const availableDepartments = [...new Set(employees.map((emp: any) => emp.department).filter(Boolean))];
 
   const form = useForm<SubFeatureFormData>({
     resolver: zodResolver(subFeatureSchema),
@@ -459,8 +476,29 @@ export function TrackerSubFeatureForm({
             </div>
           )}
 
+          {/* Employee Search and Filter */}
+          <div className="space-y-2">
+            <Input
+              placeholder="Search employees by name or email..."
+              value={employeeSearchQuery}
+              onChange={(e) => setEmployeeSearchQuery(e.target.value)}
+              className="text-sm"
+            />
+            <Select value={selectedDepartmentFilter} onValueChange={setSelectedDepartmentFilter}>
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="Filter by department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                {availableDepartments.map((dept) => (
+                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2">
-            {employees.map((employee: any) => (
+            {filteredEmployees.map((employee: any) => (
               <div key={employee.id} className="flex items-center space-x-2">
                 <Checkbox
                   id={`employee-${employee.id}`}
@@ -487,6 +525,11 @@ export function TrackerSubFeatureForm({
                 )}
               </div>
             ))}
+            {filteredEmployees.length === 0 && employeeSearchQuery && (
+              <p className="text-sm text-gray-500 text-center py-4">
+                No employees found matching "{employeeSearchQuery}"
+              </p>
+            )}
             {employees.length === 0 && (
               <p className="text-sm text-gray-500 text-center py-4">
                 No employees available. Add employees in the Employee Management module.
