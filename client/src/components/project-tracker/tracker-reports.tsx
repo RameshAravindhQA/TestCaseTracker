@@ -1345,7 +1345,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                   <div>
                     <h4 className="font-semibold text-gray-700 mb-3">📋 Immediate Actions</h4>
                     <ul className="list-disc list-inside text-gray-600 space-y-2">
-                      <li>Schedule review meetings for features with < 50% completion</li>
+                      <li>Schedule review meetings for features with &lt; 50% completion</li>
                       <li>Update estimated hours for tasks with significant time variance</li>
                       <li>Create detailed timeline for remaining {subFeatures?.filter(sf => !['Completed', 'Cancelled'].includes(sf.status)).length || 0} tasks</li>
                       <li>Document lessons learned from completed features</li>
