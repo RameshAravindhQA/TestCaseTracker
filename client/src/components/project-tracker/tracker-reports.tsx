@@ -1266,18 +1266,10 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                       <td className="border border-gray-200 px-4 py-2 text-sm max-w-xs truncate">{wl.description}</td>
                     </tr>
                   );
-                })}</td>
-                  )}
-                  {filteredWorkLogs.length === 0 && (
-                    <tr>
-                      <td colSpan={10} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
-                        No work logs found matching the current filters
-                      </td>
-                    </tr>
-                  )}
+                })}
                 {filteredWorkLogs.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                    <td colSpan={10} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
                       No work logs found matching the current filters
                     </td>
                   </tr>
