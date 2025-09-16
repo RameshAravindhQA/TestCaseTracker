@@ -156,7 +156,9 @@ export default function ProjectTrackerPage() {
   };
 
   const handleDeleteProject = (id: number) => {
-    deleteProjectMutation.mutate(id);
+    if (confirm('Are you sure you want to delete this project?')) {
+      deleteProjectMutation.mutate(id);
+    }
   };
 
   const handleEditProject = (project: TrackerProject) => {

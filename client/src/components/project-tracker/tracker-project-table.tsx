@@ -182,11 +182,7 @@ export function TrackerProjectTable({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        if (window.confirm('Are you sure you want to delete this project?')) {
-                          onDelete(project.id);
-                        }
-                      }}
+                      onClick={() => onDelete(project.id)}
                       className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
                       title="Delete Project"
                     >
@@ -205,11 +201,7 @@ export function TrackerProjectTable({
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => {
-                            if (window.confirm('Are you sure you want to delete this project?')) {
-                              onDelete(project.id);
-                            }
-                          }}
+                          onClick={() => onDelete(project.id)}
                           className="text-red-600"
                         >
                           <Trash className="h-4 w-4 mr-2" />
@@ -217,7 +209,7 @@ export function TrackerProjectTable({
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => onViewDetails(project.id)}>
                           <Eye className="h-4 w-4 mr-2" />
-                          View Details
+                          Details
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
