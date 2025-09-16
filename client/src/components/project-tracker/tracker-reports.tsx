@@ -1029,7 +1029,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                         const totalHours = featureWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
                         const completedSubFeatures = featureSubFeatures.filter(sf => sf.status === 'Completed').length;
                         const progress = featureSubFeatures.length > 0 ? Math.round((completedSubFeatures / featureSubFeatures.length) * 100) : 0;
-                        
+
                         return (
                           <tr key={feature.id} className={index % 2 === 0 ? 'bg-gray-50 hover:bg-gray-100' : 'bg-white hover:bg-gray-50'}>
                             <td className="border border-gray-300 px-6 py-4">
@@ -1080,7 +1080,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                 <h3 className="text-2xl font-bold mb-6 text-gray-800 border-b-2 border-purple-500 pb-2">
                   📋 Sub-Features Detailed Analysis ({subFeatures?.length || 0} Total)
                 </h3>
-                
+
                 {/* Sub-Features by Department */}
                 <div className="mb-8">
                   <h4 className="text-xl font-semibold mb-4 text-purple-700">🏢 Department-wise Distribution</h4>
@@ -1109,7 +1109,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                             const deptWorkLogs = filteredWorkLogs.filter(wl => items.some(item => item.id === wl.subFeatureId));
                             const totalHours = deptWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
                             const avgHours = items.length > 0 ? Math.round((totalHours / items.length) * 10) / 10 : 0;
-                            
+
                             return {
                               department: department || 'Unassigned',
                               total: items.length,
@@ -1121,6 +1121,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                               avgHours
                             };
                           })
+                          .orderBy(['total'], ['desc'])
                           .value()
                           .map((dept, index) => (
                             <tr key={dept.department} className={index % 2 === 0 ? 'bg-gray-50 hover:bg-gray-100' : 'bg-white hover:bg-gray-50'}>
@@ -1180,7 +1181,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                               items.some(item => item.id === wl.subFeatureId)
                             );
                             const totalHours = statusWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
-                            const avgHours = items.length > 0 ? Math.round((totalHours / items.length) * 10) / 10 : 0;
+                            const avgHours = statusWorkLogs.length > 0 ? Math.round((totalHours / statusWorkLogs.length) * 10) / 10 : 0;
                             const workingDays = Math.round(totalHours / 8 * 10) / 10;
                             const percentage = (subFeatures?.length || 0) > 0 ? Math.round((items.length / (subFeatures?.length || 1)) * 100) : 0;
                             return {
@@ -1193,26 +1194,28 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                               percentage
                             };
                           })
+                          .filter(item => item.subFeatures > 0 || item.workLogs > 0)
+                          .orderBy(['subFeatures'], ['desc'])
                           .value()
-                          .map((statusItem, index) => (
-                            <tr key={statusItem.status} className={index % 2 === 0 ? 'bg-gray-50 hover:bg-gray-100' : 'bg-white hover:bg-gray-50'}>
+                          .map((statusData, index) => (
+                            <tr key={statusData.status} className={index % 2 === 0 ? 'bg-gray-50 hover:bg-gray-100' : 'bg-white hover:bg-gray-50'}>
                               <td className="border border-gray-300 px-6 py-4">
-                                <StatusBadge status={statusItem.status} />
+                                <StatusBadge status={statusData.status} />
                               </td>
-                              <td className="border border-gray-300 px-6 py-4 text-center font-bold text-lg">{statusItem.count}</td>
-                              <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{statusItem.workLogs}</td>
-                              <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{statusItem.hours}h</td>
-                              <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{statusItem.avgHours}h</td>
-                              <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{statusItem.workingDays} days</td>
+                              <td className="border border-gray-300 px-6 py-4 text-center font-bold text-lg">{statusData.count}</td>
+                              <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{statusData.workLogs}</td>
+                              <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{statusData.hours}h</td>
+                              <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{statusData.avgHours}h</td>
+                              <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{statusData.workingDays} days</td>
                               <td className="border border-gray-300 px-6 py-4 text-center">
                                 <div className="flex items-center gap-2">
                                   <div className="flex-1 bg-gray-200 rounded-full h-3">
                                     <div 
                                       className="bg-purple-500 h-3 rounded-full transition-all duration-300" 
-                                      style={{ width: `${statusItem.percentage}%` }}
+                                      style={{ width: `${statusData.percentage}%` }}
                                     ></div>
                                   </div>
-                                  <span className="text-sm font-bold">{statusItem.percentage}%</span>
+                                  <span className="text-sm font-bold">{statusData.percentage}%</span>
                                 </div>
                               </td>
                             </tr>
@@ -1250,7 +1253,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                           const workingDays = Math.round(totalHours / 8 * 10) / 10;
                           const totalProjectHours = filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
                           const percentage = totalProjectHours > 0 ? Math.round((totalHours / totalProjectHours) * 100) : 0;
-                          
+
                           return {
                             workType: workType || 'Unspecified',
                             count: logs.length,
