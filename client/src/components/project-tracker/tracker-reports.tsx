@@ -281,11 +281,12 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
     Object.values(groupedData).forEach((group: any) => {
       csvData.push([`FEATURE: ${group.feature.name}`]);
-      csvData.push(['Sub-Feature', 'Department', 'Status', 'Work Type', 'Estimated Hours', 'Total Work Hours', 'Start Date', 'End Date']);
+      csvData.push(['Sub-Feature', 'Department', 'Status', 'Work Type', 'Estimated Hours', 'Estimated Days', 'Actual Hours', 'Actual Days']);
 
       group.subFeatures.forEach(sf => {
         const subFeatureWorkLogs = group.workLogs.filter(wl => wl.subFeatureId === sf.id);
         const totalHours = subFeatureWorkLogs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
+        const totalDays = totalHours / 8; // Assuming 8 hours per day
 
         csvData.push([
           sf.name,
@@ -293,9 +294,9 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
           sf.status,
           sf.workType,
           sf.estimatedHours || 0,
+          (sf.estimatedHours ? sf.estimatedHours / 8 : 0).toFixed(2), // Convert estimated hours to days
           totalHours,
-          sf.startDate || '',
-          sf.endDate || ''
+          totalDays.toFixed(2) // Display actual days
         ]);
       });
 
@@ -366,6 +367,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
       const totalHours = filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
       const totalLogs = filteredWorkLogs.length;
       const totalSubFeatures = filteredSubFeatures.length;
+      const totalDays = totalHours / 8; // Assuming 8 hours per day
 
       doc.setFontSize(14);
       doc.text('Summary Statistics', 14, yPosition);
@@ -374,7 +376,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
       doc.setFontSize(10);
       doc.text(`Total Sub-Features: ${totalSubFeatures}`, 14, yPosition);
       doc.text(`Total Work Logs: ${totalLogs}`, 14, yPosition + 5);
-      doc.text(`Total Hours Logged: ${totalHours}h`, 14, yPosition + 10);
+      doc.text(`Total Hours Logged: ${totalHours}h (${totalDays.toFixed(2)} days)`, 14, yPosition + 10);
       yPosition += 25;
 
       // Feature-wise detailed report
@@ -394,6 +396,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
           const subFeatureTableData = group.subFeatures.map(sf => {
             const subFeatureWorkLogs = group.workLogs.filter(wl => wl.subFeatureId === sf.id);
             const totalHours = subFeatureWorkLogs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
+            const totalDays = totalHours / 8; // Assuming 8 hours per day
 
             return [
               sf.name,
@@ -401,13 +404,15 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
               sf.status,
               sf.workType,
               `${sf.estimatedHours || 0}h`,
-              `${totalHours}h`
+              `${(sf.estimatedHours ? sf.estimatedHours / 8 : 0).toFixed(2)}d`, // Convert estimated hours to days
+              `${totalHours}h`,
+              `${totalDays.toFixed(2)}d` // Display actual days
             ];
           });
 
           autoTable(doc, {
             startY: yPosition,
-            head: [['Sub-Feature', 'Department', 'Status', 'Work Type', 'Estimated', 'Actual']],
+            head: [['Sub-Feature', 'Department', 'Status', 'Work Type', 'Est. Hours', 'Est. Days', 'Actual Hours', 'Actual Days']],
             body: subFeatureTableData,
             styles: { fontSize: 8 },
             headStyles: { fillColor: [41, 128, 185] },
@@ -757,13 +762,16 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                         <th className="border border-gray-200 px-4 py-2 text-left">Status</th>
                         <th className="border border-gray-200 px-4 py-2 text-left">Work Type</th>
                         <th className="border border-gray-200 px-4 py-2 text-left">Est. Hours</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left">Est. Days</th>
                         <th className="border border-gray-200 px-4 py-2 text-left">Actual Hours</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left">Actual Days</th>
                       </tr>
                     </thead>
                     <tbody>
                       {group.subFeatures.map((sf) => {
                         const subFeatureWorkLogs = group.workLogs.filter(wl => wl.subFeatureId === sf.id);
                         const totalHours = subFeatureWorkLogs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
+                        const totalDays = totalHours / 8; // Assuming 8 hours per day
 
                         return (
                           <tr key={sf.id}>
@@ -776,7 +784,9 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                               <StatusBadge status={sf.workType} />
                             </td>
                             <td className="border border-gray-200 px-4 py-2">{sf.estimatedHours || 0}h</td>
+                            <td className="border border-gray-200 px-4 py-2">{(sf.estimatedHours ? sf.estimatedHours / 8 : 0).toFixed(2)}d</td>
                             <td className="border border-gray-200 px-4 py-2">{totalHours}h</td>
+                            <td className="border border-gray-200 px-4 py-2">{totalDays.toFixed(2)}d</td>
                           </tr>
                         );
                       })}
