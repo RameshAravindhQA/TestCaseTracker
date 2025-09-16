@@ -485,6 +485,115 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
       yPos = (doc as any).lastAutoTable.finalY + 20;
 
+      // Detailed Work Log Report
+      if (yPos > 200) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text('Detailed Work Log Report', 14, yPos);
+      yPos += 10;
+
+      const workLogTableData = filteredWorkLogs.map(wl => {
+        const subFeature = filteredSubFeatures.find(sf => sf.id === wl.subFeatureId);
+        const feature = features.find(f => f.id === subFeature?.featureId);
+        const days = ((wl.hoursWorked || 0) / 8).toFixed(2);
+        
+        return [
+          `#${wl.id}`,
+          wl.workDate,
+          feature?.name || 'N/A',
+          subFeature?.name || 'N/A',
+          wl.workType || 'N/A',
+          `${wl.hoursWorked || 0}h`,
+          `${days}d`,
+          wl.status || 'N/A',
+          (wl.description || '').substring(0, 30) + '...'
+        ];
+      });
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Log ID', 'Date', 'Feature', 'Sub-Feature', 'Work Type', 'Hours', 'Days', 'Status', 'Description']],
+        body: workLogTableData,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [59, 130, 246] },
+        margin: { left: 14 }
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 20;
+
+      // Numerical Summary Table
+      if (yPos > 200) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text('Numerical Summary - Actual vs Estimated Analysis', 14, yPos);
+      yPos += 10;
+
+      const numericalSummaryData = [];
+      let totalEstHours = 0;
+      let totalActualHours = 0;
+
+      features.forEach(feature => {
+        const featureSubFeatures = filteredSubFeatures.filter(sf => sf.featureId === feature.id);
+        
+        featureSubFeatures.forEach(subFeature => {
+          const subFeatureWorkLogs = filteredWorkLogs.filter(wl => wl.subFeatureId === subFeature.id);
+          const actualHours = subFeatureWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+          const estimatedHours = subFeature.estimatedHours || 0;
+          const hourVariance = actualHours - estimatedHours;
+          const variancePercent = estimatedHours > 0 ? Math.round((hourVariance / estimatedHours) * 100) : 0;
+
+          totalEstHours += estimatedHours;
+          totalActualHours += actualHours;
+
+          numericalSummaryData.push([
+            project?.name || 'Current Project',
+            feature.name,
+            subFeature.name,
+            `${estimatedHours}h`,
+            `${(estimatedHours / 8).toFixed(2)}d`,
+            `${actualHours}h`,
+            `${(actualHours / 8).toFixed(2)}d`,
+            `${hourVariance > 0 ? '+' : ''}${hourVariance}h`,
+            `${variancePercent > 0 ? '+' : ''}${variancePercent}%`
+          ]);
+        });
+      });
+
+      // Add total row
+      const totalHourVariance = totalActualHours - totalEstHours;
+      const totalVariancePercent = totalEstHours > 0 ? Math.round((totalHourVariance / totalEstHours) * 100) : 0;
+      
+      numericalSummaryData.push([
+        'TOTAL SUMMARY',
+        `${features.length} Features`,
+        `${filteredSubFeatures.length} Sub-Features`,
+        `${totalEstHours}h`,
+        `${(totalEstHours / 8).toFixed(2)}d`,
+        `${totalActualHours}h`,
+        `${(totalActualHours / 8).toFixed(2)}d`,
+        `${totalHourVariance > 0 ? '+' : ''}${totalHourVariance}h`,
+        `${totalVariancePercent > 0 ? '+' : ''}${totalVariancePercent}%`
+      ]);
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Project', 'Feature', 'Sub-Feature', 'Est. Hours', 'Est. Days', 'Actual Hours', 'Actual Days', 'Hour Variance', 'Variance %']],
+        body: numericalSummaryData,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [34, 197, 94] },
+        margin: { left: 14 }
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 20;
+
       // Work Types & Effort Distribution
       if (yPos > 200) {
         doc.addPage();
@@ -1029,6 +1138,262 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
           </Card>
         </div>
       )}
+
+      {/* Work Log Report Table */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Detailed Work Log Report
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse border border-gray-200">
+              <thead>
+                <tr className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+                  <th className="border border-gray-200 px-4 py-3 text-left">Log ID</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Date</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Feature</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Sub-Feature</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Work Type</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Hours</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Days</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Status</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredWorkLogs.map((wl, index) => {
+                  const subFeature = filteredSubFeatures.find(sf => sf.id === wl.subFeatureId);
+                  const feature = features.find(f => f.id === subFeature?.featureId);
+                  const days = (wl.hoursWorked || 0) / 8;
+                  
+                  return (
+                    <tr key={wl.id} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                      <td className="border border-gray-200 px-4 py-2 font-mono text-sm">#{wl.id}</td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm">{wl.workDate}</td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm font-medium">{feature?.name || 'N/A'}</td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm">{subFeature?.name || 'N/A'}</td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm">
+                        <StatusBadge status={wl.workType} />
+                      </td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm font-bold text-blue-600">{wl.hoursWorked || 0}h</td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm font-bold text-green-600">{days.toFixed(2)}d</td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm">
+                        <StatusBadge status={wl.status} />
+                      </td>
+                      <td className="border border-gray-200 px-4 py-2 text-sm max-w-xs truncate">{wl.description}</td>
+                    </tr>
+                  );
+                })}
+                {filteredWorkLogs.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                      No work logs found matching the current filters
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Work Log Summary */}
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+              <h4 className="font-semibold text-blue-800">Total Work Logs</h4>
+              <p className="text-2xl font-bold text-blue-600">{filteredWorkLogs.length}</p>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+              <h4 className="font-semibold text-green-800">Total Hours</h4>
+              <p className="text-2xl font-bold text-green-600">
+                {filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0)}h
+              </p>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-lg border-l-4 border-purple-500">
+              <h4 className="font-semibold text-purple-800">Total Days</h4>
+              <p className="text-2xl font-bold text-purple-600">
+                {Math.round((filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0) / 8) * 100) / 100}d
+              </p>
+            </div>
+            <div className="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500">
+              <h4 className="font-semibold text-orange-800">Avg Hours/Log</h4>
+              <p className="text-2xl font-bold text-orange-600">
+                {filteredWorkLogs.length > 0 ? 
+                  Math.round((filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0) / filteredWorkLogs.length) * 10) / 10 
+                  : 0}h
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Numerical Summary Table */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart className="h-5 w-5" />
+            Numerical Summary - Actual vs Estimated Analysis
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse border border-gray-200">
+              <thead>
+                <tr className="bg-gradient-to-r from-green-500 to-blue-600 text-white">
+                  <th className="border border-gray-200 px-4 py-3 text-left">Project</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Feature</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Sub-Feature</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Est. Hours</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Est. Days</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Actual Hours</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Actual Days</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Hour Variance</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Day Variance</th>
+                  <th className="border border-gray-200 px-4 py-3 text-left">Variance %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const rows = [];
+                  let totalEstHours = 0;
+                  let totalActualHours = 0;
+
+                  features.forEach(feature => {
+                    const featureSubFeatures = filteredSubFeatures.filter(sf => sf.featureId === feature.id);
+                    
+                    featureSubFeatures.forEach((subFeature, index) => {
+                      const subFeatureWorkLogs = filteredWorkLogs.filter(wl => wl.subFeatureId === subFeature.id);
+                      const actualHours = subFeatureWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+                      const estimatedHours = subFeature.estimatedHours || 0;
+                      const actualDays = actualHours / 8;
+                      const estimatedDays = estimatedHours / 8;
+                      const hourVariance = actualHours - estimatedHours;
+                      const dayVariance = actualDays - estimatedDays;
+                      const variancePercent = estimatedHours > 0 ? Math.round((hourVariance / estimatedHours) * 100) : 0;
+
+                      totalEstHours += estimatedHours;
+                      totalActualHours += actualHours;
+
+                      const varianceColor = hourVariance > 0 ? 'text-red-600' : hourVariance < 0 ? 'text-green-600' : 'text-gray-600';
+                      const bgColor = index % 2 === 0 ? 'bg-gray-50' : 'bg-white';
+
+                      rows.push(
+                        <tr key={`${feature.id}-${subFeature.id}`} className={bgColor}>
+                          <td className="border border-gray-200 px-4 py-2 text-sm font-medium text-blue-600">
+                            {project?.name || 'Current Project'}
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-sm font-medium">
+                            {feature.name}
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-sm">
+                            {subFeature.name}
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-sm font-bold text-blue-600">
+                            {estimatedHours}h
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-sm text-blue-600">
+                            {estimatedDays.toFixed(2)}d
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-sm font-bold text-green-600">
+                            {actualHours}h
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-sm text-green-600">
+                            {actualDays.toFixed(2)}d
+                          </td>
+                          <td className={`border border-gray-200 px-4 py-2 text-sm font-bold ${varianceColor}`}>
+                            {hourVariance > 0 ? '+' : ''}{hourVariance}h
+                          </td>
+                          <td className={`border border-gray-200 px-4 py-2 text-sm ${varianceColor}`}>
+                            {dayVariance > 0 ? '+' : ''}{dayVariance.toFixed(2)}d
+                          </td>
+                          <td className={`border border-gray-200 px-4 py-2 text-sm font-bold ${varianceColor}`}>
+                            {variancePercent > 0 ? '+' : ''}{variancePercent}%
+                          </td>
+                        </tr>
+                      );
+                    });
+                  });
+
+                  // Add total summary row
+                  const totalHourVariance = totalActualHours - totalEstHours;
+                  const totalDayVariance = (totalActualHours - totalEstHours) / 8;
+                  const totalVariancePercent = totalEstHours > 0 ? Math.round((totalHourVariance / totalEstHours) * 100) : 0;
+                  const totalVarianceColor = totalHourVariance > 0 ? 'text-red-600' : totalHourVariance < 0 ? 'text-green-600' : 'text-gray-600';
+
+                  rows.push(
+                    <tr key="total-summary" className="bg-gradient-to-r from-indigo-100 to-purple-100 font-bold border-2 border-indigo-500">
+                      <td className="border border-gray-200 px-4 py-3 text-sm font-bold text-indigo-800">TOTAL SUMMARY</td>
+                      <td className="border border-gray-200 px-4 py-3 text-sm text-indigo-700">{features.length} Features</td>
+                      <td className="border border-gray-200 px-4 py-3 text-sm text-indigo-700">{filteredSubFeatures.length} Sub-Features</td>
+                      <td className="border border-gray-200 px-4 py-3 text-sm font-bold text-blue-700">{totalEstHours}h</td>
+                      <td className="border border-gray-200 px-4 py-3 text-sm text-blue-700">{(totalEstHours / 8).toFixed(2)}d</td>
+                      <td className="border border-gray-200 px-4 py-3 text-sm font-bold text-green-700">{totalActualHours}h</td>
+                      <td className="border border-gray-200 px-4 py-3 text-sm text-green-700">{(totalActualHours / 8).toFixed(2)}d</td>
+                      <td className={`border border-gray-200 px-4 py-3 text-sm font-bold ${totalVarianceColor}`}>
+                        {totalHourVariance > 0 ? '+' : ''}{totalHourVariance}h
+                      </td>
+                      <td className={`border border-gray-200 px-4 py-3 text-sm ${totalVarianceColor}`}>
+                        {totalDayVariance > 0 ? '+' : ''}{totalDayVariance.toFixed(2)}d
+                      </td>
+                      <td className={`border border-gray-200 px-4 py-3 text-sm font-bold ${totalVarianceColor}`}>
+                        {totalVariancePercent > 0 ? '+' : ''}{totalVariancePercent}%
+                      </td>
+                    </tr>
+                  );
+
+                  return rows;
+                })()}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Variance Analysis Summary */}
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-red-50 p-4 rounded-lg border-l-4 border-red-500">
+              <h4 className="font-semibold text-red-800 mb-2">Over-Estimated Tasks</h4>
+              <p className="text-sm text-red-600 mb-2">
+                Tasks that took more time than estimated
+              </p>
+              <div className="text-lg font-bold text-red-700">
+                {filteredSubFeatures.filter(sf => {
+                  const logs = filteredWorkLogs.filter(wl => wl.subFeatureId === sf.id);
+                  const actual = logs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+                  return actual > (sf.estimatedHours || 0);
+                }).length} tasks
+              </div>
+            </div>
+            
+            <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+              <h4 className="font-semibold text-green-800 mb-2">Under-Estimated Tasks</h4>
+              <p className="text-sm text-green-600 mb-2">
+                Tasks that took less time than estimated
+              </p>
+              <div className="text-lg font-bold text-green-700">
+                {filteredSubFeatures.filter(sf => {
+                  const logs = filteredWorkLogs.filter(wl => wl.subFeatureId === sf.id);
+                  const actual = logs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+                  return actual < (sf.estimatedHours || 0);
+                }).length} tasks
+              </div>
+            </div>
+            
+            <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+              <h4 className="font-semibold text-blue-800 mb-2">Accurate Estimates</h4>
+              <p className="text-sm text-blue-600 mb-2">
+                Tasks that matched time estimates
+              </p>
+              <div className="text-lg font-bold text-blue-700">
+                {filteredSubFeatures.filter(sf => {
+                  const logs = filteredWorkLogs.filter(wl => wl.subFeatureId === sf.id);
+                  const actual = logs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+                  return actual === (sf.estimatedHours || 0);
+                }).length} tasks
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Enhanced Final Report Display */}
       {showSummaryReport && (
