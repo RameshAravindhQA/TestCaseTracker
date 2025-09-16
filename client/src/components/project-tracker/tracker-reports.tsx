@@ -559,10 +559,12 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
       let totalEstHours = 0;
       let totalActualHours = 0;
 
-      features.forEach(feature => {
+      const featuresData = features || []; // Use featuresData for iteration
+
+      featuresData.forEach(feature => {
         const featureSubFeatures = filteredSubFeatures.filter(sf => sf.featureId === feature.id);
 
-        featureSubFeatures.forEach(subFeature => {
+        featureSubFeatures.forEach((subFeature, index) => {
           const subFeatureWorkLogs = filteredWorkLogs.filter(wl => wl.subFeatureId === subFeature.id);
           const actualHours = subFeatureWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
           const estimatedHours = subFeature.estimatedHours || 0;
@@ -593,7 +595,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
       numericalSummaryData.push([
         'TOTAL SUMMARY',
-        `${features.length} Features`,
+        `${featuresData.length} Features`,
         `${filteredSubFeatures.length} Sub-Features`,
         `${totalEstHours}h`,
         `${(totalEstHours / 8).toFixed(2)}d`,
@@ -666,9 +668,10 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      const totalWorkDays = Math.round(totalHours / 8);
+      const totalHoursForPerf = filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+      const totalWorkDays = Math.round(totalHoursForPerf / 8);
       const uniqueWorkDates = _.uniqBy(filteredWorkLogs, 'workDate').length;
-      const avgDailyHours = uniqueWorkDates > 0 ? Math.round((totalHours / uniqueWorkDates) * 10) / 10 : 0;
+      const avgDailyHours = uniqueWorkDates > 0 ? Math.round((totalHoursForPerf / uniqueWorkDates) * 10) / 10 : 0;
 
       doc.text(`Total Work Days: ${totalWorkDays} days`, 18, yPos + 10);
       doc.text(`Average Daily Hours: ${avgDailyHours}h`, 18, yPos + 18);
@@ -748,6 +751,31 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {/* Project Filter */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Project:</Label>
+              <Select 
+                value={projectId ? projectId.toString() : 'all'} 
+                onValueChange={(value) => {
+                  // Handle project selection change if needed, assuming projectId is passed down
+                  // For now, assuming projectId is fixed for this view or managed elsewhere.
+                  // If you need a project dropdown here, you'd fetch projects and use this select.
+                  console.log("Project selection changed:", value);
+                }}
+                disabled // Disable if projectId is already set and we are filtering for a specific project
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Project" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Projects</SelectItem>
+                  {/* Assuming you have a way to get a list of projects */}
+                  {/* Example: {projects.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)} */}
+                  {project && <SelectItem key={project.id} value={project.id.toString()}>{project.name}</SelectItem>}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Feature Filter */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Feature:</Label>
@@ -1279,7 +1307,9 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                   let totalEstHours = 0;
                   let totalActualHours = 0;
 
-                  features.forEach(feature => {
+                  const featuresData = features || []; // Use featuresData for iteration
+
+                  featuresData.forEach(feature => {
                     const featureSubFeatures = filteredSubFeatures.filter(sf => sf.featureId === feature.id);
 
                     featureSubFeatures.forEach((subFeature, index) => {
@@ -1335,7 +1365,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                     });
                   });
 
-                  // Add total summary row
+                  // Add total row
                   const totalHourVariance = totalActualHours - totalEstHours;
                   const totalDayVariance = (totalActualHours - totalEstHours) / 8;
                   const totalVariancePercent = totalEstHours > 0 ? Math.round((totalHourVariance / totalEstHours) * 100) : 0;
@@ -1344,7 +1374,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                   rows.push(
                     <tr key="total-summary" className="bg-gradient-to-r from-indigo-100 to-purple-100 font-bold border-2 border-indigo-500">
                       <td className="border border-gray-200 px-4 py-3 text-sm font-bold text-indigo-800">TOTAL SUMMARY</td>
-                      <td className="border border-gray-200 px-4 py-3 text-sm text-indigo-700">{features.length} Features</td>
+                      <td className="border border-gray-200 px-4 py-3 text-sm text-indigo-700">{featuresData.length} Features</td>
                       <td className="border border-gray-200 px-4 py-3 text-sm text-indigo-700">{filteredSubFeatures.length} Sub-Features</td>
                       <td className="border border-gray-200 px-4 py-3 text-sm font-bold text-blue-700">{totalEstHours}h</td>
                       <td className="border border-gray-200 px-4 py-3 text-sm text-blue-700">{(totalEstHours / 8).toFixed(2)}d</td>
@@ -1376,7 +1406,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                 Tasks that took more time than estimated
               </p>
               <div className="text-lg font-bold text-red-700">
-                {filteredSubFeatures.filter(sf => {
+                {subFeatures.filter(sf => {
                   const logs = filteredWorkLogs.filter(wl => wl.subFeatureId === sf.id);
                   const actual = logs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
                   return actual > (sf.estimatedHours || 0);
@@ -1390,7 +1420,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                 Tasks that took less time than estimated
               </p>
               <div className="text-lg font-bold text-green-700">
-                {filteredSubFeatures.filter(sf => {
+                {subFeatures.filter(sf => {
                   const logs = filteredWorkLogs.filter(wl => wl.subFeatureId === sf.id);
                   const actual = logs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
                   return actual < (sf.estimatedHours || 0);
@@ -1404,7 +1434,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                 Tasks that matched time estimates
               </p>
               <div className="text-lg font-bold text-blue-700">
-                {filteredSubFeatures.filter(sf => {
+                {subFeatures.filter(sf => {
                   const logs = filteredWorkLogs.filter(wl => wl.subFeatureId === sf.id);
                   const actual = logs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
                   return actual === (sf.estimatedHours || 0);

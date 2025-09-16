@@ -323,7 +323,12 @@ export default function ProjectTrackerPage() {
           </TabsContent>
 
           <TabsContent value="reports">
-            <TrackerReports projects={projects || []} selectedProjectId={selectedProjectId} />
+            <TrackerReports 
+              projects={projects || []} 
+              selectedProjectId={selectedProjectId}
+              features={[]}
+              subFeatures={[]}
+            />
           </TabsContent>
         </Tabs>
 
