@@ -914,84 +914,158 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
         </div>
       )}
 
-      {/* Final Report Display */}
+      {/* Enhanced Final Report Display */}
       {showSummaryReport && (
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle className="text-center text-2xl font-bold text-blue-600">
-              📊 Final Project Tracker Report
+            <CardTitle className="text-center text-3xl font-bold text-blue-600">
+              📊 Comprehensive Project Tracker Report
             </CardTitle>
             <div className="text-center text-sm text-gray-500">
-              Generated on {format(new Date(), 'MMMM dd, yyyy at HH:mm')}
+              Generated on {format(new Date(), 'MMMM dd, yyyy at HH:mm')} | Total Pages: Multi-section Analysis
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-8">
+            <div className="space-y-10">
+              {/* Executive Summary */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border-l-4 border-blue-500">
+                <h3 className="text-2xl font-bold mb-4 text-blue-800 flex items-center gap-2">
+                  📋 Executive Summary
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <h4 className="font-semibold text-blue-700">Project Completion</h4>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {subFeatures ? Math.round((subFeatures.filter(sf => sf.status === 'Completed').length / Math.max(subFeatures.length, 1)) * 100) : 0}%
+                    </p>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <h4 className="font-semibold text-green-700">Total Hours Logged</h4>
+                    <p className="text-2xl font-bold text-green-600">
+                      {filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0)}h
+                    </p>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <h4 className="font-semibold text-purple-700">Active Features</h4>
+                    <p className="text-2xl font-bold text-purple-600">{features?.length || 0}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <h4 className="font-semibold text-orange-700">Work Logs</h4>
+                    <p className="text-2xl font-bold text-orange-600">{filteredWorkLogs.length}</p>
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow-sm">
+                  <h4 className="font-semibold text-gray-700 mb-2">Key Insights</h4>
+                  <ul className="list-disc list-inside text-gray-600 space-y-1">
+                    <li>Project has {features?.length || 0} main features with {subFeatures?.length || 0} detailed sub-features</li>
+                    <li>Total development effort: {Math.round((filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0)) / 8)} working days</li>
+                    <li>Most active department: {_.chain(subFeatures || []).groupBy('department').toPairs().maxBy(([, items]) => items.length)?.[0] || 'N/A'}</li>
+                    <li>Average hours per work log: {filteredWorkLogs.length > 0 ? Math.round((filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0) / filteredWorkLogs.length) * 10) / 10 : 0}h</li>
+                  </ul>
+                </div>
+              </div>
+
               {/* Project Overview */}
               <div>
-                <h3 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">
-                  🏢 Project Overview
+                <h3 className="text-2xl font-bold mb-6 text-gray-800 border-b-2 border-blue-500 pb-2">
+                  🏢 Project Information & Scope
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
-                    <h4 className="font-semibold text-blue-800">Project Name</h4>
-                    <p className="text-lg">{project?.name || 'Unknown Project'}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                  <div className="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-500 shadow-sm">
+                    <h4 className="font-bold text-blue-800 text-lg mb-2">Project Details</h4>
+                    <div className="space-y-2">
+                      <p><span className="font-semibold">Name:</span> {project?.name || 'Unknown Project'}</p>
+                      <p><span className="font-semibold">ID:</span> #{project?.id || 'N/A'}</p>
+                      <p><span className="font-semibold">Created:</span> {project?.createdAt ? format(new Date(project.createdAt), 'MMM dd, yyyy') : 'N/A'}</p>
+                    </div>
                   </div>
-                  <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
-                    <h4 className="font-semibold text-green-800">Status</h4>
-                    <Badge className="bg-green-100 text-green-800">{project?.status || 'Active'}</Badge>
+                  <div className="bg-green-50 p-6 rounded-lg border-l-4 border-green-500 shadow-sm">
+                    <h4 className="font-bold text-green-800 text-lg mb-2">Current Status</h4>
+                    <div className="space-y-2">
+                      <p><span className="font-semibold">Status:</span> <Badge className="bg-green-100 text-green-800">{project?.status || 'Active'}</Badge></p>
+                      <p><span className="font-semibold">Priority:</span> <Badge variant="outline">{project?.priority || 'Medium'}</Badge></p>
+                      <p><span className="font-semibold">Budget:</span> {project?.budget ? `${project.currency || '$'}${project.budget.toLocaleString()}` : 'Not set'}</p>
+                    </div>
                   </div>
-                  <div className="bg-purple-50 p-4 rounded-lg border-l-4 border-purple-500">
-                    <h4 className="font-semibold text-purple-800">Timeline</h4>
-                    <p className="text-sm">
-                      {project?.startDate && project?.endDate 
-                        ? `${format(new Date(project.startDate), 'MMM dd')} - ${format(new Date(project.endDate), 'MMM dd, yyyy')}`
-                        : 'Not set'
-                      }
-                    </p>
+                  <div className="bg-purple-50 p-6 rounded-lg border-l-4 border-purple-500 shadow-sm">
+                    <h4 className="font-bold text-purple-800 text-lg mb-2">Timeline</h4>
+                    <div className="space-y-2">
+                      <p><span className="font-semibold">Start:</span> {project?.startDate ? format(new Date(project.startDate), 'MMM dd, yyyy') : 'Not set'}</p>
+                      <p><span className="font-semibold">End:</span> {project?.endDate ? format(new Date(project.endDate), 'MMM dd, yyyy') : 'Not set'}</p>
+                      <p><span className="font-semibold">Duration:</span> {project?.startDate && project?.endDate ? `${Math.ceil((new Date(project.endDate).getTime() - new Date(project.startDate).getTime()) / (1000 * 60 * 60 * 24))} days` : 'N/A'}</p>
+                    </div>
                   </div>
                 </div>
                 {project?.description && (
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-gray-800 mb-2">Description</h4>
-                    <p className="text-gray-600">{project.description}</p>
+                  <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
+                    <h4 className="font-bold text-gray-800 text-lg mb-3">Project Description</h4>
+                    <p className="text-gray-700 leading-relaxed">{project.description}</p>
                   </div>
                 )}
               </div>
 
-              {/* Features Summary */}
+              {/* Detailed Features Analysis */}
               <div>
-                <h3 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">
-                  🎯 Features Summary ({features?.length || 0} Total)
+                <h3 className="text-2xl font-bold mb-6 text-gray-800 border-b-2 border-green-500 pb-2">
+                  🎯 Features Breakdown & Analysis ({features?.length || 0} Total)
                 </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-gray-300 rounded-lg">
+                <div className="overflow-x-auto shadow-sm rounded-lg">
+                  <table className="w-full border-collapse bg-white">
                     <thead>
-                      <tr className="bg-blue-600 text-white">
-                        <th className="border border-gray-300 px-4 py-3 text-left">Feature Name</th>
-                        <th className="border border-gray-300 px-4 py-3 text-left">Status</th>
-                        <th className="border border-gray-300 px-4 py-3 text-left">Sub-Features</th>
-                        <th className="border border-gray-300 px-4 py-3 text-left">Start Date</th>
-                        <th className="border border-gray-300 px-4 py-3 text-left">End Date</th>
+                      <tr className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+                        <th className="border border-gray-300 px-6 py-4 text-left font-bold">Feature Name</th>
+                        <th className="border border-gray-300 px-6 py-4 text-left font-bold">Status</th>
+                        <th className="border border-gray-300 px-6 py-4 text-center font-bold">Sub-Features</th>
+                        <th className="border border-gray-300 px-6 py-4 text-center font-bold">Work Logs</th>
+                        <th className="border border-gray-300 px-6 py-4 text-center font-bold">Hours Logged</th>
+                        <th className="border border-gray-300 px-6 py-4 text-center font-bold">Progress</th>
+                        <th className="border border-gray-300 px-6 py-4 text-left font-bold">Timeline</th>
                       </tr>
                     </thead>
                     <tbody>
                       {features?.map((feature: any, index: number) => {
                         const featureSubFeatures = subFeatures?.filter(sf => sf.featureId === feature.id) || [];
+                        const featureWorkLogs = filteredWorkLogs.filter(wl => featureSubFeatures.some(sf => sf.id === wl.subFeatureId));
+                        const totalHours = featureWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+                        const completedSubFeatures = featureSubFeatures.filter(sf => sf.status === 'Completed').length;
+                        const progress = featureSubFeatures.length > 0 ? Math.round((completedSubFeatures / featureSubFeatures.length) * 100) : 0;
+                        
                         return (
-                          <tr key={feature.id} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                            <td className="border border-gray-300 px-4 py-3 font-medium">{feature.name}</td>
-                            <td className="border border-gray-300 px-4 py-3">
+                          <tr key={feature.id} className={index % 2 === 0 ? 'bg-gray-50 hover:bg-gray-100' : 'bg-white hover:bg-gray-50'}>
+                            <td className="border border-gray-300 px-6 py-4">
+                              <div>
+                                <p className="font-semibold text-gray-800">{feature.name}</p>
+                                {feature.description && <p className="text-sm text-gray-600 mt-1">{feature.description.substring(0, 100)}...</p>}
+                              </div>
+                            </td>
+                            <td className="border border-gray-300 px-6 py-4">
                               <StatusBadge status={feature.status} />
                             </td>
-                            <td className="border border-gray-300 px-4 py-3 text-center">
-                              <Badge variant="outline">{featureSubFeatures.length}</Badge>
+                            <td className="border border-gray-300 px-6 py-4 text-center">
+                              <Badge variant="outline" className="text-lg px-3 py-1">{featureSubFeatures.length}</Badge>
                             </td>
-                            <td className="border border-gray-300 px-4 py-3">
-                              {feature.startDate ? format(new Date(feature.startDate), 'MMM dd, yyyy') : 'Not set'}
+                            <td className="border border-gray-300 px-6 py-4 text-center">
+                              <Badge variant="outline" className="text-lg px-3 py-1">{featureWorkLogs.length}</Badge>
                             </td>
-                            <td className="border border-gray-300 px-4 py-3">
-                              {feature.endDate ? format(new Date(feature.endDate), 'MMM dd, yyyy') : 'Not set'}
+                            <td className="border border-gray-300 px-6 py-4 text-center font-semibold">
+                              {totalHours}h ({Math.round(totalHours / 8 * 10) / 10} days)
+                            </td>
+                            <td className="border border-gray-300 px-6 py-4 text-center">
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 bg-gray-200 rounded-full h-3">
+                                  <div 
+                                    className="bg-green-500 h-3 rounded-full transition-all duration-300" 
+                                    style={{ width: `${progress}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-sm font-bold">{progress}%</span>
+                              </div>
+                            </td>
+                            <td className="border border-gray-300 px-6 py-4">
+                              <div className="text-sm">
+                                <p><span className="font-semibold">Start:</span> {feature.startDate ? format(new Date(feature.startDate), 'MMM dd') : 'Not set'}</p>
+                                <p><span className="font-semibold">End:</span> {feature.endDate ? format(new Date(feature.endDate), 'MMM dd') : 'Not set'}</p>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -1001,124 +1075,211 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                 </div>
               </div>
 
-              {/* Sub-Features by Department */}
+              {/* Detailed Sub-Features Analysis */}
               <div>
-                <h3 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">
-                  🏢 Department-wise Sub-Features
+                <h3 className="text-2xl font-bold mb-6 text-gray-800 border-b-2 border-purple-500 pb-2">
+                  📋 Sub-Features Detailed Analysis ({subFeatures?.length || 0} Total)
                 </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-gray-300 rounded-lg">
-                    <thead>
-                      <tr className="bg-green-600 text-white">
-                        <th className="border border-gray-300 px-4 py-3 text-left">Department</th>
-                        <th className="border border-gray-300 px-4 py-3 text-center">Total Tasks</th>
-                        <th className="border border-gray-300 px-4 py-3 text-center">Completed</th>
-                        <th className="border border-gray-300 px-4 py-3 text-center">In Progress</th>
-                        <th className="border border-gray-300 px-4 py-3 text-center">Pending</th>
-                        <th className="border border-gray-300 px-4 py-3 text-center">Progress</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {_.chain(subFeatures || [])
-                        .groupBy('department')
-                        .map((items, department) => {
-                          const completed = items.filter(item => item.status === 'Completed').length;
-                          const inProgress = items.filter(item => ['Planning', 'Design', 'Development', 'Testing'].includes(item.status)).length;
-                          const pending = items.filter(item => ['Planning', 'Design'].includes(item.status)).length;
-                          const progress = items.length > 0 ? Math.round((completed / items.length) * 100) : 0;
-                          return {
-                            department: department || 'Unassigned',
-                            total: items.length,
-                            completed,
-                            inProgress,
-                            pending,
-                            progress
-                          };
-                        })
-                        .value()
-                        .map((dept, index) => (
-                          <tr key={dept.department} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                            <td className="border border-gray-300 px-4 py-3 font-medium">{dept.department}</td>
-                            <td className="border border-gray-300 px-4 py-3 text-center">{dept.total}</td>
-                            <td className="border border-gray-300 px-4 py-3 text-center">
-                              <Badge className="bg-green-100 text-green-800">{dept.completed}</Badge>
-                            </td>
-                            <td className="border border-gray-300 px-4 py-3 text-center">
-                              <Badge className="bg-yellow-100 text-yellow-800">{dept.inProgress}</Badge>
-                            </td>
-                            <td className="border border-gray-300 px-4 py-3 text-center">
-                              <Badge className="bg-gray-100 text-gray-800">{dept.pending}</Badge>
-                            </td>
-                            <td className="border border-gray-300 px-4 py-3 text-center">
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                  <div 
-                                    className="bg-green-500 h-2 rounded-full" 
-                                    style={{ width: `${dept.progress}%` }}
-                                  ></div>
+                
+                {/* Sub-Features by Department */}
+                <div className="mb-8">
+                  <h4 className="text-xl font-semibold mb-4 text-purple-700">🏢 Department-wise Distribution</h4>
+                  <div className="overflow-x-auto shadow-sm rounded-lg">
+                    <table className="w-full border-collapse bg-white">
+                      <thead>
+                        <tr className="bg-gradient-to-r from-green-600 to-green-700 text-white">
+                          <th className="border border-gray-300 px-6 py-4 text-left font-bold">Department</th>
+                          <th className="border border-gray-300 px-6 py-4 text-center font-bold">Total Tasks</th>
+                          <th className="border border-gray-300 px-6 py-4 text-center font-bold">Completed</th>
+                          <th className="border border-gray-300 px-6 py-4 text-center font-bold">In Progress</th>
+                          <th className="border border-gray-300 px-6 py-4 text-center font-bold">Pending</th>
+                          <th className="border border-gray-300 px-6 py-4 text-center font-bold">Total Hours</th>
+                          <th className="border border-gray-300 px-6 py-4 text-center font-bold">Avg Hours/Task</th>
+                          <th className="border border-gray-300 px-6 py-4 text-center font-bold">Progress</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {_.chain(subFeatures || [])
+                          .groupBy('department')
+                          .map((items, department) => {
+                            const completed = items.filter(item => item.status === 'Completed').length;
+                            const inProgress = items.filter(item => ['Planning', 'Design', 'Development', 'Testing'].includes(item.status)).length;
+                            const pending = items.filter(item => ['Planning', 'Design'].includes(item.status)).length;
+                            const progress = items.length > 0 ? Math.round((completed / items.length) * 100) : 0;
+                            const deptWorkLogs = filteredWorkLogs.filter(wl => items.some(item => item.id === wl.subFeatureId));
+                            const totalHours = deptWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+                            const avgHours = items.length > 0 ? Math.round((totalHours / items.length) * 10) / 10 : 0;
+                            
+                            return {
+                              department: department || 'Unassigned',
+                              total: items.length,
+                              completed,
+                              inProgress,
+                              pending,
+                              progress,
+                              totalHours,
+                              avgHours
+                            };
+                          })
+                          .value()
+                          .map((dept, index) => (
+                            <tr key={dept.department} className={index % 2 === 0 ? 'bg-gray-50 hover:bg-gray-100' : 'bg-white hover:bg-gray-50'}>
+                              <td className="border border-gray-300 px-6 py-4 font-semibold">{dept.department}</td>
+                              <td className="border border-gray-300 px-6 py-4 text-center font-bold text-lg">{dept.total}</td>
+                              <td className="border border-gray-300 px-6 py-4 text-center">
+                                <Badge className="bg-green-100 text-green-800 px-3 py-1">{dept.completed}</Badge>
+                              </td>
+                              <td className="border border-gray-300 px-6 py-4 text-center">
+                                <Badge className="bg-yellow-100 text-yellow-800 px-3 py-1">{dept.inProgress}</Badge>
+                              </td>
+                              <td className="border border-gray-300 px-6 py-4 text-center">
+                                <Badge className="bg-gray-100 text-gray-800 px-3 py-1">{dept.pending}</Badge>
+                              </td>
+                              <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{dept.totalHours}h</td>
+                              <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{dept.avgHours}h</td>
+                              <td className="border border-gray-300 px-6 py-4 text-center">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 bg-gray-200 rounded-full h-3">
+                                    <div 
+                                      className="bg-green-500 h-3 rounded-full transition-all duration-300" 
+                                      style={{ width: `${dept.progress}%` }}
+                                    ></div>
+                                  </div>
+                                  <span className="text-sm font-bold">{dept.progress}%</span>
                                 </div>
-                                <span className="text-sm font-medium">{dept.progress}%</span>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      }
-                    </tbody>
-                  </table>
+                              </td>
+                            </tr>
+                          ))
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Sub-Features by Status */}
+                <div className="mb-8">
+                  <h4 className="text-xl font-semibold mb-4 text-purple-700">📊 Status-wise Analysis</h4>
+                  <div className="overflow-x-auto shadow-sm rounded-lg">
+                    <table className="w-full border-collapse bg-white">
+                      <thead>
+                        <tr className="bg-gradient-to-r from-purple-600 to-purple-700 text-white">
+                          <th className="border border-gray-300 px-6 py-4 text-left font-bold">Status</th>
+                          <th className="border border-gray-300 px-6 py-4 text-center font-bold">Sub-Features</th>
+                          <th className="border border-gray-300 px-6 py-4 text-center font-bold">Work Logs</th>
+                          <th className="border border-gray-300 px-6 py-4 text-center font-bold">Total Hours</th>
+                          <th className="border border-gray-300 px-6 py-4 text-center font-bold">Avg Hours/Task</th>
+                          <th className="border border-gray-300 px-6 py-4 text-center font-bold">Working Days</th>
+                          <th className="border border-gray-300 px-6 py-4 text-center font-bold">Percentage</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {_.chain(subFeatures || [])
+                          .groupBy('status')
+                          .map((items, status) => {
+                            const statusWorkLogs = filteredWorkLogs.filter(wl => 
+                              items.some(item => item.id === wl.subFeatureId)
+                            );
+                            const totalHours = statusWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+                            const avgHours = items.length > 0 ? Math.round((totalHours / items.length) * 10) / 10 : 0;
+                            const workingDays = Math.round(totalHours / 8 * 10) / 10;
+                            const percentage = (subFeatures?.length || 0) > 0 ? Math.round((items.length / (subFeatures?.length || 1)) * 100) : 0;
+                            return {
+                              status,
+                              count: items.length,
+                              workLogs: statusWorkLogs.length,
+                              hours: totalHours,
+                              avgHours,
+                              workingDays,
+                              percentage
+                            };
+                          })
+                          .value()
+                          .map((statusItem, index) => (
+                            <tr key={statusItem.status} className={index % 2 === 0 ? 'bg-gray-50 hover:bg-gray-100' : 'bg-white hover:bg-gray-50'}>
+                              <td className="border border-gray-300 px-6 py-4">
+                                <StatusBadge status={statusItem.status} />
+                              </td>
+                              <td className="border border-gray-300 px-6 py-4 text-center font-bold text-lg">{statusItem.count}</td>
+                              <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{statusItem.workLogs}</td>
+                              <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{statusItem.hours}h</td>
+                              <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{statusItem.avgHours}h</td>
+                              <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{statusItem.workingDays} days</td>
+                              <td className="border border-gray-300 px-6 py-4 text-center">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 bg-gray-200 rounded-full h-3">
+                                    <div 
+                                      className="bg-purple-500 h-3 rounded-full transition-all duration-300" 
+                                      style={{ width: `${statusItem.percentage}%` }}
+                                    ></div>
+                                  </div>
+                                  <span className="text-sm font-bold">{statusItem.percentage}%</span>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        }
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
 
-              {/* Status-wise Summary */}
+              {/* Work Types Analysis */}
               <div>
-                <h3 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">
-                  📈 Status-wise Summary
+                <h3 className="text-2xl font-bold mb-6 text-gray-800 border-b-2 border-orange-500 pb-2">
+                  🔧 Work Types & Effort Distribution
                 </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-gray-300 rounded-lg">
+                <div className="overflow-x-auto shadow-sm rounded-lg">
+                  <table className="w-full border-collapse bg-white">
                     <thead>
-                      <tr className="bg-purple-600 text-white">
-                        <th className="border border-gray-300 px-4 py-3 text-left">Status</th>
-                        <th className="border border-gray-300 px-4 py-3 text-center">Sub-Features</th>
-                        <th className="border border-gray-300 px-4 py-3 text-center">Work Logs</th>
-                        <th className="border border-gray-300 px-4 py-3 text-center">Total Hours</th>
-                        <th className="border border-gray-300 px-4 py-3 text-center">Percentage</th>
+                      <tr className="bg-gradient-to-r from-orange-600 to-orange-700 text-white">
+                        <th className="border border-gray-300 px-6 py-4 text-left font-bold">Work Type</th>
+                        <th className="border border-gray-300 px-6 py-4 text-center font-bold">Work Logs</th>
+                        <th className="border border-gray-300 px-6 py-4 text-center font-bold">Total Hours</th>
+                        <th className="border border-gray-300 px-6 py-4 text-center font-bold">Working Days</th>
+                        <th className="border border-gray-300 px-6 py-4 text-center font-bold">Avg Hours/Log</th>
+                        <th className="border border-gray-300 px-6 py-4 text-center font-bold">% of Total Effort</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {_.chain(subFeatures || [])
-                        .groupBy('status')
-                        .map((items, status) => {
-                          const statusWorkLogs = filteredWorkLogs.filter(wl => 
-                            items.some(item => item.id === wl.subFeatureId)
-                          );
-                          const totalHours = statusWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
-                          const percentage = (subFeatures?.length || 0) > 0 ? Math.round((items.length / (subFeatures?.length || 1)) * 100) : 0;
+                      {_.chain(filteredWorkLogs)
+                        .groupBy('workType')
+                        .map((logs, workType) => {
+                          const totalHours = logs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+                          const avgHours = logs.length > 0 ? Math.round((totalHours / logs.length) * 10) / 10 : 0;
+                          const workingDays = Math.round(totalHours / 8 * 10) / 10;
+                          const totalProjectHours = filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+                          const percentage = totalProjectHours > 0 ? Math.round((totalHours / totalProjectHours) * 100) : 0;
+                          
                           return {
-                            status,
-                            count: items.length,
-                            workLogs: statusWorkLogs.length,
+                            workType: workType || 'Unspecified',
+                            count: logs.length,
                             hours: totalHours,
+                            avgHours,
+                            workingDays,
                             percentage
                           };
                         })
                         .value()
-                        .map((statusItem, index) => (
-                          <tr key={statusItem.status} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                            <td className="border border-gray-300 px-4 py-3">
-                              <StatusBadge status={statusItem.status} />
+                        .orderBy(['hours'], ['desc'])
+                        .map((workTypeItem, index) => (
+                          <tr key={workTypeItem.workType} className={index % 2 === 0 ? 'bg-gray-50 hover:bg-gray-100' : 'bg-white hover:bg-gray-50'}>
+                            <td className="border border-gray-300 px-6 py-4">
+                              <StatusBadge status={workTypeItem.workType} />
                             </td>
-                            <td className="border border-gray-300 px-4 py-3 text-center font-medium">{statusItem.count}</td>
-                            <td className="border border-gray-300 px-4 py-3 text-center">{statusItem.workLogs}</td>
-                            <td className="border border-gray-300 px-4 py-3 text-center">{statusItem.hours}h</td>
-                            <td className="border border-gray-300 px-4 py-3 text-center">
+                            <td className="border border-gray-300 px-6 py-4 text-center font-bold text-lg">{workTypeItem.count}</td>
+                            <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{workTypeItem.hours}h</td>
+                            <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{workTypeItem.workingDays} days</td>
+                            <td className="border border-gray-300 px-6 py-4 text-center font-semibold">{workTypeItem.avgHours}h</td>
+                            <td className="border border-gray-300 px-6 py-4 text-center">
                               <div className="flex items-center gap-2">
-                                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                <div className="flex-1 bg-gray-200 rounded-full h-3">
                                   <div 
-                                    className="bg-purple-500 h-2 rounded-full" 
-                                    style={{ width: `${statusItem.percentage}%` }}
+                                    className="bg-orange-500 h-3 rounded-full transition-all duration-300" 
+                                    style={{ width: `${workTypeItem.percentage}%` }}
                                   ></div>
                                 </div>
-                                <span className="text-sm font-medium">{statusItem.percentage}%</span>
+                                <span className="text-sm font-bold">{workTypeItem.percentage}%</span>
                               </div>
                             </td>
                           </tr>
@@ -1129,21 +1290,93 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                 </div>
               </div>
 
-              {/* Final Actions */}
-              <div className="text-center pt-6 border-t">
-                <div className="flex justify-center gap-4">
-                  <Button onClick={exportToPDF} className="bg-red-600 hover:bg-red-700">
-                    <FileDown className="h-4 w-4 mr-2" />
-                    Download as PDF
+              {/* Timeline Analysis */}
+              <div>
+                <h3 className="text-2xl font-bold mb-6 text-gray-800 border-b-2 border-indigo-500 pb-2">
+                  📅 Timeline & Performance Analysis
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                  <div className="bg-indigo-50 p-6 rounded-lg border-l-4 border-indigo-500 shadow-sm">
+                    <h4 className="font-bold text-indigo-800 text-lg mb-3">Project Timeline</h4>
+                    <div className="space-y-2">
+                      <p><span className="font-semibold">Total Duration:</span> {project?.startDate && project?.endDate ? `${Math.ceil((new Date(project.endDate).getTime() - new Date(project.startDate).getTime()) / (1000 * 60 * 60 * 24))} days` : 'N/A'}</p>
+                      <p><span className="font-semibold">Days Elapsed:</span> {project?.startDate ? `${Math.ceil((new Date().getTime() - new Date(project.startDate).getTime()) / (1000 * 60 * 60 * 24))} days` : 'N/A'}</p>
+                      <p><span className="font-semibold">Days Remaining:</span> {project?.endDate ? `${Math.max(0, Math.ceil((new Date(project.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} days` : 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div className="bg-green-50 p-6 rounded-lg border-l-4 border-green-500 shadow-sm">
+                    <h4 className="font-bold text-green-800 text-lg mb-3">Work Performance</h4>
+                    <div className="space-y-2">
+                      <p><span className="font-semibold">Total Work Days:</span> {Math.round((filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0)) / 8)} days</p>
+                      <p><span className="font-semibold">Avg Daily Hours:</span> {filteredWorkLogs.length > 0 ? Math.round((filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0) / _.uniqBy(filteredWorkLogs, 'workDate').length) * 10) / 10 : 0}h</p>
+                      <p><span className="font-semibold">Most Productive Day:</span> {(() => {
+                        const dayGroups = _.groupBy(filteredWorkLogs, 'workDate');
+                        const productiveDay = _.maxBy(Object.entries(dayGroups), ([, logs]) => logs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0));
+                        return productiveDay ? `${format(new Date(productiveDay[0]), 'MMM dd')} (${productiveDay[1].reduce((sum, log) => sum + (log.hoursWorked || 0), 0)}h)` : 'N/A';
+                      })()}</p>
+                    </div>
+                  </div>
+                  <div className="bg-yellow-50 p-6 rounded-lg border-l-4 border-yellow-500 shadow-sm">
+                    <h4 className="font-bold text-yellow-800 text-lg mb-3">Efficiency Metrics</h4>
+                    <div className="space-y-2">
+                      <p><span className="font-semibold">Completion Rate:</span> {subFeatures ? Math.round((subFeatures.filter(sf => sf.status === 'Completed').length / Math.max(subFeatures.length, 1)) * 100) : 0}%</p>
+                      <p><span className="font-semibold">Active Work Rate:</span> {subFeatures ? Math.round((subFeatures.filter(sf => ['Development', 'Testing'].includes(sf.status)).length / Math.max(subFeatures.length, 1)) * 100) : 0}%</p>
+                      <p><span className="font-semibold">Log Frequency:</span> {filteredWorkLogs.length > 0 ? `${Math.round((filteredWorkLogs.length / _.uniqBy(filteredWorkLogs, 'workDate').length) * 10) / 10} logs/day` : 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recommendations & Next Steps */}
+              <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-6 rounded-lg border-l-4 border-gray-500">
+                <h3 className="text-2xl font-bold mb-4 text-gray-800 flex items-center gap-2">
+                  💡 Recommendations & Next Steps
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-semibold text-gray-700 mb-3">🎯 Key Recommendations</h4>
+                    <ul className="list-disc list-inside text-gray-600 space-y-2">
+                      <li>Focus on completing {subFeatures?.filter(sf => sf.status === 'Development').length || 0} development tasks in progress</li>
+                      <li>Review {subFeatures?.filter(sf => sf.status === 'Blocked').length || 0} blocked items to unblock dependencies</li>
+                      <li>Allocate more resources to {_.chain(subFeatures || []).groupBy('department').toPairs().minBy(([, items]) => items.filter(item => item.status === 'Completed').length / items.length)?.[0] || 'N/A'} department if lagging</li>
+                      <li>Consider increasing daily logging frequency for better tracking</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-700 mb-3">📋 Immediate Actions</h4>
+                    <ul className="list-disc list-inside text-gray-600 space-y-2">
+                      <li>Schedule review meetings for features with < 50% completion</li>
+                      <li>Update estimated hours for tasks with significant time variance</li>
+                      <li>Create detailed timeline for remaining {subFeatures?.filter(sf => !['Completed', 'Cancelled'].includes(sf.status)).length || 0} tasks</li>
+                      <li>Document lessons learned from completed features</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Export Actions */}
+              <div className="text-center pt-8 border-t-2 border-gray-200">
+                <h4 className="text-lg font-semibold mb-4 text-gray-700">📄 Export Options</h4>
+                <div className="flex justify-center gap-4 flex-wrap">
+                  <Button onClick={exportToPDF} className="bg-red-600 hover:bg-red-700 px-6 py-3">
+                    <FileDown className="h-5 w-5 mr-2" />
+                    Download Comprehensive PDF
                   </Button>
-                  <Button onClick={exportToCSV} variant="outline">
-                    <FileDown className="h-4 w-4 mr-2" />
-                    Export as CSV
+                  <Button onClick={exportToCSV} variant="outline" className="px-6 py-3">
+                    <FileDown className="h-5 w-5 mr-2" />
+                    Export Raw Data (CSV)
                   </Button>
-                  <Button onClick={() => setShowSummaryReport(false)} variant="outline">
+                  <Button onClick={() => window.print()} variant="outline" className="px-6 py-3">
+                    <FileDown className="h-5 w-5 mr-2" />
+                    Print Report
+                  </Button>
+                  <Button onClick={() => setShowSummaryReport(false)} variant="outline" className="px-6 py-3">
                     Close Report
                   </Button>
                 </div>
+                <p className="text-sm text-gray-500 mt-4">
+                  Report contains {features?.length || 0} features, {subFeatures?.length || 0} sub-features, and {filteredWorkLogs.length} work logs
+                </p>
               </div>
             </div>
           </CardContent>
