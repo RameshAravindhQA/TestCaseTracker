@@ -38,19 +38,21 @@ interface TrackerProject {
 }
 
 export default function ProjectTrackerPage() {
+  const { toast } = useToast();
+  
   // Get project ID from URL params if available
   const urlParams = new URLSearchParams(window.location.search);
   const urlProjectId = urlParams.get('projectId');
 
-  const [selectedProject, setSelectedProject] = useState<number | null>(
-    urlProjectId ? parseInt(urlProjectId) : null
-  );
+  const [selectedProject, setSelectedProject] = useState<TrackerProject | null>(null);
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [editingProject, setEditingProject] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('projects');
   const [searchQuery, setSearchQuery] = useState('');
   const [showProjectDetails, setShowProjectDetails] = useState(false);
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
+    urlProjectId ? parseInt(urlProjectId) : null
+  );
   const [filters, setFilters] = useState({
     status: 'all',
     priority: 'all',
@@ -142,11 +144,13 @@ export default function ProjectTrackerPage() {
   });
 
   const handleCreateProject = (data: any) => {
+    console.log('Creating project with data:', data);
     createProjectMutation.mutate(data);
   };
 
   const handleUpdateProject = (data: any) => {
-    if (selectedProject) {
+    if (selectedProject?.id) {
+      console.log('Updating project with data:', data);
       updateProjectMutation.mutate({ id: selectedProject.id, data });
     }
   };
@@ -158,7 +162,9 @@ export default function ProjectTrackerPage() {
   };
 
   const handleEditProject = (project: TrackerProject) => {
+    console.log('Editing project:', project);
     setSelectedProject(project);
+    setEditingProject(project);
     setShowProjectForm(true);
   };
 
@@ -211,7 +217,9 @@ export default function ProjectTrackerPage() {
           </div>
           <Button 
             onClick={() => {
+              console.log('Opening new project form');
               setSelectedProject(null);
+              setEditingProject(null);
               setShowProjectForm(true);
             }}
             className="flex items-center gap-2"
@@ -324,15 +332,16 @@ export default function ProjectTrackerPage() {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>
-                {selectedProject ? 'Edit Project' : 'Create New Project'}
+                {editingProject ? 'Edit Project' : 'Create New Project'}
               </DialogTitle>
             </DialogHeader>
             <TrackerProjectForm
-              project={selectedProject}
-              onSubmit={selectedProject ? handleUpdateProject : handleCreateProject}
+              project={editingProject}
+              onSubmit={editingProject ? handleUpdateProject : handleCreateProject}
               onCancel={() => {
                 setShowProjectForm(false);
                 setSelectedProject(null);
+                setEditingProject(null);
               }}
               isLoading={createProjectMutation.isPending || updateProjectMutation.isPending}
             />

@@ -30,7 +30,7 @@ const projectSchema = z.object({
   priority: z.enum(['Low', 'Medium', 'High', 'Critical']),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
-  ownerId: z.number(),
+  ownerId: z.number().default(1),
   currency: z.string().default('USD'),
   departmentId: z.number().optional(),
   tags: z.array(z.string()).default([]),
@@ -68,7 +68,17 @@ export function TrackerProjectForm({
   });
 
   const handleSubmit = (data: ProjectFormData) => {
-    onSubmit(data);
+    console.log('Form submitted with data:', data);
+    
+    // Ensure all required fields are present
+    const submitData = {
+      ...data,
+      ownerId: data.ownerId || 1, // Default to user ID 1 if not set
+      createdById: 1, // This should be the current user ID
+    };
+    
+    console.log('Submitting processed data:', submitData);
+    onSubmit(submitData);
   };
 
   return (
