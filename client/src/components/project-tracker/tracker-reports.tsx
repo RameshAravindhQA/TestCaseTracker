@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileDown, Calendar, TrendingUp, Clock, Target, Filter, FileText, BarChart } from 'lucide-react';
+import { FileDown, Calendar, TrendingUp, Clock, Target, Filter, FileText, BarChart3, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -1146,7 +1146,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                   <span>Collecting project data...</span>
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                  <BarChart className="h-4 w-4" />
+                  <BarChart3 className="h-4 w-4" />
                   <span>Processing analytics...</span>
                 </div>
                 <div className="flex items-center justify-center gap-2">
