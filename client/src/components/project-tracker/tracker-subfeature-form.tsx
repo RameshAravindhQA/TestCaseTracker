@@ -128,6 +128,8 @@ export function TrackerSubFeatureForm({
       // Editing existing sub-feature
       const assignedIds = Array.isArray(subFeature.assignedEmployeeIds) ? subFeature.assignedEmployeeIds : [];
       
+      console.log('Editing sub-feature, assigned employee IDs:', assignedIds);
+      
       const formData = {
         name: subFeature.name || '',
         description: subFeature.description || '',
@@ -159,10 +161,12 @@ export function TrackerSubFeatureForm({
         form.setValue('priority', subFeature.priority || 'Medium');
         form.setValue('workType', subFeature.workType || 'Development');
         form.setValue('assignedEmployeeIds', assignedIds);
-      }, 100); // Increased timeout to ensure proper rendering
+      }, 100);
     } else {
-      // Creating new sub-feature
-      form.reset({
+      // Creating new sub-feature - clear everything
+      console.log('Creating new sub-feature, clearing form');
+      
+      const defaultFormData = {
         name: '',
         description: '',
         featureId: featureId,
@@ -177,21 +181,31 @@ export function TrackerSubFeatureForm({
         assignedEmployeeIds: [],
         estimatedHours: undefined,
         tags: [],
-      });
+      };
+      
+      form.reset(defaultFormData);
       setSelectedEmployees([]);
       setTags([]);
+      
+      // Ensure form field is synchronized
+      setTimeout(() => {
+        form.setValue('assignedEmployeeIds', []);
+      }, 50);
     }
-  }, [subFeature, featureId, projectId, form, employees]); // Added employees dependency
+  }, [subFeature, featureId, projectId, form, employees]);
 
   const handleSubmit = (data: any) => {
+    // Ensure selectedEmployees is properly included
     const formData = {
       ...data,
       tags,
-      assignedEmployeeIds: selectedEmployees,
+      assignedEmployeeIds: selectedEmployees.length > 0 ? selectedEmployees : [],
       estimatedHours: data.estimatedHours ? Number(data.estimatedHours) : undefined,
       parentSubFeatureId: data.parentSubFeatureId ? Number(data.parentSubFeatureId) : undefined,
     };
+    
     console.log('Submitting sub-feature with assigned employees:', selectedEmployees);
+    console.log('Complete form data being submitted:', formData);
     onSubmit(formData);
   };
 
@@ -200,8 +214,13 @@ export function TrackerSubFeatureForm({
       ? selectedEmployees.filter(id => id !== employeeId)
       : [...selectedEmployees, employeeId];
     
+    console.log('Employee toggle - Previous:', selectedEmployees, 'New:', newSelectedEmployees);
+    
     setSelectedEmployees(newSelectedEmployees);
     form.setValue('assignedEmployeeIds', newSelectedEmployees);
+    
+    // Force form to register the change
+    form.trigger('assignedEmployeeIds');
   };
 
   const getSelectedEmployeeNames = () => {

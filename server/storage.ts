@@ -3456,7 +3456,7 @@ class MemStorage implements IStorage {
     if (index === -1) throw new Error("Card not found");
 
     const updatedCard = { ...this.kanbanCards[index], ...cardData, updatedAt: new Date() };
-    this.kanbanCards[index] = updatedCard;
+    this.kanbanCards[index] =updateCard;
     return updatedCard;
   }
 
@@ -5524,14 +5524,22 @@ class MemStorage implements IStorage {
   }
 
   async createTrackerSubFeature(data: InsertTrackerSubFeature): Promise<TrackerSubFeature> {
+    const id = this.getNextId();
+    const now = new Date();
+
+    console.log('Creating tracker sub-feature with data:', data);
+    console.log('Assigned employee IDs:', data.assignedEmployeeIds);
+
     const subFeature: TrackerSubFeature = {
-      id: this.nextTrackerSubFeatureId++,
+      id,
       ...data,
-      progressPercentage: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      assignedEmployeeIds: Array.isArray(data.assignedEmployeeIds) ? data.assignedEmployeeIds : [],
+      createdAt: now,
+      updatedAt: now,
     };
+
     this.trackerSubFeatures.push(subFeature);
+    console.log('Created sub-feature with assigned employees:', subFeature.assignedEmployeeIds);
     return subFeature;
   }
 

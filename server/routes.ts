@@ -1961,15 +1961,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/tracker/sub-features", isAuthenticated, async (req, res) => {
     try {
+      console.log('Received sub-feature creation request:', req.body);
+      console.log('Assigned employee IDs in request:', req.body.assignedEmployeeIds);
+      
       const subFeatureData = insertTrackerSubFeatureSchema.parse({
         ...req.body,
         createdById: req.session.userId,
+        assignedEmployeeIds: Array.isArray(req.body.assignedEmployeeIds) ? req.body.assignedEmployeeIds : [],
       });
+      
+      console.log('Parsed sub-feature data:', subFeatureData);
       const subFeature = await storage.createTrackerSubFeature(subFeatureData);
+      console.log('Created sub-feature:', subFeature);
+      
       res.status(201).json(subFeature);
     } catch (error) {
       console.error("Create tracker sub-feature error:", error);
-      res.status(400).json({ message: "Invalid sub-feature data" });
+      res.status(400).json({ message: "Invalid sub-feature data", error: error.message });
     }
   });
 
