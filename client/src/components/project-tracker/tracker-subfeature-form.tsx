@@ -206,6 +206,10 @@ export function TrackerSubFeatureForm({
     
     console.log('Submitting sub-feature with assigned employees:', selectedEmployees);
     console.log('Complete form data being submitted:', formData);
+    
+    // Force set the assignedEmployeeIds in form before submitting
+    form.setValue('assignedEmployeeIds', selectedEmployees);
+    
     onSubmit(formData);
   };
 

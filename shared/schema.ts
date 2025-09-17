@@ -1255,6 +1255,7 @@ export const trackerSubFeatures = pgTable("tracker_sub_features", {
   actualEndDate: date("actual_end_date"),
   priority: text("priority").$type<"Low" | "Medium" | "High" | "Critical">().notNull().default("Medium"),
   assignedToId: integer("assigned_to_id"),
+  assignedEmployeeIds: json("assigned_employee_ids").default([]),
   estimatedHours: integer("estimated_hours"),
   actualHours: integer("actual_hours"),
   progressPercentage: integer("progress_percentage").default(0),

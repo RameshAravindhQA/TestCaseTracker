@@ -1964,13 +1964,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Received sub-feature creation request:', req.body);
       console.log('Assigned employee IDs in request:', req.body.assignedEmployeeIds);
       
-      const subFeatureData = insertTrackerSubFeatureSchema.parse({
+      // Extract assignedEmployeeIds before schema parsing to ensure it's preserved
+      const assignedEmployeeIds = Array.isArray(req.body.assignedEmployeeIds) ? req.body.assignedEmployeeIds : [];
+      
+      const subFeatureData = {
         ...req.body,
         createdById: req.session.userId,
-        assignedEmployeeIds: Array.isArray(req.body.assignedEmployeeIds) ? req.body.assignedEmployeeIds : [],
-      });
+        assignedEmployeeIds: assignedEmployeeIds,
+      };
       
-      console.log('Parsed sub-feature data:', subFeatureData);
+      console.log('Parsed sub-feature data before storage:', subFeatureData);
       const subFeature = await storage.createTrackerSubFeature(subFeatureData);
       console.log('Created sub-feature:', subFeature);
       

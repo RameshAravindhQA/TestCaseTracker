@@ -325,45 +325,6 @@ export interface IStorage {
   updateDirectMessage(messageId: number, userId: number, updates: any): Promise<any | null>;
   deleteDirectMessage(messageId: number, userId: number): Promise<boolean>;
 
-  // Employee Management Methods
-  getEmployees(): Promise<any[]>;
-  getEmployee(id: number): Promise<any | undefined>;
-  createEmployee(data: any): Promise<any>;
-  updateEmployee(id: number, data: any): Promise<any | null>;
-  deleteEmployee(id: number): Promise<boolean>;
-  getEmployeeByEmail(email: string): Promise<any | undefined>;
-  importEmployees(employees: any[]): Promise<{ successCount: number; errorCount: number; errors: string[] }>;
-
-  // Employee Project Mapping
-  getEmployeeProjects(employeeId?: number): Promise<any[]>;
-  createEmployeeProject(data: any): Promise<any>;
-  deleteEmployeeProject(id: number): Promise<boolean>;
-  updateEmployeeProject(id: number, data: Partial<any>): Promise<any>; // Assuming InsertEmployeeProject type for data
-  getEmployeeProjectHistory(employeeId: number): Promise<any[]>;
-  getAllEmployeeProjectHistory(): Promise<any[]>;
-  getEmployeeProjectAllocation(allocationId: number): Promise<any | null>;
-  createEmployeeProjectHistory(historyData: any): Promise<any>;
-  extendEmployeeProject(allocationId: number, newEndDate: string, extensionDays?: number): Promise<any>;
-
-  // Technology Options
-  getTechnologyOptions(): Promise<any[]>;
-  createTechnologyOption(data: any): Promise<any>;
-
-  // Department Options
-  getDepartmentOptions(): Promise<any[]>;
-  createDepartmentOption(data: any): Promise<any>;
-
-  // Navadhiti Projects Methods
-  getNavadhitiProjects(): Promise<any[]>;
-  getNavadhitiProject(id: number): Promise<any | undefined>;
-  createNavadhitiProject(data: any): Promise<any>;
-  updateNavadhitiProject(id: number, data: any): Promise<any | null>;
-  deleteNavadhitiProject(id: number): Promise<boolean>;
-
-  // Status Review Methods
-  getStatusReviews(date?: string): Promise<any[]>;
-  createStatusReview(data: any): Promise<any>;
-
   // Todo Management Methods
   getTodos(userId: number): Promise<any[]>;
   getTodosByUserId(userId: number): Promise<any[]>;
@@ -482,7 +443,7 @@ export interface IStorage {
 
   getTrackerSubFeatures(featureId?: number, projectId?: number): Promise<TrackerSubFeature[]>;
   getTrackerSubFeature(id: number): Promise<TrackerSubFeature | null>;
-  createTrackerSubFeature(data: InsertTrackerSubFeature): Promise<TrackerSubFeature>;
+  createTrackerSubFeature(data: any): Promise<TrackerSubFeature>;
   updateTrackerSubFeature(id: number, data: Partial<TrackerSubFeature>): Promise<TrackerSubFeature | null>;
   deleteTrackerSubFeature(id: number): Promise<boolean>;
 
@@ -2474,11 +2435,11 @@ class MemStorage implements IStorage {
     return this.tags.find(tag => tag.id === id) || null;
   }
 
-  async updateTag(id: number, data: Partial<Tag>): Promise<Tag | null> {
+  async updateTag(id: number, tagData: Partial<Tag>): Promise<Tag | null> {
     const index = this.tags.findIndex(tag => tag.id === id);
     if (index === -1) return null;
 
-    const updatedTag = { ...this.tags[index], ...data };
+    const updatedTag = { ...this.tags[index], ...tagData };
     this.tags[index] = updatedTag;
     return updatedTag;
   }
@@ -3369,7 +3330,7 @@ class MemStorage implements IStorage {
     return this.sprints.length < initialLength;
   }
 
-  // Kanban operations (re-declared, ensure consistency)
+  // Kanban operations (re-declared for consistency)
   async getKanbanColumns(projectId?: number, sprintId?: number): Promise<KanbanColumn[]> {
     let results = [...this.kanbanColumns];
 
@@ -5523,7 +5484,7 @@ class MemStorage implements IStorage {
     return this.trackerSubFeatures.find(sf => sf.id === id) || null;
   }
 
-  async createTrackerSubFeature(data: InsertTrackerSubFeature): Promise<TrackerSubFeature> {
+  async createTrackerSubFeature(data: any): Promise<TrackerSubFeature> {
     const id = this.getNextId();
     const now = new Date();
 
@@ -5532,14 +5493,35 @@ class MemStorage implements IStorage {
 
     const subFeature: TrackerSubFeature = {
       id,
-      ...data,
+      name: data.name,
+      description: data.description || '',
+      featureId: data.featureId,
+      projectId: data.projectId,
+      parentSubFeatureId: data.parentSubFeatureId,
+      status: data.status || 'Planning',
+      startDate: data.startDate,
+      endDate: data.endDate,
+      actualStartDate: data.actualStartDate,
+      actualEndDate: data.actualEndDate,
+      priority: data.priority || 'Medium',
+      assignedToId: data.assignedToId,
+      estimatedHours: data.estimatedHours,
+      actualHours: data.actualHours,
+      progressPercentage: data.progressPercentage || 0,
+      workType: data.workType || 'Development',
+      department: data.department,
+      tags: Array.isArray(data.tags) ? data.tags : [],
+      customFields: data.customFields || {},
       assignedEmployeeIds: Array.isArray(data.assignedEmployeeIds) ? data.assignedEmployeeIds : [],
+      createdById: data.createdById,
       createdAt: now,
       updatedAt: now,
     };
 
-    this.trackerSubFeatures.push(subFeature);
     console.log('Created sub-feature with assigned employees:', subFeature.assignedEmployeeIds);
+    console.log('Created sub-feature with tags:', subFeature.tags);
+
+    this.trackerSubFeatures.push(subFeature);
     return subFeature;
   }
 
