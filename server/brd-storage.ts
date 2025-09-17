@@ -25,14 +25,14 @@ async createBrdDocument(data: any): Promise<any> {
   const now = new Date();
   
   // Get project to generate document ID
-  const project = this.data.projects.find(p => p.id === data.projectId);
+  const project = await this.getProject(data.projectId);
   if (!project) {
     throw new Error(`Project with ID ${data.projectId} not found`);
   }
   
   // Generate document ID: BEG-REQ-001
   const projectPrefix = project.prefix || project.name.substring(0, 3).toUpperCase();
-  const existingDocs = this.data.brdDocuments.filter(doc => doc.projectId === data.projectId);
+  const existingDocs = await this.getBrdDocuments(data.projectId);
   const nextNumber = existingDocs.length + 1;
   const documentId = `${projectPrefix}-REQ-${String(nextNumber).padStart(3, '0')}`;
 
@@ -175,13 +175,13 @@ async createFunctionalRequirement(data: any): Promise<any> {
   const now = new Date();
   
   // Get BRD document to generate requirement ID
-  const brdDocument = this.data.brdDocuments.find(doc => doc.id === data.brdId);
+  const brdDocument = await this.getBrdDocument(data.brdId);
   if (!brdDocument) {
     throw new Error(`BRD Document with ID ${data.brdId} not found`);
   }
   
   // Generate requirement ID: BEG-REQ-001-FR-001
-  const existingRequirements = this.data.functionalRequirements.filter(req => req.brdId === data.brdId);
+  const existingRequirements = await this.getFunctionalRequirements(data.brdId);
   const nextNumber = existingRequirements.length + 1;
   const requirementId = `${brdDocument.documentId}-FR-${String(nextNumber).padStart(3, '0')}`;
 
@@ -189,6 +189,8 @@ async createFunctionalRequirement(data: any): Promise<any> {
     id,
     requirementId,
     ...data,
+    status: data.status || "Not Executed",
+    priority: data.priority || "Medium",
     createdAt: now,
     updatedAt: now
   };

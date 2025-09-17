@@ -6125,7 +6125,196 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================================================
+  // BRD Documents API Routes
+  // ============================================================================
+
+  // Get BRD Documents
+  apiRouter.get("/brd-documents", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      const documents = await storage.getBrdDocuments(projectId);
+
+      // Include functional requirements for each document
+      const documentsWithRequirements = await Promise.all(
+        documents.map(async (doc: any) => {
+          const functionalRequirements = await storage.getFunctionalRequirements(doc.id);
+          return { ...doc, functionalRequirements };
+        })
+      );
+
+      res.json(documentsWithRequirements);
+    } catch (error) {
+      console.error("Error fetching BRD documents:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Create BRD Document
+  apiRouter.post("/brd-documents", isAuthenticated, async (req, res) => {
+    try {
+      const documentData = {
+        ...req.body,
+        createdById: req.session.userId
+      };
+
+      const document = await storage.createBrdDocument(documentData);
+      res.status(201).json(document);
+    } catch (error) {
+      console.error("Error creating BRD document:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Create Functional Requirement
+  apiRouter.post("/brd-documents/:id/functional-requirements", isAuthenticated, async (req, res) => {
+    try {
+      const brdId = parseInt(req.params.id);
+      const requirementData = {
+        ...req.body,
+        brdId,
+        createdById: req.session.userId
+      };
+
+      const requirement = await storage.createFunctionalRequirement(requirementData);
+      res.status(201).json(requirement);
+    } catch (error) {
+      console.error("Error creating functional requirement:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Update Functional Requirement
+  apiRouter.put("/brd-documents/functional-requirements/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+
+      const requirement = await storage.updateFunctionalRequirement(id, updateData);
+      if (!requirement) {
+        return res.status(404).json({ message: "Functional requirement not found" });
+      }
+
+      res.json(requirement);
+    } catch (error) {
+      console.error("Error updating functional requirement:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Delete Functional Requirement
+  apiRouter.delete("/brd-documents/functional-requirements/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteFunctionalRequirement(id);
+
+      if (!success) {
+        return res.status(404).json({ message: "Functional requirement not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting functional requirement:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // ============================================================================
   // RTM (Requirements Traceability Matrix) API Routes
+  // ============================================================================
+
+  // Get RTM data for a project
+  apiRouter.get("/projects/:id/rtm", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+
+      // Get BRD documents with functional requirements
+      const brdDocuments = await storage.getBrdDocuments(projectId);
+      const brdDocumentsWithRequirements = await Promise.all(
+        brdDocuments.map(async (doc: any) => {
+          const functionalRequirements = await storage.getFunctionalRequirements(doc.id);
+          
+          // Get mappings for each functional requirement
+          const requirementsWithMappings = await Promise.all(
+            functionalRequirements.map(async (req: any) => {
+              const mappings = await storage.getRequirementTestCaseMappings(req.id);
+              return { ...req, mappings };
+            })
+          );
+
+          return { ...doc, functionalRequirements: requirementsWithMappings };
+        })
+      );
+
+      // Get test cases for the project
+      const testCases = await storage.getTestCasesByProject(projectId);
+
+      res.json({
+        brdDocuments: brdDocumentsWithRequirements,
+        testCases
+      });
+    } catch (error) {
+      console.error("Error fetching RTM data:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Create requirement-test case mapping
+  apiRouter.post("/rtm/mappings", isAuthenticated, async (req, res) => {
+    try {
+      const mappingData = {
+        ...req.body,
+        createdById: req.session.userId
+      };
+
+      const mapping = await storage.createRequirementTestCaseMapping(mappingData);
+      res.status(201).json(mapping);
+    } catch (error) {
+      console.error("Error creating RTM mapping:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Update mapping status
+  apiRouter.put("/rtm/mappings/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+
+      const mapping = await storage.updateRequirementTestCaseMapping(id, { status });
+      if (!mapping) {
+        return res.status(404).json({ message: "Mapping not found" });
+      }
+
+      // Update functional requirement status based on test case results
+      const functionalRequirementId = mapping.functionalRequirementId;
+      await storage.syncRequirementStatusWithTestCases(functionalRequirementId);
+
+      res.json(mapping);
+    } catch (error) {
+      console.error("Error updating RTM mapping:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Delete mapping
+  apiRouter.delete("/rtm/mappings/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteRequirementTestCaseMapping(id);
+
+      if (!success) {
+        return res.status(404).json({ message: "Mapping not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting RTM mapping:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // ============================================================================
+  // Original RTM API Routes
   // ============================================================================
 
   // BRD Documents Routes

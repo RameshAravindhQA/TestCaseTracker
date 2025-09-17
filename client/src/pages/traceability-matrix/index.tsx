@@ -63,6 +63,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
   const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
 
   const { toast } = useToast();
 
@@ -166,6 +167,131 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
     }
   };
 
+  const generateRTMCSV = (brd: any, testCases: any[]) => {
+    const headers = ['Requirement ID', 'Requirement Title', 'Test Case ID', 'Test Case Feature', 'Mapping Status', 'Test Case Status'];
+    const rows = [headers];
+
+    brd.functionalRequirements.forEach((req: any) => {
+      if (req.mappings.length === 0) {
+        rows.push([req.requirementId, req.title, 'No mappings', '', '', '']);
+      } else {
+        req.mappings.forEach((mapping: any) => {
+          const testCase = testCases.find(tc => tc.id === mapping.testCaseId);
+          rows.push([
+            req.requirementId,
+            req.title,
+            testCase?.testCaseId || 'Unknown',
+            testCase?.feature || '',
+            mapping.status,
+            testCase?.status || ''
+          ]);
+        });
+      }
+    });
+
+    return rows.map(row => row.join(',')).join('\n');
+  };
+
+  const downloadCSV = (csvContent: string, filename: string) => {
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const renderChartView = () => {
+    const selectedBrd = rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
+    if (!selectedBrd) return null;
+
+    const stats = selectedBrd.functionalRequirements.reduce((acc: any, req: any) => {
+      const passCount = req.mappings.filter((m: any) => m.status === "Pass").length;
+      const failCount = req.mappings.filter((m: any) => m.status === "Fail").length;
+      const notExecutedCount = req.mappings.filter((m: any) => m.status === "Not Executed").length;
+      
+      acc.pass += passCount;
+      acc.fail += failCount;
+      acc.notExecuted += notExecutedCount;
+      acc.total += req.mappings.length;
+      
+      return acc;
+    }, { pass: 0, fail: 0, notExecuted: 0, total: 0 });
+
+    return (
+      <div className="space-y-6">
+        {/* Coverage Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <div className="text-3xl font-bold text-blue-600">{stats.total}</div>
+              <div className="text-sm text-gray-500">Total Mappings</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <div className="text-3xl font-bold text-green-600">{stats.pass}</div>
+              <div className="text-sm text-gray-500">Passed</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <div className="text-3xl font-bold text-red-600">{stats.fail}</div>
+              <div className="text-sm text-gray-500">Failed</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <div className="text-3xl font-bold text-gray-600">{stats.notExecuted}</div>
+              <div className="text-sm text-gray-500">Not Executed</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Requirements Coverage Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Requirements Test Coverage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {selectedBrd.functionalRequirements.map((req: any) => {
+                const totalMappings = req.mappings.length;
+                const passCount = req.mappings.filter((m: any) => m.status === "Pass").length;
+                const failCount = req.mappings.filter((m: any) => m.status === "Fail").length;
+                const coverage = totalMappings > 0 ? Math.round((passCount / totalMappings) * 100) : 0;
+
+                return (
+                  <div key={req.id} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{req.requirementId}</p>
+                        <p className="text-xs text-gray-600 truncate">{req.title}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">{coverage}% Coverage</p>
+                        <p className="text-xs text-gray-500">
+                          {passCount}P / {failCount}F / {totalMappings - passCount - failCount}NE
+                        </p>
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-500 h-2 rounded-full" 
+                        style={{ width: `${coverage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   if (!rtmData) {
     return (
       <Card>
@@ -253,15 +379,51 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
         </CardContent>
       </Card>
 
-      {/* RTM Table */}
+      {/* RTM Controls */}
       {selectedBrdId && (
         <Card>
           <CardHeader>
-            <CardTitle>Requirements to Test Cases Mapping</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Requirements Traceability Matrix</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={viewMode === 'table' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('table')}
+                >
+                  Table View
+                </Button>
+                <Button
+                  variant={viewMode === 'chart' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('chart')}
+                >
+                  Chart View
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const selectedBrd = rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
+                    if (selectedBrd) {
+                      const csvData = generateRTMCSV(selectedBrd, rtmData.testCases);
+                      downloadCSV(csvData, `RTM_${selectedBrd.documentId}.csv`);
+                    }
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Map functional requirements to test cases and track execution status
+            </p>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
+            {viewMode === 'chart' ? renderChartView() : (
+              <div className="overflow-x-auto">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Requirement ID</TableHead>
@@ -352,6 +514,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
                 </TableBody>
               </Table>
             </div>
+            )}
           </CardContent>
         </Card>
       )}

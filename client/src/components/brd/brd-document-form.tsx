@@ -90,6 +90,9 @@ export function BrdDocumentForm({
               <FileText className="h-5 w-5" />
               Basic Information
             </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Document ID will be auto-generated based on project prefix (e.g., BEG-REQ-001)
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
             <FormField

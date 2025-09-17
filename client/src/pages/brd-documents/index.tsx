@@ -640,6 +640,10 @@ export default function BrdDocumentsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
+                  <div className="flex items-center text-sm text-blue-600 font-medium">
+                    <FileText className="h-4 w-4 mr-2" />
+                    ID: {document.documentId}
+                  </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <User className="h-4 w-4 mr-2" />
                     {document.author}

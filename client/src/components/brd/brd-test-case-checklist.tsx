@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -214,6 +213,12 @@ export function BrdFunctionalRequirements({
               <Card className="border-dashed">
                 <CardContent className="pt-6">
                   <div className="space-y-4">
+                    <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-sm text-blue-800">
+                        <strong>Note:</strong> Requirement ID will be auto-generated (e.g., BEG-REQ-001-FR-001)
+                      </p>
+                    </div>
+
                     <Input
                       placeholder="Functional requirement title"
                       value={newRequirement.title}
@@ -283,7 +288,7 @@ export function BrdFunctionalRequirements({
                         {getStatusBadge(requirement.status)}
                         {getPriorityBadge(requirement.priority)}
                       </div>
-                      
+
                       <Input
                         placeholder="Requirement title"
                         value={editingRequirement.title}
@@ -292,7 +297,7 @@ export function BrdFunctionalRequirements({
                           title: e.target.value
                         } : null)}
                       />
-                      
+
                       <Textarea
                         placeholder="Description"
                         value={editingRequirement.description || ""}
@@ -317,7 +322,7 @@ export function BrdFunctionalRequirements({
                           <SelectItem value="Low">Low</SelectItem>
                         </SelectContent>
                       </Select>
-                      
+
                       <Textarea
                         placeholder="Acceptance criteria"
                         value={editingRequirement.acceptanceCriteria || ""}
@@ -326,7 +331,7 @@ export function BrdFunctionalRequirements({
                           acceptanceCriteria: e.target.value
                         } : null)}
                       />
-                      
+
                       <Textarea
                         placeholder="Notes"
                         value={editingRequirement.notes || ""}
@@ -401,7 +406,7 @@ export function BrdFunctionalRequirements({
                           </label>
                         </div>
                       </div>
-                      
+
                       <div className="flex justify-end space-x-2">
                         <Button
                           variant="outline"
