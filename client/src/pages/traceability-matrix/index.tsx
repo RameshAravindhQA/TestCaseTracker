@@ -64,6 +64,8 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
   const [isLoading, setIsLoading] = useState(false);
   const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
+  const [testCaseViewDialogOpen, setTestCaseViewDialogOpen] = useState(false);
+  const [selectedTestCase, setSelectedTestCase] = useState<any>(null);
 
   const { toast } = useToast();
 
@@ -72,15 +74,25 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
     queryKey: ["/api/projects", selectedProjectId, "rtm"],
     queryFn: async () => {
       if (!selectedProjectId) return null;
+      console.log(`🔍 Fetching RTM data for project ${selectedProjectId}`);
       const response = await apiRequest("GET", `/api/projects/${selectedProjectId}/rtm`);
       if (!response.ok) throw new Error("Failed to fetch RTM data");
-      return response.json();
+      const data = await response.json();
+      console.log(`📊 RTM data received:`, {
+        brdCount: data.brdDocuments?.length || 0,
+        testCaseCount: data.testCases?.length || 0,
+        mappingCount: data.brdDocuments?.reduce((sum: number, brd: any) => 
+          sum + (brd.functionalRequirements?.reduce((reqSum: number, req: any) => 
+            reqSum + (req.mappings?.length || 0), 0) || 0), 0) || 0
+      });
+      return data;
     },
     enabled: !!selectedProjectId,
   });
 
   useEffect(() => {
     if (rtmProjectData) {
+      console.log(`🔄 Setting RTM data:`, rtmProjectData);
       setRtmData(rtmProjectData);
     }
   }, [rtmProjectData]);
@@ -137,12 +149,18 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
   const handleCreateMapping = (testCaseId: number) => {
     if (!selectedRequirement) return;
     
+    console.log(`🔗 Creating mapping: Requirement ${selectedRequirement.id} -> Test Case ${testCaseId}`);
     createMappingMutation.mutate({
       functionalRequirementId: selectedRequirement.id,
       testCaseId,
       projectId: selectedProjectId,
       status: "Not Executed"
     });
+  };
+
+  const handleViewTestCase = (testCase: any) => {
+    setSelectedTestCase(testCase);
+    setTestCaseViewDialogOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -461,40 +479,53 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
-                            {requirement.mappings.map((mapping: any) => {
-                              const testCase = rtmData.testCases.find((tc: any) => tc.id === mapping.testCaseId);
-                              return (
-                                <div key={mapping.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                                  <Badge variant="outline" className="text-xs">
-                                    {testCase?.testCaseId || 'Unknown'}
-                                  </Badge>
-                                  <Select
-                                    value={mapping.status}
-                                    onValueChange={(status) => 
-                                      updateMappingMutation.mutate({ mappingId: mapping.id, status })
-                                    }
-                                  >
-                                    <SelectTrigger className="h-6 text-xs w-24">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="Pass">Pass</SelectItem>
-                                      <SelectItem value="Fail">Fail</SelectItem>
-                                      <SelectItem value="Not Executed">Not Executed</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => deleteMappingMutation.mutate(mapping.id)}
-                                    className="h-6 w-6 p-0"
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              );
-                            })}
-                            {requirement.mappings.length === 0 && (
+                            {requirement.mappings && requirement.mappings.length > 0 ? (
+                              requirement.mappings.map((mapping: any) => {
+                                const testCase = rtmData.testCases?.find((tc: any) => tc.id === mapping.testCaseId);
+                                console.log(`🔍 Mapping ${mapping.id}: testCaseId=${mapping.testCaseId}, found testCase:`, testCase);
+                                return (
+                                  <div key={mapping.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                                    <Badge 
+                                      variant="outline" 
+                                      className="text-xs cursor-pointer hover:bg-blue-50"
+                                      onClick={() => testCase && handleViewTestCase(testCase)}
+                                      title={testCase ? `Click to view test case details: ${testCase.feature || testCase.title}` : 'Test case not found'}
+                                    >
+                                      {testCase?.testCaseId || `TC-${mapping.testCaseId}`}
+                                    </Badge>
+                                    {testCase && (
+                                      <span className="text-xs text-gray-600 max-w-32 truncate" title={testCase.feature || testCase.title}>
+                                        {testCase.feature || testCase.title}
+                                      </span>
+                                    )}
+                                    <Select
+                                      value={mapping.status}
+                                      onValueChange={(status) => 
+                                        updateMappingMutation.mutate({ mappingId: mapping.id, status })
+                                      }
+                                    >
+                                      <SelectTrigger className="h-6 text-xs w-24">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="Pass">Pass</SelectItem>
+                                        <SelectItem value="Fail">Fail</SelectItem>
+                                        <SelectItem value="Not Executed">Not Executed</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => deleteMappingMutation.mutate(mapping.id)}
+                                      className="h-6 w-6 p-0"
+                                      title="Remove mapping"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                );
+                              })
+                            ) : (
                               <span className="text-sm text-gray-500">No test cases mapped</span>
                             )}
                           </div>
@@ -530,39 +561,167 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
             <DialogTitle>Map Test Case to Requirement</DialogTitle>
             <DialogDescription>
               {selectedRequirement && (
-                <>Select test cases to map to requirement: <strong>{selectedRequirement.requirementId}</strong></>
+                <>Select test cases to map to requirement: <strong>{selectedRequirement.requirementId}</strong> - {selectedRequirement.title}</>
               )}
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-96 overflow-y-auto">
             <div className="space-y-2">
-              {rtmData.testCases.map((testCase: any) => {
-                const isAlreadyMapped = selectedRequirement?.mappings.some((m: any) => m.testCaseId === testCase.id);
-                return (
-                  <div
-                    key={testCase.id}
-                    className={`flex items-center justify-between p-3 border rounded-lg ${
-                      isAlreadyMapped ? 'bg-gray-100 opacity-50' : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex-1">
-                      <div className="font-medium">{testCase.testCaseId}</div>
-                      <div className="text-sm text-gray-600">{testCase.feature}</div>
-                      <div className="text-xs text-gray-500">Status: {testCase.status}</div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={isAlreadyMapped}
-                      onClick={() => handleCreateMapping(testCase.id)}
+              {rtmData?.testCases && rtmData.testCases.length > 0 ? (
+                rtmData.testCases.map((testCase: any) => {
+                  const isAlreadyMapped = selectedRequirement?.mappings?.some((m: any) => m.testCaseId === testCase.id);
+                  return (
+                    <div
+                      key={testCase.id}
+                      className={`flex items-center justify-between p-3 border rounded-lg ${
+                        isAlreadyMapped ? 'bg-gray-100 opacity-50' : 'hover:bg-gray-50'
+                      }`}
                     >
-                      {isAlreadyMapped ? 'Already Mapped' : 'Map'}
-                    </Button>
-                  </div>
-                );
-              })}
+                      <div className="flex-1">
+                        <div className="font-medium">{testCase.testCaseId}</div>
+                        <div className="text-sm text-gray-600">{testCase.feature || testCase.title}</div>
+                        <div className="text-xs text-gray-500">
+                          Status: {testCase.status} | Priority: {testCase.priority}
+                        </div>
+                        {testCase.description && (
+                          <div className="text-xs text-gray-400 mt-1 line-clamp-2">
+                            {testCase.description}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewTestCase(testCase)}
+                          title="View test case details"
+                        >
+                          View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isAlreadyMapped}
+                          onClick={() => handleCreateMapping(testCase.id)}
+                        >
+                          {isAlreadyMapped ? 'Already Mapped' : 'Map'}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No test cases found for this project.</p>
+                  <p className="text-sm mt-2">Create test cases first to map them to requirements.</p>
+                </div>
+              )}
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Test Case View Dialog */}
+      <Dialog open={testCaseViewDialogOpen} onOpenChange={setTestCaseViewDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Test Case Details</DialogTitle>
+          </DialogHeader>
+          {selectedTestCase && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Test Case ID</Label>
+                  <p className="text-sm bg-gray-50 p-2 rounded">{selectedTestCase.testCaseId}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Status</Label>
+                  <p className="text-sm bg-gray-50 p-2 rounded">{selectedTestCase.status}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Priority</Label>
+                  <p className="text-sm bg-gray-50 p-2 rounded">{selectedTestCase.priority}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Type</Label>
+                  <p className="text-sm bg-gray-50 p-2 rounded">{selectedTestCase.type || 'Functional'}</p>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium">Feature/Title</Label>
+                <p className="text-sm bg-gray-50 p-2 rounded">{selectedTestCase.feature || selectedTestCase.title}</p>
+              </div>
+
+              {selectedTestCase.description && (
+                <div>
+                  <Label className="text-sm font-medium">Description</Label>
+                  <p className="text-sm bg-gray-50 p-2 rounded whitespace-pre-wrap">{selectedTestCase.description}</p>
+                </div>
+              )}
+
+              {selectedTestCase.preconditions && (
+                <div>
+                  <Label className="text-sm font-medium">Preconditions</Label>
+                  <p className="text-sm bg-gray-50 p-2 rounded whitespace-pre-wrap">{selectedTestCase.preconditions}</p>
+                </div>
+              )}
+
+              {selectedTestCase.steps && (
+                <div>
+                  <Label className="text-sm font-medium">Test Steps</Label>
+                  <p className="text-sm bg-gray-50 p-2 rounded whitespace-pre-wrap">{selectedTestCase.steps}</p>
+                </div>
+              )}
+
+              {selectedTestCase.expectedResult && (
+                <div>
+                  <Label className="text-sm font-medium">Expected Result</Label>
+                  <p className="text-sm bg-gray-50 p-2 rounded whitespace-pre-wrap">{selectedTestCase.expectedResult}</p>
+                </div>
+              )}
+
+              {selectedTestCase.actualResult && (
+                <div>
+                  <Label className="text-sm font-medium">Actual Result</Label>
+                  <p className="text-sm bg-gray-50 p-2 rounded whitespace-pre-wrap">{selectedTestCase.actualResult}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Created Date</Label>
+                  <p className="text-sm bg-gray-50 p-2 rounded">
+                    {selectedTestCase.createdAt ? new Date(selectedTestCase.createdAt).toLocaleDateString() : 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Last Updated</Label>
+                  <p className="text-sm bg-gray-50 p-2 rounded">
+                    {selectedTestCase.updatedAt ? new Date(selectedTestCase.updatedAt).toLocaleDateString() : 'N/A'}
+                  </p>
+                </div>
+              </div>
+
+              {selectedTestCase.tags && selectedTestCase.tags.length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium">Tags</Label>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {selectedTestCase.tags.map((tag: any, index: number) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {typeof tag === 'string' ? tag : tag.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTestCaseViewDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

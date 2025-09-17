@@ -697,7 +697,7 @@ class MemStorage implements IStorage {
 
     console.log(`Storage: getBrdDocuments called with projectId: ${projectId}`);
     console.log(`Storage: Total BRD documents in storage: ${this.data.brdDocuments.length}`);
-    console.log(`Storage: Found ${results.length} BRD documents for project ${projectId}:`, 
+    console.log(`Storage: Found ${results.length} BRD documents for project ${projectId}:`,
       results.map(doc => ({ id: doc.id, title: doc.title, documentId: doc.documentId, projectId: doc.projectId })));
 
     return results.sort((a, b) => a.documentId.localeCompare(b.documentId));
@@ -807,7 +807,7 @@ class MemStorage implements IStorage {
       this.data.functionalRequirements = [];
     }
     this.data.functionalRequirements.push(requirement);
-    
+
     console.log(`Storage: Created functional requirement with ID ${id}:`, requirement);
     return requirement;
   }
@@ -1194,7 +1194,7 @@ class MemStorage implements IStorage {
         throw new Error(`Module or Project not found`);
       }
 
-      const projectPrefix = project.prefix || 'DEF';
+      const projectPrefix = project.prefix || 'BEG';
 
       // Extract module prefix from module ID with robust logic
       let modulePrefix = 'MOD';
@@ -5191,6 +5191,9 @@ class MemStorage implements IStorage {
   }
 
   async getRequirementTestCaseMapping(id: number): Promise<RequirementTestCaseMapping | null> {
+    if (!this.requirementTestCaseMappings) {
+      this.requirementTestCaseMappings = [];
+    }
     return this.requirementTestCaseMappings.find(mapping => mapping.id === id) || null;
   }
 

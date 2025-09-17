@@ -12,87 +12,6 @@ import { EnhancedAIService } from "./enhanced-ai-service";
 import { aiConfigStorage } from "./ai-config-storage";
 import * as fs from "fs";
 import * as path from "path";
-import {
-  insertUserSchema,
-  insertProjectSchema,
-  insertProjectMemberSchema,
-  insertModuleSchema,
-  insertTestCaseSchema,
-  insertBugSchema,
-  insertActivitySchema,
-  insertDocumentFolderSchema,
-  insertDocumentSchema,
-  insertTimeSheetSchema,
-  type TimeSheet,
-  type InsertTimeSheet,
-  type TimeSheetFolder,
-  type InsertTimeSheetFolder,
-  type Customer,
-  type InsertCustomer,
-  type CustomerProject,
-  type InsertCustomerProject,
-
-  type Sprint,
-  type InsertSprint,
-  type KanbanColumn,
-  type InsertKanbanColumn,
-  type KanbanCard,
-  type InsertKanbanCard,
-  insertCustomMarkerSchema,
-  insertMatrixCellSchema,
-  cellValueSchema,
-  type CustomMarker,
-  type InsertCustomMarker,
-  type MatrixCell,
-  type InsertMatrixCell,
-  type CellValue,
-  type Notebook,
-  type NotebookCategory,
-  type NotebookComment,
-
-  // Project Tracker imports
-  type TrackerProject,
-  type InsertTrackerProject,
-  type TrackerFeature,
-  type InsertTrackerFeature,
-  type TrackerSubFeature,
-  type InsertTrackerSubFeature,
-  type TrackerWorkLog,
-  type InsertTrackerWorkLog,
-  type TrackerTimelineExtension,
-  type InsertTrackerTimelineExtension,
-  type TrackerDependency,
-  type InsertTrackerDependency,
-  type TrackerAuditLog,
-  type InsertTrackerAuditLog,
-  type TrackerCustomDropdown,
-  type InsertTrackerCustomDropdown,
-  insertTrackerProjectSchema,
-  insertTrackerFeatureSchema,
-  insertTrackerSubFeatureSchema,
-  insertTrackerWorkLogSchema,
-  insertTrackerTimelineExtensionSchema,
-  insertTrackerDependencySchema,
-  insertTrackerAuditLogSchema,
-  insertTrackerCustomDropdownSchema,
-
-  // RTM (Requirements Traceability Matrix) imports
-  type BrdDocument,
-  type InsertBrdDocument,
-  type FunctionalRequirement,
-  type InsertFunctionalRequirement,
-  type RequirementTestCaseMapping,
-  type InsertRequirementTestCaseMapping,
-  insertBrdDocumentSchema,
-  insertFunctionalRequirementSchema,
-  insertRequirementTestCaseMappingSchema
-} from "@shared/schema";
-import * as crypto from "crypto";
-import * as bcrypt from "bcrypt";
-import session from "express-session";
-import MemoryStore from "memorystore";
-import multer from "multer";
-import path from "path";
 import flowDiagramRoutes from './api/flow-diagram-routes';
 import brdRoutes from "./brd-routes";
 import { OAuthService } from './oauth-service';
@@ -3668,8 +3587,7 @@ export async function registerRoutes(app: Express): Server {
       res.status(500).json({
         success: false,
         message: 'Internal server error while getting execution',
-        error: error.message,
-      });
+        error: error.message,      });
     }
   });
 
@@ -5108,7 +5026,7 @@ export async function registerRoutes(app: Express): Server {
         const module = await storage.getModule(parseInt(moduleId as string));
         if (!module || module.projectId !== projectId) {
           console.log(`[API] Module ${moduleId} not found or doesn't belong to project ${projectId}`);
-          return res.status(400).json({ message: "Invalid module for this project" });
+          return res.status(400).json({ message: "Invalid module ID" });
         }
         testCases = await storage.getTestCasesByFilters(projectId, parseInt(moduleId as string));
       } else {
@@ -6276,55 +6194,83 @@ export async function registerRoutes(app: Express): Server {
   // Create requirement-test case mapping
   apiRouter.post("/rtm/mappings", isAuthenticated, async (req, res) => {
     try {
+      console.log(`🔗 Creating RTM mapping:`, req.body);
       const mappingData = {
         ...req.body,
-        createdById: req.session.userId
+        createdById: req.session.userId,
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
 
       const mapping = await storage.createRequirementTestCaseMapping(mappingData);
+      console.log(`✅ RTM mapping created:`, mapping);
+
+      // Sync requirement status after creating mapping
+      await storage.syncRequirementStatusWithTestCases(mappingData.functionalRequirementId);
+
       res.status(201).json(mapping);
     } catch (error) {
-      console.error("Error creating RTM mapping:", error);
-      res.status(500).json({ message: "Server error" });
+      console.error("Create RTM mapping error:", error);
+      res.status(500).json({ error: "Failed to create mapping" });
     }
   });
 
   // Update mapping status
   apiRouter.put("/rtm/mappings/:id", isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const { status } = req.body;
+      const mappingId = parseInt(req.params.id);
+      console.log(`🔄 Updating RTM mapping ${mappingId}:`, req.body);
 
-      const mapping = await storage.updateRequirementTestCaseMapping(id, { status });
+      const updateData = {
+        ...req.body,
+        updatedAt: new Date()
+      };
+
+      const mapping = await storage.updateRequirementTestCaseMapping(mappingId, updateData);
       if (!mapping) {
-        return res.status(404).json({ message: "Mapping not found" });
+        return res.status(404).json({ error: "Mapping not found" });
       }
 
-      // Update functional requirement status based on test case results
-      const functionalRequirementId = mapping.functionalRequirementId;
-      await storage.syncRequirementStatusWithTestCases(functionalRequirementId);
+      console.log(`✅ RTM mapping updated:`, mapping);
+
+      // Sync requirement status after updating mapping
+      if (mapping.functionalRequirementId) {
+        await storage.syncRequirementStatusWithTestCases(mapping.functionalRequirementId);
+      }
 
       res.json(mapping);
     } catch (error) {
-      console.error("Error updating RTM mapping:", error);
-      res.status(500).json({ message: "Server error" });
+      console.error("Update RTM mapping error:", error);
+      res.status(500).json({ error: "Failed to update mapping" });
     }
   });
 
   // Delete mapping
   apiRouter.delete("/rtm/mappings/:id", isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const success = await storage.deleteRequirementTestCaseMapping(id);
+      const mappingId = parseInt(req.params.id);
+      console.log(`🗑️ Deleting RTM mapping ${mappingId}`);
+
+      // Get mapping data before deletion for status sync
+      const mapping = await storage.getRequirementTestCaseMapping(mappingId);
+
+      const success = await storage.deleteRequirementTestCaseMapping(mappingId);
 
       if (!success) {
-        return res.status(404).json({ message: "Mapping not found" });
+        return res.status(404).json({ error: "Mapping not found" });
+      }
+
+      console.log(`✅ RTM mapping deleted`);
+
+      // Sync requirement status after deleting mapping
+      if (mapping && mapping.functionalRequirementId) {
+        await storage.syncRequirementStatusWithTestCases(mapping.functionalRequirementId);
       }
 
       res.json({ success: true });
     } catch (error) {
-      console.error("Error deleting RTM mapping:", error);
-      res.status(500).json({ message: "Server error" });
+      console.error("Delete RTM mapping error:", error);
+      res.status(500).json({ error: "Failed to delete mapping" });
     }
   });
 
@@ -7478,7 +7424,7 @@ export async function registerRoutes(app: Express): Server {
         // Make sure target folder is in the same project
         if (targetFolder.projectId !== document.projectId) {
           return res.status(400).json({
-            message: "Cannot copy document to a folder in a different project"
+            message: "Target folder must be in the same project"
           });
         }
       }
@@ -8486,7 +8432,7 @@ export async function registerRoutes(app: Express): Server {
     }
   });
 
-  apiRouter.put("/todos/:id", isAuthenticated, async (req, res) => {
+  apiRouter.put("/todos/:id", isAuthenticated, async (req, res) =>{
     try {
       const todoId = parseInt(req.params.id);
       const updates = req.body;
