@@ -1375,38 +1375,21 @@ export class DatabaseStorage implements IStorage {
     
     console.log('DB: Processing assignedEmployeeId - original:', workLog.assignedEmployeeId, 'processed:', assignedEmployeeId);
     
-    const insertData: any = {
-      projectId: workLog.projectId,
-      featureId: workLog.featureId || null,
-      subFeatureId: workLog.subFeatureId || null,
-      userId: workLog.userId,
-      assignedEmployeeId: assignedEmployeeId,
-      workDate: workLog.workDate,
-      hoursWorked: typeof workLog.hoursWorked === 'string' ? workLog.hoursWorked : workLog.hoursWorked.toString(),
-      description: workLog.description,
-      workType: workLog.workType || null,
-      status: workLog.status,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    console.log('DB: Insert data:', JSON.stringify(insertData, null, 2));
-    
     const [result] = await db
       .insert(trackerWorkLogs)
       .values({
-        projectId: insertData.projectId,
-        featureId: insertData.featureId,
-        subFeatureId: insertData.subFeatureId,
-        userId: insertData.userId,
-        assignedEmployeeId: insertData.assignedEmployeeId,
-        workDate: insertData.workDate,
-        hoursWorked: insertData.hoursWorked,
-        description: insertData.description,
-        workType: insertData.workType,
-        status: insertData.status,
-        createdAt: insertData.createdAt,
-        updatedAt: insertData.updatedAt
+        projectId: workLog.projectId,
+        featureId: workLog.featureId || null,
+        subFeatureId: workLog.subFeatureId || null,
+        userId: workLog.userId,
+        assignedEmployeeId: assignedEmployeeId,
+        workDate: workLog.workDate,
+        hoursWorked: typeof workLog.hoursWorked === 'string' ? workLog.hoursWorked : workLog.hoursWorked.toString(),
+        description: workLog.description,
+        workType: workLog.workType || null,
+        status: workLog.status,
+        createdAt: new Date(),
+        updatedAt: new Date()
       })
       .returning();
     
@@ -1415,8 +1398,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateTrackerWorkLog(id: number, workLogData: Partial<TrackerWorkLog>): Promise<TrackerWorkLog | undefined> {
+    // Ensure assignedEmployeeId is properly handled for updates too
+    const updateData = { ...workLogData };
+    if (updateData.assignedEmployeeId !== undefined) {
+      if (updateData.assignedEmployeeId === null || updateData.assignedEmployeeId === '') {
+        updateData.assignedEmployeeId = null;
+      } else {
+        const numValue = Number(updateData.assignedEmployeeId);
+        updateData.assignedEmployeeId = !isNaN(numValue) && numValue > 0 ? numValue : null;
+      }
+    }
+
     const [updatedWorkLog] = await db.update(trackerWorkLogs)
-      .set({ ...workLogData, updatedAt: new Date() })
+      .set({ ...updateData, updatedAt: new Date() })
       .where(eq(trackerWorkLogs.id, id))
       .returning();
     return updatedWorkLog;
