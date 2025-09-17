@@ -452,6 +452,7 @@ export interface IStorage {
     featureId?: number;
     subFeatureId?: number;
     userId?: number;
+    assignedEmployeeId?: number;
     startDate?: string;
     endDate?: string;
   }): Promise<TrackerWorkLog[]>;
@@ -5550,6 +5551,7 @@ class MemStorage implements IStorage {
     featureId?: number;
     subFeatureId?: number;
     userId?: number;
+    assignedEmployeeId?: number;
     startDate?: string;
     endDate?: string;
   }): Promise<TrackerWorkLog[]> {
@@ -5567,6 +5569,9 @@ class MemStorage implements IStorage {
       }
       if (filters.userId) {
         workLogs = workLogs.filter(wl => wl.userId === filters.userId);
+      }
+      if (filters.assignedEmployeeId) {
+        workLogs = workLogs.filter(wl => wl.assignedEmployeeId === filters.assignedEmployeeId);
       }
       if (filters.startDate) {
         workLogs = workLogs.filter(wl => wl.workDate >= filters.startDate!);
@@ -5587,6 +5592,7 @@ class MemStorage implements IStorage {
       featureId: data.featureId,
       subFeatureId: data.subFeatureId,
       userId: data.userId,
+      assignedEmployeeId: data.assignedEmployeeId,
       workDate: data.workDate,
       hoursWorked: data.hoursWorked,
       description: data.description,

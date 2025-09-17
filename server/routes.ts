@@ -2030,7 +2030,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Work Logs
   apiRouter.get("/tracker/work-logs", isAuthenticated, async (req, res) => {
     try {
-      const {projectId, featureId, subFeatureId, userId, startDate, endDate } = req.query;
+      const {projectId, featureId, subFeatureId, userId, assignedEmployeeId, startDate, endDate } = req.query;
       const requestingUser = req.session?.userId;
 
       console.log(`[API] Getting work logs with filters:`, {
@@ -2038,6 +2038,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         featureId: featureId ? parseInt(featureId as string) : undefined,
         subFeatureId: subFeatureId ? parseInt(subFeatureId as string) : undefined,
         userId: userId ? parseInt(userId as string) : undefined,
+        assignedEmployeeId: assignedEmployeeId ? parseInt(assignedEmployeeId as string) : undefined,
         startDate: startDate as string,
         endDate: endDate as string,
       });
@@ -2048,6 +2049,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (featureId) filters.featureId = parseInt(featureId as string);
       if (subFeatureId) filters.subFeatureId = parseInt(subFeatureId as string);
       if (userId) filters.userId = parseInt(userId as string);
+      if (assignedEmployeeId) filters.assignedEmployeeId = parseInt(assignedEmployeeId as string);
       if (startDate) filters.startDate = startDate as string;
       if (endDate) filters.endDate = endDate as string;
 
