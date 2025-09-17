@@ -66,6 +66,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
   const [testCaseViewDialogOpen, setTestCaseViewDialogOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<any>(null);
+  const [treeViewMode, setTreeViewMode] = useState<'table' | 'tree'>('table');
 
   const { toast } = useToast();
 
@@ -220,6 +221,122 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
     URL.revokeObjectURL(url);
   };
 
+  const renderTreeView = () => {
+    const selectedBrd = rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
+    if (!selectedBrd) return null;
+
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Requirements Tree Diagram</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Hierarchical view of BRD → Functional Requirements → Test Cases
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* BRD Document Root */}
+              <div className="flex items-center gap-2 p-4 border rounded-lg bg-blue-50">
+                <FileText className="h-6 w-6 text-blue-600" />
+                <div>
+                  <div className="font-semibold text-blue-900">{selectedBrd.documentId}</div>
+                  <div className="text-sm text-blue-700">{selectedBrd.title}</div>
+                </div>
+              </div>
+
+              {/* Functional Requirements */}
+              {selectedBrd.functionalRequirements?.map((requirement: any, reqIndex: number) => (
+                <div key={requirement.id} className="ml-8 space-y-2">
+                  {/* Connection line to parent */}
+                  <div className="flex items-center">
+                    <div className="w-6 border-l-2 border-t-2 border-gray-300 h-4"></div>
+                    <div className="flex items-center gap-2 p-3 border rounded-lg bg-green-50 flex-1">
+                      <Tag className="h-5 w-5 text-green-600" />
+                      <div className="flex-1">
+                        <div className="font-medium text-green-900">{requirement.requirementId}</div>
+                        <div className="text-sm text-green-700">{requirement.title}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          {getStatusBadge(requirement.status || "Not Executed")}
+                          <Badge variant="outline" className="text-xs">
+                            {requirement.mappings?.length || 0} Test Cases
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Test Cases */}
+                  {requirement.mappings?.map((mapping: any, mappingIndex: number) => {
+                    const testCase = rtmData.testCases?.find((tc: any) => tc.id === mapping.testCaseId);
+                    return (
+                      <div key={mapping.id} className="ml-8 flex items-center">
+                        <div className="w-6 border-l-2 border-t-2 border-gray-300 h-4"></div>
+                        <div className="flex items-center gap-2 p-2 border rounded-lg bg-yellow-50 flex-1 hover:bg-yellow-100 cursor-pointer"
+                             onClick={() => testCase && handleViewTestCase(testCase)}>
+                          <Check className="h-4 w-4 text-yellow-600" />
+                          <div className="flex-1">
+                            <div className="font-medium text-yellow-900">
+                              {testCase?.testCaseId || `TC-${mapping.testCaseId}`}
+                            </div>
+                            <div className="text-sm text-yellow-700">
+                              {testCase?.feature || testCase?.title || 'Test Case'}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              {getStatusBadge(mapping.status)}
+                              {testCase?.priority && (
+                                <Badge variant="outline" className="text-xs">
+                                  {testCase.priority}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Show message if no test cases mapped */}
+                  {(!requirement.mappings || requirement.mappings.length === 0) && (
+                    <div className="ml-8 flex items-center">
+                      <div className="w-6 border-l-2 border-t-2 border-gray-300 h-4"></div>
+                      <div className="flex items-center gap-2 p-2 border rounded-lg bg-gray-50 flex-1">
+                        <X className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-500">No test cases mapped</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedRequirement(requirement);
+                            setMappingDialogOpen(true);
+                          }}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Map Test Case
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Show message if no requirements */}
+              {(!selectedBrd.functionalRequirements || selectedBrd.functionalRequirements.length === 0) && (
+                <div className="ml-8 flex items-center">
+                  <div className="w-6 border-l-2 border-t-2 border-gray-300 h-4"></div>
+                  <div className="flex items-center gap-2 p-4 border rounded-lg bg-gray-50 flex-1">
+                    <X className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-500">No functional requirements found</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   const renderChartView = () => {
     const selectedBrd = rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
     if (!selectedBrd) return null;
@@ -344,14 +461,23 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select BRD Document">
-                  {selectedBrdId && rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId)?.documentId}
+                  {selectedBrdId && (() => {
+                    const selectedBrd = rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
+                    return selectedBrd ? `${selectedBrd.documentId} (${selectedBrd.functionalRequirements?.length || 0} Requirements)` : '';
+                  })()}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {rtmData.brdDocuments && rtmData.brdDocuments.length > 0 ? (
                   rtmData.brdDocuments.map((brd: any) => (
                     <SelectItem key={brd.id} value={brd.id.toString()}>
-                      {brd.documentId} - {brd.title}
+                      <div className="flex flex-col">
+                        <span className="font-medium">{brd.documentId}</span>
+                        <span className="text-xs text-gray-500">{brd.title}</span>
+                        <span className="text-xs text-blue-600">
+                          {brd.functionalRequirements?.length || 0} Requirements
+                        </span>
+                      </div>
                     </SelectItem>
                   ))
                 ) : (
@@ -423,6 +549,13 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
                   Chart View
                 </Button>
                 <Button
+                  variant={treeViewMode === 'tree' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTreeViewMode('tree')}
+                >
+                  Tree View
+                </Button>
+                <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
@@ -443,7 +576,8 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
             </p>
           </CardHeader>
           <CardContent>
-            {viewMode === 'chart' ? renderChartView() : (
+            {viewMode === 'chart' ? renderChartView() : 
+             treeViewMode === 'tree' ? renderTreeView() : (
               <div className="overflow-x-auto">
                 <Table>
                 <TableHeader>

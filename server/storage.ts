@@ -786,7 +786,7 @@ class MemStorage implements IStorage {
       throw new Error(`BRD Document with ID ${data.brdId} not found`);
     }
 
-    // Generate requirement ID: BEG-REQ-001-FR-001
+    // Generate requirement ID: BEG-REQ-001-FR-001 format
     const existingRequirements = await this.getFunctionalRequirements(data.brdId);
     const nextNumber = existingRequirements.length + 1;
     const requirementId = `${brdDocument.documentId}-FR-${String(nextNumber).padStart(3, '0')}`;

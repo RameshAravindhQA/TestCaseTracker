@@ -1,5 +1,9 @@
 import express, { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
+import * as crypto from "crypto";
+import session from "express-session";
+import MemoryStore from "memorystore";
 import { storage } from "./storage";
 import { GitHubService, githubService, syncGitHubComments } from "./github-service";
 import { initializeDatabase, saveMatrixCell, getMatrixCellsByProject, getTraceabilityMarkersByProject, deleteMatrixCell } from "./matrix-fix";
