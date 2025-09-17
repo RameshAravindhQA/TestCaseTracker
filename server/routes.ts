@@ -1963,20 +1963,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Received sub-feature creation request:', req.body);
       console.log('Assigned employee IDs in request:', req.body.assignedEmployeeIds);
-      
+
       // Extract assignedEmployeeIds before schema parsing to ensure it's preserved
       const assignedEmployeeIds = Array.isArray(req.body.assignedEmployeeIds) ? req.body.assignedEmployeeIds : [];
-      
+
       const subFeatureData = {
         ...req.body,
         createdById: req.session.userId,
         assignedEmployeeIds: assignedEmployeeIds,
       };
-      
+
       console.log('Parsed sub-feature data before storage:', subFeatureData);
       const subFeature = await storage.createTrackerSubFeature(subFeatureData);
       console.log('Created sub-feature:', subFeature);
-      
+
       res.status(201).json(subFeature);
     } catch (error) {
       console.error("Create tracker sub-feature error:", error);
@@ -2065,17 +2065,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/tracker/work-logs", isAuthenticated, async (req, res) => {
     try {
+      console.log('Creating work log with data:', req.body);
       const workLogData = insertTrackerWorkLogSchema.parse({
         ...req.body,
         userId: req.session.userId,
+        assignedEmployeeId: req.body.assignedEmployeeId || null,
       });
-      
-      console.log('Creating work log with data:', workLogData);
-      
       const workLog = await storage.createTrackerWorkLog(workLogData);
-      
       console.log('Created work log:', workLog);
-      
       res.status(201).json(workLog);
     } catch (error) {
       console.error("Create tracker work log error:", error);
@@ -7626,7 +7623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const listId = parseInt(req.params.id);
       const todos = await storage.getTodosByListId(listId);
 
-      // Ensure we always return an array
+      // Ensure we return an array
       const todosArray = Array.isArray(todos) ? todos : [];
       res.json(todosArray);
     } catch (error) {

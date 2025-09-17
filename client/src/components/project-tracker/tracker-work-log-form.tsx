@@ -101,8 +101,9 @@ export function TrackerWorkLogForm({
       projectId: projectId,
       subFeatureId: subFeature.id,
       featureId: subFeature.featureId,
-      assignedEmployeeId: data.assignedEmployeeId
+      assignedEmployeeId: data.assignedEmployeeId || null
     };
+    console.log('Submitting work log data:', workLogData);
     onSubmit(workLogData);
   };
 

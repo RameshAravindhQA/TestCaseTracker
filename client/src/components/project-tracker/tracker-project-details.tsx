@@ -568,6 +568,16 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
                                       </span>
                                     )}
                                   </div>
+                                  {/* Display tags if available */}
+                                  {subFeature.tags && subFeature.tags.length > 0 && (
+                                    <div className="flex items-center gap-1 mt-2">
+                                      {subFeature.tags.map((tag: string, index: number) => (
+                                        <Badge key={index} variant="secondary" className="text-xs bg-blue-50 text-blue-700">
+                                          {tag}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  )}
                                   {/* Display assigned employees */}
                                   {subFeature.assignedEmployeeIds && subFeature.assignedEmployeeIds.length > 0 && (
                                     <div className="flex items-center gap-1 mt-2">
