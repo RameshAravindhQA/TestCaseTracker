@@ -5097,59 +5097,6 @@ class MemStorage implements IStorage {
 export const storage = new MemStorage();
 
 export { MemStorage };
-</new_str>
-Add BRD properties to MemStorage class
-Replacing
-<old_str>
-class MemStorage implements Storage {
-  private testCases: TestCase[] = [];
-  private bugs: Bug[] = [];
-  private projects: Project[] = [];
-  private modules: Module[] = [];
-  private employees: Employee[] = [];
-  private users: User[] = [];
-  private projectMembers: ProjectMember[] = [];
-  private bugComments: BugComment[] = [];
-  private nextId: number = 1;
-  private activities: Activity[] = [];
-  private deletedTestCases: DeletedTestCase[] = [];
-  private markers: Marker[] = [];
-  private customMarkers: CustomMarker[] = [];
-  private matrixCells: MatrixCell[] = [];
-  private notifications: Notification[] = [];
-  private messages: Message[] = [];
-  private chatRooms: ChatRoom[] = [];
-  private nextChatRoomId: number = 1;
-</old_str>
-with
-<new_str>
-class MemStorage implements Storage {
-  private testCases: TestCase[] = [];
-  private bugs: Bug[] = [];
-  private projects: Project[] = [];
-  private modules: Module[] = [];
-  private employees: Employee[] = [];
-  private users: User[] = [];
-  private projectMembers: ProjectMember[] = [];
-  private bugComments: BugComment[] = [];
-  private nextId: number = 1;
-  private activities: Activity[] = [];
-  private deletedTestCases: DeletedTestCase[] = [];
-  private markers: Marker[] = [];
-  private customMarkers: CustomMarker[] = [];
-  private matrixCells: MatrixCell[] = [];
-  private notifications: Notification[] = [];
-  private messages: Message[] = [];
-  private chatRooms: ChatRoom[] = [];
-  private nextChatRoomId: number = 1;
-
-  // BRD and RTM related properties
-  private brdDocuments: any[] = [];
-  private functionalRequirements: any[] = [];
-  private requirementTestCaseMappings: any[] = [];
-</new_str>
-</changes>
-<replit_final_file>
 import {
   User,
   Project,
