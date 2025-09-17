@@ -1357,9 +1357,9 @@ export const insertTrackerSubFeatureSchema = createInsertSchema(trackerSubFeatur
 
 export const insertTrackerWorkLogSchema = createInsertSchema(trackerWorkLogs, {
   workDate: z.string(),
-  hoursWorked: z.number().positive(),
+  hoursWorked: z.union([z.number().positive(), z.string().transform(val => Number(val))]),
   description: z.string().min(1),
-  assignedEmployeeId: z.union([z.number().int().positive(), z.null()]).optional().nullable(),
+  assignedEmployeeId: z.union([z.number().int().positive(), z.null(), z.undefined()]).optional().nullable(),
 }).omit({
   id: true,
   createdAt: true,

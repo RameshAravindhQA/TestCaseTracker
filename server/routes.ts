@@ -2077,7 +2077,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const workLogData = {
+      const workLogData: any = {
         projectId: Number(req.body.projectId),
         featureId: req.body.featureId ? Number(req.body.featureId) : null,
         subFeatureId: req.body.subFeatureId ? Number(req.body.subFeatureId) : null,
