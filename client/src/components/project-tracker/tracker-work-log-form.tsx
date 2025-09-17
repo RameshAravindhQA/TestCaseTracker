@@ -249,63 +249,140 @@ export function TrackerWorkLogForm({
               name="assignedEmployeeId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Assigned Employee</FormLabel>
-                  <div className="space-y-2">
-                    <Input
-                      placeholder="Search employees by name or email..."
-                      value={employeeSearchQuery}
-                      onChange={(e) => setEmployeeSearchQuery(e.target.value)}
-                      className="text-sm"
-                    />
-                    <Select value={selectedDepartmentFilter} onValueChange={setSelectedDepartmentFilter}>
-                      <SelectTrigger className="text-sm">
-                        <SelectValue placeholder="Filter by department" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Departments</SelectItem>
-                        {availableDepartments.map((dept) => (
-                          <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
-                      value={field.value?.toString()}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select employee" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {filteredEmployees.map((employee: any) => (
-                          <SelectItem key={employee.id} value={employee.id.toString()}>
-                            <div className="flex items-center gap-2">
-                              {employee.profilePicture ? (
-                                <img
-                                  src={employee.profilePicture}
-                                  alt={`${employee.firstName} ${employee.lastName}`}
-                                  className="h-6 w-6 rounded-full object-cover"
+                  <FormLabel className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Select Employee Who Worked
+                  </FormLabel>
+                  <div className="space-y-3">
+                    {/* Show assigned employees from sub-feature */}
+                    {subFeature.assignedEmployeeIds && subFeature.assignedEmployeeIds.length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Assigned to this sub-feature:
+                        </p>
+                        <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
+                          {employees
+                            .filter((emp: any) => subFeature.assignedEmployeeIds.includes(emp.id))
+                            .map((employee: any) => (
+                              <div key={employee.id} className="flex items-center space-x-2">
+                                <input
+                                  type="radio"
+                                  id={`assigned-${employee.id}`}
+                                  name="assignedEmployee"
+                                  checked={field.value === employee.id}
+                                  onChange={() => field.onChange(employee.id)}
+                                  className="rounded"
                                 />
-                              ) : (
-                                <div className="h-6 w-6 rounded-full bg-gray-300 flex items-center justify-center text-xs">
-                                  {employee.firstName?.[0]}{employee.lastName?.[0]}
-                                </div>
-                              )}
-                              <span>{employee.firstName} {employee.lastName}</span>
-                              {employee.department && (
-                                <span className="text-xs text-gray-500">({employee.department})</span>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                        {filteredEmployees.length === 0 && employeeSearchQuery && (
-                          <SelectItem value="" disabled>
-                            No employees found matching "{employeeSearchQuery}"
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
+                                <label 
+                                  htmlFor={`assigned-${employee.id}`} 
+                                  className="text-sm font-medium cursor-pointer flex items-center gap-2 flex-1"
+                                >
+                                  {employee.profilePicture ? (
+                                    <img
+                                      src={employee.profilePicture}
+                                      alt={`${employee.firstName} ${employee.lastName}`}
+                                      className="h-6 w-6 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">
+                                      {employee.firstName?.[0]}{employee.lastName?.[0]}
+                                    </div>
+                                  )}
+                                  <span>{employee.firstName} {employee.lastName}</span>
+                                  {employee.department && (
+                                    <span className="text-xs text-green-600 bg-green-50 px-1 rounded">
+                                      {employee.department}
+                                    </span>
+                                  )}
+                                </label>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Option to select other employees */}
+                    <div className="border-t pt-3">
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Or select another employee:
+                      </p>
+                      <div className="space-y-2">
+                        <Input
+                          placeholder="Search employees by name or email..."
+                          value={employeeSearchQuery}
+                          onChange={(e) => setEmployeeSearchQuery(e.target.value)}
+                          className="text-sm"
+                        />
+                        <Select value={selectedDepartmentFilter} onValueChange={setSelectedDepartmentFilter}>
+                          <SelectTrigger className="text-sm">
+                            <SelectValue placeholder="Filter by department" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Departments</SelectItem>
+                            {availableDepartments.map((dept) => (
+                              <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        
+                        <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-2">
+                          {filteredEmployees
+                            .filter((emp: any) => !subFeature.assignedEmployeeIds?.includes(emp.id))
+                            .map((employee: any) => (
+                              <div key={employee.id} className="flex items-center space-x-2">
+                                <input
+                                  type="radio"
+                                  id={`other-${employee.id}`}
+                                  name="assignedEmployee"
+                                  checked={field.value === employee.id}
+                                  onChange={() => field.onChange(employee.id)}
+                                  className="rounded"
+                                />
+                                <label 
+                                  htmlFor={`other-${employee.id}`} 
+                                  className="text-sm font-medium cursor-pointer flex items-center gap-2 flex-1"
+                                >
+                                  {employee.profilePicture ? (
+                                    <img
+                                      src={employee.profilePicture}
+                                      alt={`${employee.firstName} ${employee.lastName}`}
+                                      className="h-6 w-6 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="h-6 w-6 rounded-full bg-gray-300 flex items-center justify-center text-xs">
+                                      {employee.firstName?.[0]}{employee.lastName?.[0]}
+                                    </div>
+                                  )}
+                                  <span>{employee.firstName} {employee.lastName}</span>
+                                  {employee.department && (
+                                    <span className="text-xs text-gray-500">({employee.department})</span>
+                                  )}
+                                </label>
+                              </div>
+                            ))}
+                          {filteredEmployees.filter((emp: any) => !subFeature.assignedEmployeeIds?.includes(emp.id)).length === 0 && employeeSearchQuery && (
+                            <p className="text-sm text-gray-500 text-center py-4">
+                              No other employees found matching "{employeeSearchQuery}"
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Clear selection option */}
+                    <div className="flex items-center space-x-2 pt-2 border-t">
+                      <input
+                        type="radio"
+                        id="clear-selection"
+                        name="assignedEmployee"
+                        checked={!field.value}
+                        onChange={() => field.onChange(undefined)}
+                        className="rounded"
+                      />
+                      <label htmlFor="clear-selection" className="text-sm text-gray-500 cursor-pointer">
+                        No specific employee (unassigned)
+                      </label>
+                    </div>
                   </div>
                   <FormMessage />
                 </FormItem>

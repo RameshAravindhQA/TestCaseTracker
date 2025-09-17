@@ -126,6 +126,8 @@ export function TrackerSubFeatureForm({
   React.useEffect(() => {
     if (subFeature) {
       // Editing existing sub-feature
+      const assignedIds = Array.isArray(subFeature.assignedEmployeeIds) ? subFeature.assignedEmployeeIds : [];
+      
       const formData = {
         name: subFeature.name || '',
         description: subFeature.description || '',
@@ -138,13 +140,17 @@ export function TrackerSubFeatureForm({
         department: subFeature.department || '',
         startDate: subFeature.startDate || '',
         endDate: subFeature.endDate || '',
-        assignedEmployeeIds: subFeature.assignedEmployeeIds || [],
+        assignedEmployeeIds: assignedIds,
         estimatedHours: subFeature.estimatedHours || undefined,
         tags: subFeature.tags || [],
       };
-      form.reset(formData);
-      setSelectedEmployees(subFeature.assignedEmployeeIds || []);
+      
+      // Set selected employees first
+      setSelectedEmployees(assignedIds);
       setTags(subFeature.tags || []);
+      
+      // Reset form with data
+      form.reset(formData);
 
       // Force set individual field values to ensure they're displayed
       setTimeout(() => {
@@ -152,8 +158,8 @@ export function TrackerSubFeatureForm({
         form.setValue('department', subFeature.department || '');
         form.setValue('priority', subFeature.priority || 'Medium');
         form.setValue('workType', subFeature.workType || 'Development');
-        form.setValue('assignedEmployeeIds', subFeature.assignedEmployeeIds || []);
-      }, 0);
+        form.setValue('assignedEmployeeIds', assignedIds);
+      }, 100); // Increased timeout to ensure proper rendering
     } else {
       // Creating new sub-feature
       form.reset({
@@ -175,7 +181,7 @@ export function TrackerSubFeatureForm({
       setSelectedEmployees([]);
       setTags([]);
     }
-  }, [subFeature, featureId, projectId, form]);
+  }, [subFeature, featureId, projectId, form, employees]); // Added employees dependency
 
   const handleSubmit = (data: any) => {
     const formData = {
