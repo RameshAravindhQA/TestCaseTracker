@@ -1359,7 +1359,11 @@ export const insertTrackerWorkLogSchema = createInsertSchema(trackerWorkLogs, {
   workDate: z.string(),
   hoursWorked: z.number().positive(),
   description: z.string().min(1),
-  assignedEmployeeId: z.union([z.number(), z.null(), z.undefined()]).optional(),
+  assignedEmployeeId: z.number().int().positive().optional().nullable(),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export const insertTrackerTimelineExtensionSchema = createInsertSchema(trackerTimelineExtensions).omit({
