@@ -1365,9 +1365,13 @@ export class DatabaseStorage implements IStorage {
     console.log('DB: Creating work log with assignedEmployeeId:', workLog.assignedEmployeeId);
     
     // Ensure assignedEmployeeId is properly handled
-    const assignedEmployeeId = workLog.assignedEmployeeId !== undefined && workLog.assignedEmployeeId !== null 
-      ? Number(workLog.assignedEmployeeId) 
-      : null;
+    let assignedEmployeeId = null;
+    if (workLog.assignedEmployeeId !== undefined && workLog.assignedEmployeeId !== null) {
+      const numValue = Number(workLog.assignedEmployeeId);
+      if (!isNaN(numValue) && numValue > 0) {
+        assignedEmployeeId = numValue;
+      }
+    }
     
     console.log('DB: Processing assignedEmployeeId - original:', workLog.assignedEmployeeId, 'processed:', assignedEmployeeId);
     
@@ -1392,6 +1396,7 @@ export class DatabaseStorage implements IStorage {
       .insert(trackerWorkLogs)
       .values(insertData)
       .returning();
+    
     console.log('DB: Created work log with assignedEmployeeId:', result.assignedEmployeeId);
     return result;
   }
