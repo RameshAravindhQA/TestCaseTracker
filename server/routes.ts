@@ -10,6 +10,8 @@ import githubIntegrationsRouter from "./api/github-integrations";
 import { geminiService } from "./gemini-service";
 import { EnhancedAIService } from "./enhanced-ai-service";
 import { aiConfigStorage } from "./ai-config-storage";
+import * as fs from "fs";
+import * as path from "path";
 import {
   insertUserSchema,
   insertProjectSchema,
