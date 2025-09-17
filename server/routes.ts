@@ -2066,22 +2066,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/tracker/work-logs", isAuthenticated, async (req, res) => {
     try {
       console.log('Creating work log with data:', req.body);
+      console.log('Raw assignedEmployeeId from request:', req.body.assignedEmployeeId, 'type:', typeof req.body.assignedEmployeeId);
 
-      // Ensure assignedEmployeeId is properly handled
-      const assignedEmployeeId = req.body.assignedEmployeeId ? Number(req.body.assignedEmployeeId) : null;
+      // Ensure assignedEmployeeId is properly handled - convert to number if it's a valid value
+      let assignedEmployeeId = null;
+      if (req.body.assignedEmployeeId !== undefined && req.body.assignedEmployeeId !== null && req.body.assignedEmployeeId !== '') {
+        const parsed = Number(req.body.assignedEmployeeId);
+        if (!isNaN(parsed) && parsed > 0) {
+          assignedEmployeeId = parsed;
+        }
+      }
 
       const workLogData = {
-        ...req.body,
+        projectId: req.body.projectId,
+        featureId: req.body.featureId,
+        subFeatureId: req.body.subFeatureId,
         userId: req.session.userId!,
         assignedEmployeeId: assignedEmployeeId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        workDate: req.body.workDate,
+        hoursWorked: Number(req.body.hoursWorked),
+        description: req.body.description,
+        workType: req.body.workType,
+        status: req.body.status
       };
 
-      console.log('assignedEmployeeId type:', typeof workLogData.assignedEmployeeId, 'value:', workLogData.assignedEmployeeId);
+      console.log('Processed work log data - assignedEmployeeId:', assignedEmployeeId, 'type:', typeof assignedEmployeeId);
 
       const workLog = await storage.createTrackerWorkLog(workLogData);
-      console.log('Created work log:', workLog);
+      console.log('Created work log with final assignedEmployeeId:', workLog.assignedEmployeeId);
       res.status(201).json(workLog);
     } catch (error) {
       console.error('Error creating work log:', error);

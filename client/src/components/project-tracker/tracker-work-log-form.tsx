@@ -32,7 +32,7 @@ const workLogSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   workType: z.string().min(1, 'Work type is required'),
   status: z.enum(['In Progress', 'Completed', 'Blocked']),
-  assignedEmployeeId: z.union([z.number(), z.undefined(), z.null()]).optional(),
+  assignedEmployeeId: z.union([z.number().positive(), z.undefined(), z.null()]).optional().nullable(),
 });
 
 type WorkLogFormData = z.infer<typeof workLogSchema>;
@@ -95,16 +95,28 @@ export function TrackerWorkLogForm({
   });
 
   const handleSubmit = (data: WorkLogFormData) => {
+    console.log('Form handleSubmit - raw data:', data);
+    console.log('Form handleSubmit - assignedEmployeeId from form:', data.assignedEmployeeId, 'type:', typeof data.assignedEmployeeId);
+    
     // Ensure assignedEmployeeId is properly included in the submission
+    let processedAssignedEmployeeId = null;
+    if (data.assignedEmployeeId !== undefined && data.assignedEmployeeId !== null) {
+      processedAssignedEmployeeId = Number(data.assignedEmployeeId);
+      if (isNaN(processedAssignedEmployeeId)) {
+        processedAssignedEmployeeId = null;
+      }
+    }
+
     const workLogData = {
       ...data,
       projectId: projectId,
       subFeatureId: subFeature.id,
       featureId: subFeature.featureId,
-      assignedEmployeeId: data.assignedEmployeeId ? Number(data.assignedEmployeeId) : null
+      assignedEmployeeId: processedAssignedEmployeeId
     };
-    console.log('Submitting work log data:', workLogData);
-    console.log('assignedEmployeeId in form submission:', data.assignedEmployeeId, typeof data.assignedEmployeeId);
+    
+    console.log('Form handleSubmit - processed work log data:', workLogData);
+    console.log('Form handleSubmit - final assignedEmployeeId:', processedAssignedEmployeeId, 'type:', typeof processedAssignedEmployeeId);
     onSubmit(workLogData);
   };
 

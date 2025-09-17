@@ -1363,11 +1363,27 @@ export class DatabaseStorage implements IStorage {
 
   async createTrackerWorkLog(workLog: InsertTrackerWorkLog): Promise<TrackerWorkLog> {
     console.log('DB: Creating work log with assignedEmployeeId:', workLog.assignedEmployeeId);
+    
+    // Ensure assignedEmployeeId is properly handled
+    const assignedEmployeeId = workLog.assignedEmployeeId !== undefined && workLog.assignedEmployeeId !== null 
+      ? Number(workLog.assignedEmployeeId) 
+      : null;
+    
+    console.log('DB: Processing assignedEmployeeId - original:', workLog.assignedEmployeeId, 'processed:', assignedEmployeeId);
+    
     const [result] = await db
       .insert(trackerWorkLogs)
       .values({
-        ...workLog,
-        assignedEmployeeId: workLog.assignedEmployeeId || null,
+        projectId: workLog.projectId,
+        featureId: workLog.featureId,
+        subFeatureId: workLog.subFeatureId,
+        userId: workLog.userId,
+        assignedEmployeeId: assignedEmployeeId,
+        workDate: workLog.workDate,
+        hoursWorked: workLog.hoursWorked,
+        description: workLog.description,
+        workType: workLog.workType,
+        status: workLog.status,
         createdAt: new Date(),
         updatedAt: new Date()
       })
