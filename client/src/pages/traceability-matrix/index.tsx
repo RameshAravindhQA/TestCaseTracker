@@ -71,6 +71,18 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
 
   const { toast } = useToast();
 
+  // Fetch modules for the project
+  const { data: modules = [] } = useQuery({
+    queryKey: ["/api/modules", selectedProjectId],
+    queryFn: async () => {
+      if (!selectedProjectId) return [];
+      const response = await apiRequest("GET", `/api/projects/${selectedProjectId}/modules`);
+      if (!response.ok) throw new Error("Failed to fetch modules");
+      return response.json();
+    },
+    enabled: !!selectedProjectId,
+  });
+
   // Fetch RTM data for the selected project
   const { data: rtmProjectData, refetch: refetchRtmData } = useQuery({
     queryKey: ["/api/projects", selectedProjectId, "rtm"],

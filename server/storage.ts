@@ -5114,16 +5114,28 @@ class MemStorage implements IStorage {
     // Auto-generate requirement ID if not provided
     let requirementId = data.requirementId;
     if (!requirementId || requirementId.trim() === '') {
+      // Get project to extract prefix from project name
+      const project = await this.getProject(brdDocument.projectId);
+      const projectPrefix = project ? 
+        project.name.split(' ').map(word => word.charAt(0).toUpperCase()).join('').substring(0, 3) :
+        'DEF'; // Default fallback
+      
+      // Get the BRD document ID with proper formatting
+      const brdNumber = String(brdDocument.id).padStart(3, '0');
+      
       // Get existing functional requirements for this BRD document
       const existingRequirements = this.functionalRequirements
         .filter(req => req.brdDocumentId === data.brdDocumentId)
         .map(req => req.requirementId)
-        .filter(id => id && id.match(/^REQ-(\d+)$/))
-        .map(id => parseInt(id.replace('REQ-', ''), 10))
+        .filter(id => id && id.match(new RegExp(`^${projectPrefix}-REQ-${brdNumber}-FR-(\\d+)$`)))
+        .map(id => {
+          const match = id.match(/FR-(\d+)$/);
+          return match ? parseInt(match[1], 10) : 0;
+        })
         .filter(num => !isNaN(num));
 
       const nextNumber = existingRequirements.length > 0 ? Math.max(...existingRequirements) + 1 : 1;
-      requirementId = `REQ-${String(nextNumber).padStart(3, '0')}`;
+      requirementId = `${projectPrefix}-REQ-${brdNumber}-FR-${String(nextNumber).padStart(3, '0')}`;
     }
 
     const functionalRequirement: FunctionalRequirement = {
