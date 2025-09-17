@@ -611,6 +611,28 @@ export interface IStorage {
   createMessageReadStatus(data: InsertMessageReadStatus): Promise<MessageReadStatus>;
   getMessageReadStatuses(messageId: number): Promise<MessageReadStatus[]>;
   markMessageAsRead(messageId: number, userId: number): Promise<void>;
+
+  // RTM (Requirements Traceability Matrix) operations
+  // BRD Documents
+  getBrdDocuments(projectId?: number): Promise<BrdDocument[]>;
+  getBrdDocument(id: number): Promise<BrdDocument | null>;
+  createBrdDocument(data: InsertBrdDocument): Promise<BrdDocument>;
+  updateBrdDocument(id: number, data: Partial<BrdDocument>): Promise<BrdDocument | null>;
+  deleteBrdDocument(id: number): Promise<boolean>;
+
+  // Functional Requirements
+  getFunctionalRequirements(brdDocumentId?: number, projectId?: number): Promise<FunctionalRequirement[]>;
+  getFunctionalRequirement(id: number): Promise<FunctionalRequirement | null>;
+  createFunctionalRequirement(data: InsertFunctionalRequirement): Promise<FunctionalRequirement>;
+  updateFunctionalRequirement(id: number, data: Partial<FunctionalRequirement>): Promise<FunctionalRequirement | null>;
+  deleteFunctionalRequirement(id: number): Promise<boolean>;
+
+  // Requirement Test Case Mappings
+  getRequirementTestCaseMappings(functionalRequirementId?: number, testCaseId?: number, projectId?: number): Promise<RequirementTestCaseMapping[]>;
+  getRequirementTestCaseMapping(id: number): Promise<RequirementTestCaseMapping | null>;
+  createRequirementTestCaseMapping(data: InsertRequirementTestCaseMapping): Promise<RequirementTestCaseMapping>;
+  updateRequirementTestCaseMapping(id: number, data: Partial<RequirementTestCaseMapping>): Promise<RequirementTestCaseMapping | null>;
+  deleteRequirementTestCaseMapping(id: number): Promise<boolean>;
 }
 
 /**
@@ -642,6 +664,11 @@ class MemStorage implements IStorage {
   private kanbanColumns: KanbanColumn[] = [];
   private kanbanCards: KanbanCard[] = [];
   private traceabilityMatrixes: TraceabilityMatrix[] = [];
+
+  // RTM (Requirements Traceability Matrix) storage
+  private brdDocuments: BrdDocument[] = [];
+  private functionalRequirements: FunctionalRequirement[] = [];
+  private requirementTestCaseMappings: RequirementTestCaseMapping[] = [];
 
   // Notebook storage
   private notebooks: Notebook[] = [];
@@ -5704,6 +5731,225 @@ class MemStorage implements IStorage {
       logs = logs.filter(log => log.entityType === entityType && log.entityId === entityId);
     }
     return logs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  // RTM (Requirements Traceability Matrix) Methods
+
+  // BRD Documents Methods
+  async getBrdDocuments(projectId?: number): Promise<BrdDocument[]> {
+    if (projectId) {
+      return this.brdDocuments.filter(doc => doc.projectId === projectId);
+    }
+    return this.brdDocuments;
+  }
+
+  async getBrdDocument(id: number): Promise<BrdDocument | null> {
+    return this.brdDocuments.find(doc => doc.id === id) || null;
+  }
+
+  async createBrdDocument(data: InsertBrdDocument): Promise<BrdDocument> {
+    const id = this.getNextId();
+    
+    // Get project to generate auto ID with prefix
+    const project = this.projects.find(p => p.id === data.projectId);
+    if (!project) {
+      throw new Error(`Project with ID ${data.projectId} not found`);
+    }
+
+    // Generate auto ID: BEG-REQ-001, BEG-REQ-002, etc.
+    const existingDocsForProject = this.brdDocuments.filter(doc => doc.projectId === data.projectId);
+    const nextSequence = existingDocsForProject.length + 1;
+    const documentId = `${project.prefix}-REQ-${nextSequence.toString().padStart(3, '0')}`;
+
+    const brdDocument: BrdDocument = {
+      id,
+      documentId,
+      title: data.title,
+      description: data.description,
+      version: data.version || "1.0",
+      status: data.status || "Draft",
+      priority: data.priority || "Medium",
+      projectId: data.projectId,
+      createdById: data.createdById,
+      approvedById: data.approvedById,
+      approvedAt: data.approvedAt,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    this.brdDocuments.push(brdDocument);
+    return brdDocument;
+  }
+
+  async updateBrdDocument(id: number, data: Partial<BrdDocument>): Promise<BrdDocument | null> {
+    const index = this.brdDocuments.findIndex(doc => doc.id === id);
+    if (index === -1) return null;
+
+    const updatedDoc = {
+      ...this.brdDocuments[index],
+      ...data,
+      updatedAt: new Date()
+    };
+    this.brdDocuments[index] = updatedDoc;
+    return updatedDoc;
+  }
+
+  async deleteBrdDocument(id: number): Promise<boolean> {
+    const initialLength = this.brdDocuments.length;
+    this.brdDocuments = this.brdDocuments.filter(doc => doc.id !== id);
+    
+    // Also delete associated functional requirements
+    this.functionalRequirements = this.functionalRequirements.filter(req => req.brdDocumentId !== id);
+    
+    return this.brdDocuments.length < initialLength;
+  }
+
+  // Functional Requirements Methods
+  async getFunctionalRequirements(brdDocumentId?: number, projectId?: number): Promise<FunctionalRequirement[]> {
+    let requirements = this.functionalRequirements;
+    
+    if (brdDocumentId) {
+      requirements = requirements.filter(req => req.brdDocumentId === brdDocumentId);
+    }
+    if (projectId) {
+      requirements = requirements.filter(req => req.projectId === projectId);
+    }
+    
+    return requirements;
+  }
+
+  async getFunctionalRequirement(id: number): Promise<FunctionalRequirement | null> {
+    return this.functionalRequirements.find(req => req.id === id) || null;
+  }
+
+  async createFunctionalRequirement(data: InsertFunctionalRequirement): Promise<FunctionalRequirement> {
+    const id = this.getNextId();
+    
+    // Get BRD Document to generate nested ID
+    const brdDocument = this.brdDocuments.find(doc => doc.id === data.brdDocumentId);
+    if (!brdDocument) {
+      throw new Error(`BRD Document with ID ${data.brdDocumentId} not found`);
+    }
+
+    // Generate nested auto ID: BEG-REQ-001-FR-001, BEG-REQ-001-FR-002, etc.
+    const existingReqsForBrd = this.functionalRequirements.filter(req => req.brdDocumentId === data.brdDocumentId);
+    const nextSequence = existingReqsForBrd.length + 1;
+    const requirementId = `${brdDocument.documentId}-FR-${nextSequence.toString().padStart(3, '0')}`;
+
+    const functionalRequirement: FunctionalRequirement = {
+      id,
+      requirementId,
+      brdDocumentId: data.brdDocumentId,
+      title: data.title,
+      description: data.description,
+      acceptanceCriteria: data.acceptanceCriteria,
+      priority: data.priority || "Medium",
+      complexity: data.complexity || "Medium",
+      status: data.status || "Draft",
+      projectId: data.projectId,
+      createdById: data.createdById,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    this.functionalRequirements.push(functionalRequirement);
+    return functionalRequirement;
+  }
+
+  async updateFunctionalRequirement(id: number, data: Partial<FunctionalRequirement>): Promise<FunctionalRequirement | null> {
+    const index = this.functionalRequirements.findIndex(req => req.id === id);
+    if (index === -1) return null;
+
+    const updatedReq = {
+      ...this.functionalRequirements[index],
+      ...data,
+      updatedAt: new Date()
+    };
+    this.functionalRequirements[index] = updatedReq;
+    return updatedReq;
+  }
+
+  async deleteFunctionalRequirement(id: number): Promise<boolean> {
+    const initialLength = this.functionalRequirements.length;
+    this.functionalRequirements = this.functionalRequirements.filter(req => req.id !== id);
+    
+    // Also delete associated test case mappings
+    this.requirementTestCaseMappings = this.requirementTestCaseMappings.filter(mapping => mapping.functionalRequirementId !== id);
+    
+    return this.functionalRequirements.length < initialLength;
+  }
+
+  // Requirement Test Case Mapping Methods
+  async getRequirementTestCaseMappings(functionalRequirementId?: number, testCaseId?: number, projectId?: number): Promise<RequirementTestCaseMapping[]> {
+    let mappings = this.requirementTestCaseMappings;
+    
+    if (functionalRequirementId) {
+      mappings = mappings.filter(mapping => mapping.functionalRequirementId === functionalRequirementId);
+    }
+    if (testCaseId) {
+      mappings = mappings.filter(mapping => mapping.testCaseId === testCaseId);
+    }
+    if (projectId) {
+      // Filter by project through functional requirements
+      const projectFRIds = this.functionalRequirements
+        .filter(req => req.projectId === projectId)
+        .map(req => req.id);
+      mappings = mappings.filter(mapping => projectFRIds.includes(mapping.functionalRequirementId));
+    }
+    
+    return mappings;
+  }
+
+  async getRequirementTestCaseMapping(id: number): Promise<RequirementTestCaseMapping | null> {
+    return this.requirementTestCaseMappings.find(mapping => mapping.id === id) || null;
+  }
+
+  async createRequirementTestCaseMapping(data: InsertRequirementTestCaseMapping): Promise<RequirementTestCaseMapping> {
+    const id = this.getNextId();
+    
+    // Check for duplicate mapping
+    const existingMapping = this.requirementTestCaseMappings.find(
+      mapping => mapping.functionalRequirementId === data.functionalRequirementId && 
+                 mapping.testCaseId === data.testCaseId
+    );
+    
+    if (existingMapping) {
+      throw new Error(`Mapping between Functional Requirement ${data.functionalRequirementId} and Test Case ${data.testCaseId} already exists`);
+    }
+
+    const mapping: RequirementTestCaseMapping = {
+      id,
+      functionalRequirementId: data.functionalRequirementId,
+      testCaseId: data.testCaseId,
+      status: data.status || "NOT_EXECUTED",
+      executionDate: data.executionDate,
+      notes: data.notes,
+      createdById: data.createdById,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    this.requirementTestCaseMappings.push(mapping);
+    return mapping;
+  }
+
+  async updateRequirementTestCaseMapping(id: number, data: Partial<RequirementTestCaseMapping>): Promise<RequirementTestCaseMapping | null> {
+    const index = this.requirementTestCaseMappings.findIndex(mapping => mapping.id === id);
+    if (index === -1) return null;
+
+    const updatedMapping = {
+      ...this.requirementTestCaseMappings[index],
+      ...data,
+      updatedAt: new Date()
+    };
+    this.requirementTestCaseMappings[index] = updatedMapping;
+    return updatedMapping;
+  }
+
+  async deleteRequirementTestCaseMapping(id: number): Promise<boolean> {
+    const initialLength = this.requirementTestCaseMappings.length;
+    this.requirementTestCaseMappings = this.requirementTestCaseMappings.filter(mapping => mapping.id !== id);
+    return this.requirementTestCaseMappings.length < initialLength;
   }
 }
 

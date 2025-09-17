@@ -72,7 +72,18 @@ import {
   insertTrackerTimelineExtensionSchema,
   insertTrackerDependencySchema,
   insertTrackerAuditLogSchema,
-  insertTrackerCustomDropdownSchema
+  insertTrackerCustomDropdownSchema,
+
+  // RTM (Requirements Traceability Matrix) imports
+  type BrdDocument,
+  type InsertBrdDocument,
+  type FunctionalRequirement,
+  type InsertFunctionalRequirement,
+  type RequirementTestCaseMapping,
+  type InsertRequirementTestCaseMapping,
+  insertBrdDocumentSchema,
+  insertFunctionalRequirementSchema,
+  insertRequirementTestCaseMappingSchema
 } from "@shared/schema";
 import * as crypto from "crypto";
 import * as bcrypt from "bcrypt";
@@ -6109,6 +6120,533 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, result });
     } catch (error) {
       console.error("Save traceability matrix error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // ============================================================================
+  // RTM (Requirements Traceability Matrix) API Routes
+  // ============================================================================
+
+  // BRD Documents Routes
+  
+  // Get BRD Documents for a project
+  apiRouter.get("/rtm/brd-documents", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      
+      if (projectId) {
+        // Check if user has access to this project
+        const project = await storage.getProject(projectId);
+        if (!project) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+
+        if (req.session.userRole !== "Admin") {
+          const projectMembers = await storage.getProjectMembers(projectId);
+          const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+          if (!isMember && project.createdById !== req.session.userId) {
+            return res.status(403).json({ message: "You don't have access to this project" });
+          }
+        }
+      }
+
+      const brdDocuments = await storage.getBrdDocuments(projectId);
+      res.json(brdDocuments);
+    } catch (error) {
+      console.error("Get BRD documents error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get single BRD Document
+  apiRouter.get("/rtm/brd-documents/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const brdDocument = await storage.getBrdDocument(id);
+      
+      if (!brdDocument) {
+        return res.status(404).json({ message: "BRD Document not found" });
+      }
+
+      // Check access to the project
+      if (req.session.userRole !== "Admin") {
+        const project = await storage.getProject(brdDocument.projectId);
+        if (!project) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+
+        const projectMembers = await storage.getProjectMembers(brdDocument.projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      res.json(brdDocument);
+    } catch (error) {
+      console.error("Get BRD document error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Create BRD Document
+  apiRouter.post("/rtm/brd-documents", isAuthenticated, async (req, res) => {
+    try {
+      // Validate request body using Zod schema
+      const parseResult = insertBrdDocumentSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: parseResult.error.issues 
+        });
+      }
+
+      const { title, description, version, status, priority, projectId, approvedById, approvedAt } = parseResult.data;
+
+      // Check access to the project
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const brdDocument = await storage.createBrdDocument({
+        title,
+        description,
+        version,
+        status,
+        priority,
+        projectId,
+        createdById: req.session.userId,
+        approvedById,
+        approvedAt: approvedAt ? new Date(approvedAt) : undefined
+      });
+
+      res.status(201).json(brdDocument);
+    } catch (error) {
+      console.error("Create BRD document error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
+    }
+  });
+
+  // Update BRD Document
+  apiRouter.put("/rtm/brd-documents/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+
+      const existingDoc = await storage.getBrdDocument(id);
+      if (!existingDoc) {
+        return res.status(404).json({ message: "BRD Document not found" });
+      }
+
+      // Check access to the project
+      if (req.session.userRole !== "Admin") {
+        const project = await storage.getProject(existingDoc.projectId);
+        if (!project) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+
+        const projectMembers = await storage.getProjectMembers(existingDoc.projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const updatedDoc = await storage.updateBrdDocument(id, updateData);
+      res.json(updatedDoc);
+    } catch (error) {
+      console.error("Update BRD document error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Delete BRD Document
+  apiRouter.delete("/rtm/brd-documents/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+
+      const existingDoc = await storage.getBrdDocument(id);
+      if (!existingDoc) {
+        return res.status(404).json({ message: "BRD Document not found" });
+      }
+
+      // Check access to the project
+      if (req.session.userRole !== "Admin") {
+        const project = await storage.getProject(existingDoc.projectId);
+        if (!project) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+
+        const projectMembers = await storage.getProjectMembers(existingDoc.projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const success = await storage.deleteBrdDocument(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete BRD document error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Functional Requirements Routes
+
+  // Get Functional Requirements
+  apiRouter.get("/rtm/functional-requirements", isAuthenticated, async (req, res) => {
+    try {
+      const brdDocumentId = req.query.brdDocumentId ? parseInt(req.query.brdDocumentId as string) : undefined;
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      
+      if (projectId) {
+        // Check if user has access to this project
+        const project = await storage.getProject(projectId);
+        if (!project) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+
+        if (req.session.userRole !== "Admin") {
+          const projectMembers = await storage.getProjectMembers(projectId);
+          const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+          if (!isMember && project.createdById !== req.session.userId) {
+            return res.status(403).json({ message: "You don't have access to this project" });
+          }
+        }
+      }
+
+      const functionalRequirements = await storage.getFunctionalRequirements(brdDocumentId, projectId);
+      res.json(functionalRequirements);
+    } catch (error) {
+      console.error("Get functional requirements error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get single Functional Requirement
+  apiRouter.get("/rtm/functional-requirements/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const functionalRequirement = await storage.getFunctionalRequirement(id);
+      
+      if (!functionalRequirement) {
+        return res.status(404).json({ message: "Functional Requirement not found" });
+      }
+
+      // Check access to the project
+      if (req.session.userRole !== "Admin") {
+        const project = await storage.getProject(functionalRequirement.projectId);
+        if (!project) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+
+        const projectMembers = await storage.getProjectMembers(functionalRequirement.projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      res.json(functionalRequirement);
+    } catch (error) {
+      console.error("Get functional requirement error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Create Functional Requirement
+  apiRouter.post("/rtm/functional-requirements", isAuthenticated, async (req, res) => {
+    try {
+      // Validate request body using Zod schema
+      const parseResult = insertFunctionalRequirementSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: parseResult.error.issues 
+        });
+      }
+
+      const { title, description, acceptanceCriteria, priority, complexity, status, brdDocumentId, projectId } = parseResult.data;
+
+      // Check access to the project
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const functionalRequirement = await storage.createFunctionalRequirement({
+        title,
+        description,
+        acceptanceCriteria,
+        priority,
+        complexity,
+        status,
+        brdDocumentId,
+        projectId,
+        createdById: req.session.userId
+      });
+
+      res.status(201).json(functionalRequirement);
+    } catch (error) {
+      console.error("Create functional requirement error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
+    }
+  });
+
+  // Update Functional Requirement
+  apiRouter.put("/rtm/functional-requirements/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+
+      const existingReq = await storage.getFunctionalRequirement(id);
+      if (!existingReq) {
+        return res.status(404).json({ message: "Functional Requirement not found" });
+      }
+
+      // Check access to the project
+      if (req.session.userRole !== "Admin") {
+        const project = await storage.getProject(existingReq.projectId);
+        if (!project) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+
+        const projectMembers = await storage.getProjectMembers(existingReq.projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const updatedReq = await storage.updateFunctionalRequirement(id, updateData);
+      res.json(updatedReq);
+    } catch (error) {
+      console.error("Update functional requirement error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Delete Functional Requirement
+  apiRouter.delete("/rtm/functional-requirements/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+
+      const existingReq = await storage.getFunctionalRequirement(id);
+      if (!existingReq) {
+        return res.status(404).json({ message: "Functional Requirement not found" });
+      }
+
+      // Check access to the project
+      if (req.session.userRole !== "Admin") {
+        const project = await storage.getProject(existingReq.projectId);
+        if (!project) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+
+        const projectMembers = await storage.getProjectMembers(existingReq.projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const success = await storage.deleteFunctionalRequirement(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete functional requirement error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Requirement Test Case Mappings Routes
+
+  // Get Requirement Test Case Mappings
+  apiRouter.get("/rtm/mappings", isAuthenticated, async (req, res) => {
+    try {
+      const functionalRequirementId = req.query.functionalRequirementId ? parseInt(req.query.functionalRequirementId as string) : undefined;
+      const testCaseId = req.query.testCaseId ? parseInt(req.query.testCaseId as string) : undefined;
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      
+      if (projectId) {
+        // Check if user has access to this project
+        const project = await storage.getProject(projectId);
+        if (!project) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+
+        if (req.session.userRole !== "Admin") {
+          const projectMembers = await storage.getProjectMembers(projectId);
+          const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+          if (!isMember && project.createdById !== req.session.userId) {
+            return res.status(403).json({ message: "You don't have access to this project" });
+          }
+        }
+      }
+
+      const mappings = await storage.getRequirementTestCaseMappings(functionalRequirementId, testCaseId, projectId);
+      res.json(mappings);
+    } catch (error) {
+      console.error("Get requirement test case mappings error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Create Requirement Test Case Mapping
+  apiRouter.post("/rtm/mappings", isAuthenticated, async (req, res) => {
+    try {
+      // Validate request body using Zod schema
+      const parseResult = insertRequirementTestCaseMappingSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: parseResult.error.issues 
+        });
+      }
+
+      const { functionalRequirementId, testCaseId, status, executionDate, notes } = parseResult.data;
+
+      // Get functional requirement to verify project access
+      const functionalRequirement = await storage.getFunctionalRequirement(functionalRequirementId);
+      if (!functionalRequirement) {
+        return res.status(404).json({ message: "Functional Requirement not found" });
+      }
+
+      // Check access to the project
+      if (req.session.userRole !== "Admin") {
+        const project = await storage.getProject(functionalRequirement.projectId);
+        if (!project) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+
+        const projectMembers = await storage.getProjectMembers(functionalRequirement.projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const mapping = await storage.createRequirementTestCaseMapping({
+        functionalRequirementId,
+        testCaseId,
+        status,
+        executionDate: executionDate ? new Date(executionDate) : undefined,
+        notes,
+        createdById: req.session.userId
+      });
+
+      res.status(201).json(mapping);
+    } catch (error) {
+      console.error("Create requirement test case mapping error:", error);
+      res.status(500).json({ message: error.message || "Server error" });
+    }
+  });
+
+  // Update Requirement Test Case Mapping
+  apiRouter.put("/rtm/mappings/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+
+      const existingMapping = await storage.getRequirementTestCaseMapping(id);
+      if (!existingMapping) {
+        return res.status(404).json({ message: "Mapping not found" });
+      }
+
+      // Get functional requirement to verify project access
+      const functionalRequirement = await storage.getFunctionalRequirement(existingMapping.functionalRequirementId);
+      if (!functionalRequirement) {
+        return res.status(404).json({ message: "Functional Requirement not found" });
+      }
+
+      // Check access to the project
+      if (req.session.userRole !== "Admin") {
+        const project = await storage.getProject(functionalRequirement.projectId);
+        if (!project) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+
+        const projectMembers = await storage.getProjectMembers(functionalRequirement.projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const updatedMapping = await storage.updateRequirementTestCaseMapping(id, updateData);
+      res.json(updatedMapping);
+    } catch (error) {
+      console.error("Update requirement test case mapping error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Delete Requirement Test Case Mapping
+  apiRouter.delete("/rtm/mappings/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+
+      const existingMapping = await storage.getRequirementTestCaseMapping(id);
+      if (!existingMapping) {
+        return res.status(404).json({ message: "Mapping not found" });
+      }
+
+      // Get functional requirement to verify project access
+      const functionalRequirement = await storage.getFunctionalRequirement(existingMapping.functionalRequirementId);
+      if (!functionalRequirement) {
+        return res.status(404).json({ message: "Functional Requirement not found" });
+      }
+
+      // Check access to the project
+      if (req.session.userRole !== "Admin") {
+        const project = await storage.getProject(functionalRequirement.projectId);
+        if (!project) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+
+        const projectMembers = await storage.getProjectMembers(functionalRequirement.projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const success = await storage.deleteRequirementTestCaseMapping(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete requirement test case mapping error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
