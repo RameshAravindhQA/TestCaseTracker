@@ -103,9 +103,8 @@ export function TrackerWorkLogForm({
       featureId: subFeature.featureId,
       assignedEmployeeId: data.assignedEmployeeId ? Number(data.assignedEmployeeId) : null
     };
-    console.log('Form: Submitting work log data:', workLogData);
-    console.log('Form: assignedEmployeeId in form submission:', data.assignedEmployeeId, typeof data.assignedEmployeeId);
-    console.log('Form: Final assignedEmployeeId being sent:', workLogData.assignedEmployeeId, typeof workLogData.assignedEmployeeId);
+    console.log('Submitting work log data:', workLogData);
+    console.log('assignedEmployeeId in form submission:', data.assignedEmployeeId, typeof data.assignedEmployeeId);
     onSubmit(workLogData);
   };
 
