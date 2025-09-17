@@ -5633,7 +5633,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     path.join(process.cwd(), 'attached_assets', filename)
                   ];
 
-                  let foundPath = null                for (const possiblePath of possiblePaths) {
+                  let foundPath = null;
+                  for (const possiblePath of possiblePaths) {
                     if (fs.existsSync(possiblePath)) {
                       foundPath = possiblePath;
                       break;

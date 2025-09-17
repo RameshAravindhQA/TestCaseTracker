@@ -32,7 +32,7 @@ const workLogSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   workType: z.string().min(1, 'Work type is required'),
   status: z.enum(['In Progress', 'Completed', 'Blocked']),
-  assignedEmployeeId: z.number().optional(),
+  assignedEmployeeId: z.union([z.number(), z.undefined(), z.null()]).optional(),
 });
 
 type WorkLogFormData = z.infer<typeof workLogSchema>;
@@ -101,7 +101,7 @@ export function TrackerWorkLogForm({
       projectId: projectId,
       subFeatureId: subFeature.id,
       featureId: subFeature.featureId,
-      assignedEmployeeId: data.assignedEmployeeId || null
+      assignedEmployeeId: data.assignedEmployeeId ? Number(data.assignedEmployeeId) : null
     };
     console.log('Submitting work log data:', workLogData);
     console.log('assignedEmployeeId in form submission:', data.assignedEmployeeId, typeof data.assignedEmployeeId);
@@ -280,7 +280,7 @@ export function TrackerWorkLogForm({
                                   id={`assigned-${employee.id}`}
                                   name="assignedEmployee"
                                   checked={field.value === employee.id}
-                                  onChange={() => field.onChange(employee.id)}
+                                  onChange={() => field.onChange(Number(employee.id))}
                                   className="rounded"
                                 />
                                 <label 
@@ -345,7 +345,7 @@ export function TrackerWorkLogForm({
                                   id={`other-${employee.id}`}
                                   name="assignedEmployee"
                                   checked={field.value === employee.id}
-                                  onChange={() => field.onChange(employee.id)}
+                                  onChange={() => field.onChange(Number(employee.id))}
                                   className="rounded"
                                 />
                                 <label 
@@ -385,7 +385,7 @@ export function TrackerWorkLogForm({
                         type="radio"
                         id="clear-selection"
                         name="assignedEmployee"
-                        checked={!field.value}
+                        checked={field.value === undefined || field.value === null}
                         onChange={() => field.onChange(undefined)}
                         className="rounded"
                       />
