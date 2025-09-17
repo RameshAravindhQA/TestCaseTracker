@@ -1382,7 +1382,7 @@ export class DatabaseStorage implements IStorage {
       userId: workLog.userId,
       assignedEmployeeId: assignedEmployeeId,
       workDate: workLog.workDate,
-      hoursWorked: workLog.hoursWorked.toString(), // Convert to string for decimal field
+      hoursWorked: typeof workLog.hoursWorked === 'string' ? workLog.hoursWorked : workLog.hoursWorked.toString(),
       description: workLog.description,
       workType: workLog.workType || null,
       status: workLog.status,
