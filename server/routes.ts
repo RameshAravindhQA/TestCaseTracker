@@ -2,6 +2,7 @@ import express, { Router, type Express, Request, Response, NextFunction } from "
 import { createServer, type Server } from "http";
 import multer from "multer";
 import * as crypto from "crypto";
+import bcrypt from "bcrypt";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import { storage } from "./storage";
