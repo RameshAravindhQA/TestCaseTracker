@@ -1,5 +1,5 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, uuid, date, varchar, jsonb } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { pgTable, text, serial, integer, boolean, timestamp, json, uuid, date, varchar, jsonb, decimal } from "drizzle-orm/pg-core";
+import { createInsertSchema, createSelectSchema, InferInsertModel, InferSelectModel } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 import { z } from "zod";
 
@@ -1268,21 +1268,20 @@ export const trackerSubFeatures = pgTable("tracker_sub_features", {
   updatedAt: timestamp("updated_at"),
 });
 
-export const trackerWorkLogs = pgTable("tracker_work_logs", {
-  id: serial("id").primaryKey(),
-  projectId: integer("project_id"),
-  featureId: integer("feature_id"),
-  subFeatureId: integer("sub_feature_id"),
-  userId: integer("user_id").notNull(),
-  assignedEmployeeId: integer("assigned_employee_id"),
-  workDate: date("work_date").notNull(),
-  hoursWorked: integer("hours_worked").notNull(),
-  description: text("description").notNull(),
-  workType: text("work_type").notNull(), // Development, QA, DevOps, Designing
-  status: text("status").$type<"In Progress" | "Completed" | "Blocked">().notNull().default("In Progress"),
-  attachments: json("attachments").default([]),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at"),
+export const trackerWorkLogs = pgTable('tracker_work_logs', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => trackerProjects.id, { onDelete: 'cascade' }),
+  featureId: integer('feature_id').references(() => trackerFeatures.id, { onDelete: 'cascade' }),
+  subFeatureId: integer('sub_feature_id').references(() => trackerSubFeatures.id, { onDelete: 'cascade' }),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  assignedEmployeeId: integer('assigned_employee_id').references(() => users.id, { onDelete: 'set null' }),
+  workDate: date('work_date').notNull(),
+  hoursWorked: decimal('hours_worked', { precision: 10, scale: 2 }).notNull(),
+  description: text('description').notNull(),
+  workType: varchar('work_type', { length: 100 }),
+  status: varchar('status', { length: 50 }).notNull().default('In Progress'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 export const trackerTimelineExtensions = pgTable("tracker_timeline_extensions", {
@@ -1356,10 +1355,11 @@ export const insertTrackerSubFeatureSchema = createInsertSchema(trackerSubFeatur
   updatedAt: true,
 });
 
-export const insertTrackerWorkLogSchema = createInsertSchema(trackerWorkLogs).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+export const insertTrackerWorkLogSchema = createInsertSchema(trackerWorkLogs, {
+  workDate: z.string(),
+  hoursWorked: z.number().positive(),
+  description: z.string().min(1),
+  assignedEmployeeId: z.number().optional().nullable(),
 });
 
 export const insertTrackerTimelineExtensionSchema = createInsertSchema(trackerTimelineExtensions).omit({

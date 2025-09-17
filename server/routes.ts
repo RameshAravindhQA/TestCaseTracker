@@ -2068,12 +2068,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const workLogData = {
         ...req.body,
         userId: req.session.userId!,
-        assignedEmployeeId: req.body.assignedEmployeeId || null,
+        assignedEmployeeId: req.body.assignedEmployeeId && req.body.assignedEmployeeId !== 'undefined' 
+          ? parseInt(req.body.assignedEmployeeId.toString()) 
+          : null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
       console.log('Creating work log with data:', workLogData);
+      console.log('assignedEmployeeId type:', typeof workLogData.assignedEmployeeId, 'value:', workLogData.assignedEmployeeId);
 
       const workLog = await storage.createTrackerWorkLog(workLogData);
       console.log('Created work log:', workLog);
@@ -2113,8 +2116,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         workLogData.hoursWorked = parseFloat(workLogData.hoursWorked);
       }
 
+      // Ensure assignedEmployeeId is properly handled
+      if (workLogData.assignedEmployeeId && workLogData.assignedEmployeeId !== 'undefined') {
+        workLogData.assignedEmployeeId = parseInt(workLogData.assignedEmployeeId.toString());
+      } else {
+        workLogData.assignedEmployeeId = null;
+      }
+
       // Add user ID for audit trail
       workLogData.userId = userId;
+
+      console.log('Final work log data for update:', workLogData);
+      console.log('assignedEmployeeId type and value:', typeof workLogData.assignedEmployeeId, workLogData.assignedEmployeeId);
 
       const updatedWorkLog = await storage.updateTrackerWorkLog(workLogId, workLogData);
 

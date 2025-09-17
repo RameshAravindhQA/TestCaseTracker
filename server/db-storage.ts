@@ -1362,6 +1362,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTrackerWorkLog(workLog: InsertTrackerWorkLog): Promise<TrackerWorkLog> {
+    console.log('DB: Creating work log with assignedEmployeeId:', workLog.assignedEmployeeId);
     const [result] = await db
       .insert(trackerWorkLogs)
       .values({
@@ -1371,6 +1372,7 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       })
       .returning();
+    console.log('DB: Created work log with assignedEmployeeId:', result.assignedEmployeeId);
     return result;
   }
 

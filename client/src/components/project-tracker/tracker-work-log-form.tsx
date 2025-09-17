@@ -104,6 +104,7 @@ export function TrackerWorkLogForm({
       assignedEmployeeId: data.assignedEmployeeId || null
     };
     console.log('Submitting work log data:', workLogData);
+    console.log('assignedEmployeeId in form submission:', data.assignedEmployeeId, typeof data.assignedEmployeeId);
     onSubmit(workLogData);
   };
 
