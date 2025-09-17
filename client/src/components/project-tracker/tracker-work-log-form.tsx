@@ -95,7 +95,15 @@ export function TrackerWorkLogForm({
   });
 
   const handleSubmit = (data: WorkLogFormData) => {
-    onSubmit(data);
+    // Ensure assignedEmployeeId is properly included in the submission
+    const workLogData = {
+      ...data,
+      projectId: projectId,
+      subFeatureId: subFeature.id,
+      featureId: subFeature.featureId,
+      assignedEmployeeId: data.assignedEmployeeId
+    };
+    onSubmit(workLogData);
   };
 
   // Get previous work logs and date range for this sub-feature

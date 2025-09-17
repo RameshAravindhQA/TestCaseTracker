@@ -2069,7 +2069,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         userId: req.session.userId,
       });
+      
+      console.log('Creating work log with data:', workLogData);
+      
       const workLog = await storage.createTrackerWorkLog(workLogData);
+      
+      console.log('Created work log:', workLog);
+      
       res.status(201).json(workLog);
     } catch (error) {
       console.error("Create tracker work log error:", error);

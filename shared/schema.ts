@@ -1274,6 +1274,7 @@ export const trackerWorkLogs = pgTable("tracker_work_logs", {
   featureId: integer("feature_id"),
   subFeatureId: integer("sub_feature_id"),
   userId: integer("user_id").notNull(),
+  assignedEmployeeId: integer("assigned_employee_id"),
   workDate: date("work_date").notNull(),
   hoursWorked: integer("hours_worked").notNull(),
   description: text("description").notNull(),
