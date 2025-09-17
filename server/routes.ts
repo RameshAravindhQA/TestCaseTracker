@@ -2079,14 +2079,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const workLogData = {
         projectId: Number(req.body.projectId),
-        featureId: req.body.featureId ? Number(req.body.featureId) : undefined,
-        subFeatureId: req.body.subFeatureId ? Number(req.body.subFeatureId) : undefined,
+        featureId: req.body.featureId ? Number(req.body.featureId) : null,
+        subFeatureId: req.body.subFeatureId ? Number(req.body.subFeatureId) : null,
         userId: req.session.userId!,
         assignedEmployeeId: assignedEmployeeId,
         workDate: req.body.workDate,
         hoursWorked: Number(req.body.hoursWorked),
         description: req.body.description,
-        workType: req.body.workType || undefined,
+        workType: req.body.workType || null,
         status: req.body.status || 'In Progress'
       };
 

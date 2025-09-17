@@ -1365,7 +1365,7 @@ export class DatabaseStorage implements IStorage {
     console.log('DB: Creating work log with assignedEmployeeId:', workLog.assignedEmployeeId);
     
     // Ensure assignedEmployeeId is properly handled
-    let assignedEmployeeId = null;
+    let assignedEmployeeId: number | null = null;
     if (workLog.assignedEmployeeId !== undefined && workLog.assignedEmployeeId !== null) {
       const numValue = Number(workLog.assignedEmployeeId);
       if (!isNaN(numValue) && numValue > 0) {
@@ -1375,22 +1375,26 @@ export class DatabaseStorage implements IStorage {
     
     console.log('DB: Processing assignedEmployeeId - original:', workLog.assignedEmployeeId, 'processed:', assignedEmployeeId);
     
+    const insertData = {
+      projectId: workLog.projectId,
+      featureId: workLog.featureId || null,
+      subFeatureId: workLog.subFeatureId || null,
+      userId: workLog.userId,
+      assignedEmployeeId: assignedEmployeeId,
+      workDate: workLog.workDate,
+      hoursWorked: typeof workLog.hoursWorked === 'string' ? workLog.hoursWorked : workLog.hoursWorked.toString(),
+      description: workLog.description,
+      workType: workLog.workType || null,
+      status: workLog.status,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    console.log('DB: Insert data with assignedEmployeeId:', JSON.stringify(insertData, null, 2));
+    
     const [result] = await db
       .insert(trackerWorkLogs)
-      .values({
-        projectId: workLog.projectId,
-        featureId: workLog.featureId || null,
-        subFeatureId: workLog.subFeatureId || null,
-        userId: workLog.userId,
-        assignedEmployeeId: assignedEmployeeId,
-        workDate: workLog.workDate,
-        hoursWorked: typeof workLog.hoursWorked === 'string' ? workLog.hoursWorked : workLog.hoursWorked.toString(),
-        description: workLog.description,
-        workType: workLog.workType || null,
-        status: workLog.status,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      })
+      .values(insertData)
       .returning();
     
     console.log('DB: Created work log with assignedEmployeeId:', result.assignedEmployeeId);

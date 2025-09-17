@@ -1359,7 +1359,7 @@ export const insertTrackerWorkLogSchema = createInsertSchema(trackerWorkLogs, {
   workDate: z.string(),
   hoursWorked: z.number().positive(),
   description: z.string().min(1),
-  assignedEmployeeId: z.union([z.number().int().positive(), z.null()]).optional(),
+  assignedEmployeeId: z.union([z.number().int().positive(), z.null()]).optional().nullable(),
 }).omit({
   id: true,
   createdAt: true,
