@@ -1382,7 +1382,7 @@ export class DatabaseStorage implements IStorage {
       userId: workLog.userId,
       assignedEmployeeId: assignedEmployeeId,
       workDate: workLog.workDate,
-      hoursWorked: Number(workLog.hoursWorked),
+      hoursWorked: workLog.hoursWorked.toString(), // Convert to string for decimal field
       description: workLog.description,
       workType: workLog.workType || null,
       status: workLog.status,
@@ -1411,6 +1411,11 @@ export class DatabaseStorage implements IStorage {
         const numValue = Number(updateData.assignedEmployeeId);
         updateData.assignedEmployeeId = !isNaN(numValue) && numValue > 0 ? numValue : null;
       }
+    }
+
+    // Convert hoursWorked to string if it exists
+    if (updateData.hoursWorked !== undefined) {
+      updateData.hoursWorked = updateData.hoursWorked.toString();
     }
 
     const [updatedWorkLog] = await db.update(trackerWorkLogs)
