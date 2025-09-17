@@ -155,7 +155,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
   });
 
   // Fetch work logs with filters
-  const { data: workLogs = [] } = useQuery({
+  const { data: workLogsData = [] } = useQuery({
     queryKey: ['/api/tracker/work-logs', projectId, selectedFeature, selectedSubFeature],
     queryFn: async () => {
       const params = new URLSearchParams();
