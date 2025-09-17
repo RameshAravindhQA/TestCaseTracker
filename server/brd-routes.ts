@@ -36,14 +36,16 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ error: "BRD document not found" });
     }
 
-    // Include test cases and versions
+    // Include test cases, versions, and functional requirements
     const testCases = await storage.getBrdTestCases(id);
     const versions = await storage.getBrdVersions(id);
+    const functionalRequirements = await storage.getFunctionalRequirements(id);
 
     res.json({
       ...document,
       testCases,
-      versions
+      versions,
+      functionalRequirements
     });
   } catch (error) {
     console.error("Error fetching BRD document:", error);

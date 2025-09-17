@@ -1,4 +1,3 @@
-
 // Enhanced BRD-specific storage methods for the MemStorage class
 
 // Add these properties to the MemStorage class constructor:
@@ -23,13 +22,13 @@ async getBrdDocument(id: number): Promise<any | null> {
 async createBrdDocument(data: any): Promise<any> {
   const id = this.generateId();
   const now = new Date();
-  
+
   // Get project to generate document ID
   const project = await this.getProject(data.projectId);
   if (!project) {
     throw new Error(`Project with ID ${data.projectId} not found`);
   }
-  
+
   // Generate document ID: BEG-REQ-001
   const projectPrefix = project.prefix || project.name.substring(0, 3).toUpperCase();
   const existingDocs = await this.getBrdDocuments(data.projectId);
@@ -110,7 +109,7 @@ async updateBrdDocument(id: number, updateData: any): Promise<any | null> {
 async deleteBrdDocument(id: number): Promise<boolean> {
   const initialLength = this.data.brdDocuments.length;
   this.data.brdDocuments = this.data.brdDocuments.filter(doc => doc.id !== id);
-  
+
   // Also delete related versions and functional requirements
   this.data.brdVersions = this.data.brdVersions.filter(version => version.brdId !== id);
   this.data.functionalRequirements = this.data.functionalRequirements.filter(req => req.brdId !== id);
@@ -118,7 +117,7 @@ async deleteBrdDocument(id: number): Promise<boolean> {
     const requirement = this.data.functionalRequirements.find(req => req.id === mapping.functionalRequirementId);
     return !requirement || requirement.brdId !== id;
   });
-  
+
   this.saveToFile();
   return this.data.brdDocuments.length < initialLength;
 }
@@ -156,14 +155,29 @@ async createBrdVersion(versionData: any): Promise<any> {
 }
 
 // Functional Requirements operations
-async getFunctionalRequirements(brdId: number): Promise<any[]> {
+async getFunctionalRequirements(brdId?: number, projectId?: number): Promise<any[]> {
   if (!this.data.functionalRequirements) {
     this.data.functionalRequirements = [];
   }
-  
-  return this.data.functionalRequirements
-    .filter(req => req.brdId === brdId)
-    .sort((a, b) => a.requirementId.localeCompare(b.requirementId));
+
+  let results = [...this.data.functionalRequirements];
+
+  if (brdId) {
+    results = results.filter(req => req.brdId === brdId);
+  }
+
+  // Get BRD document IDs for the project if projectId is provided
+  if (projectId && !brdDocumentId) {
+    const brdDocuments = await this.getBrdDocuments(projectId);
+    const brdIds = brdDocuments.map(doc => doc.id);
+    console.log(`Storage: BRD IDs for project ${projectId}:`, brdIds);
+
+    // Filter by project's BRD documents
+    results = results.filter(req => brdIds.includes(req.brdDocumentId || req.brdId));
+    console.log(`Storage: After filtering by projectId ${projectId}: ${results.length} requirements`);
+  }
+
+  return results.sort((a, b) => a.requirementId.localeCompare(b.requirementId));
 }
 
 async getFunctionalRequirement(id: number): Promise<any | null> {
@@ -173,13 +187,13 @@ async getFunctionalRequirement(id: number): Promise<any | null> {
 async createFunctionalRequirement(data: any): Promise<any> {
   const id = this.generateId();
   const now = new Date();
-  
+
   // Get BRD document to generate requirement ID
   const brdDocument = await this.getBrdDocument(data.brdId);
   if (!brdDocument) {
     throw new Error(`BRD Document with ID ${data.brdId} not found`);
   }
-  
+
   // Generate requirement ID: BEG-REQ-001-FR-001
   const existingRequirements = await this.getFunctionalRequirements(data.brdId);
   const nextNumber = existingRequirements.length + 1;
@@ -221,10 +235,10 @@ async updateFunctionalRequirement(id: number, data: any): Promise<any | null> {
 async deleteFunctionalRequirement(id: number): Promise<boolean> {
   const initialLength = this.data.functionalRequirements.length;
   this.data.functionalRequirements = this.data.functionalRequirements.filter(req => req.id !== id);
-  
+
   // Also delete related mappings
   this.data.requirementTestCaseMappings = this.data.requirementTestCaseMappings.filter(mapping => mapping.functionalRequirementId !== id);
-  
+
   this.saveToFile();
   return this.data.functionalRequirements.length < initialLength;
 }
@@ -234,21 +248,21 @@ async getRequirementTestCaseMappings(functionalRequirementId?: number, testCaseI
   if (!this.data.requirementTestCaseMappings) {
     this.data.requirementTestCaseMappings = [];
   }
-  
+
   let mappings = this.data.requirementTestCaseMappings;
-  
+
   if (functionalRequirementId) {
     mappings = mappings.filter(mapping => mapping.functionalRequirementId === functionalRequirementId);
   }
-  
+
   if (testCaseId) {
     mappings = mappings.filter(mapping => mapping.testCaseId === testCaseId);
   }
-  
+
   if (projectId) {
     mappings = mappings.filter(mapping => mapping.projectId === projectId);
   }
-  
+
   return mappings;
 }
 
@@ -266,7 +280,7 @@ async createRequirementTestCaseMapping(data: any): Promise<any> {
   if (!this.data.requirementTestCaseMappings) {
     this.data.requirementTestCaseMappings = [];
   }
-  
+
   this.data.requirementTestCaseMappings.push(mapping);
   this.saveToFile();
   return mapping;
@@ -297,21 +311,21 @@ async deleteRequirementTestCaseMapping(id: number): Promise<boolean> {
 // RTM Status Synchronization
 async syncRequirementStatusWithTestCases(functionalRequirementId: number): Promise<void> {
   const mappings = await this.getRequirementTestCaseMappings(functionalRequirementId);
-  
+
   if (mappings.length === 0) return;
 
   // Get all mapped test cases
   const testCaseIds = mappings.map(m => m.testCaseId);
   const testCases = this.data.testCases.filter(tc => testCaseIds.includes(tc.id));
-  
+
   // Determine the overall status
   let overallStatus = "Not Executed";
-  
+
   if (testCases.length > 0) {
     const passCount = testCases.filter(tc => tc.status === "Pass").length;
     const failCount = testCases.filter(tc => tc.status === "Fail").length;
     const totalCount = testCases.length;
-    
+
     if (failCount > 0) {
       overallStatus = "Fail";
     } else if (passCount === totalCount) {
@@ -320,7 +334,7 @@ async syncRequirementStatusWithTestCases(functionalRequirementId: number): Promi
       overallStatus = "Pass"; // Partial pass
     }
   }
-  
+
   // Update functional requirement status
   await this.updateFunctionalRequirement(functionalRequirementId, { status: overallStatus });
 }

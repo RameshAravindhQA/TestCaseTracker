@@ -1136,7 +1136,7 @@ class MemStorage implements IStorage {
 
       // Find the highest existing test case number for this specific module
       // Use the exact format: PROJECT-MODULE-TC-###
-      const prefixPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-(\\d+)$`);
+      const prefixPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-\\d{3}$`);
       const existingTestCases = this.testCases
         .filter(tc => tc.moduleId === insertTestCase.moduleId && tc.projectId === insertTestCase.projectId && !tc.isDeleted)
         .map(tc => tc.testCaseId)
@@ -2503,7 +2503,7 @@ class MemStorage implements IStorage {
     if (projectId && sprintId) {
       results = results.filter(col => col.projectId === projectId && col.sprintId === sprintId);
     } else if (projectId) {
-      results = results.filter(col => col.projectId === projectId);
+      results = results.filter(col => col.projectId ===projectId);
     } else if (sprintId) {
       results = results.filter(col => col.sprintId === sprintId);
     }
@@ -2583,7 +2583,7 @@ class MemStorage implements IStorage {
     if (index === -1) throw new Error("Card not found");
 
     const updatedCard = { ...this.kanbanCards[index], ...cardData, updatedAt: new Date() };
-    this.kanbanCards[index] =updateCard;
+    this.kanbanCards[index] =updatedCard;
     return updatedCard;
   }
 
@@ -4957,27 +4957,31 @@ class MemStorage implements IStorage {
 
   // Functional Requirements Methods
   async getFunctionalRequirements(brdDocumentId?: number, projectId?: number): Promise<FunctionalRequirement[]> {
+    if (!this.functionalRequirements) {
+      this.functionalRequirements = [];
+    }
+
     console.log(`Storage: getFunctionalRequirements called with brdDocumentId: ${brdDocumentId}, projectId: ${projectId}`);
     console.log(`Storage: Total functional requirements in storage: ${this.functionalRequirements.length}`);
 
     let results = [...this.functionalRequirements];
 
     if (brdDocumentId) {
-      results = results.filter(req => req.brdDocumentId === brdDocumentId);
+      results = results.filter(req => (req.brdId || req.brdDocumentId) === brdDocumentId);
       console.log(`Storage: After filtering by brdDocumentId ${brdDocumentId}: ${results.length} requirements`);
     }
 
-    if (projectId) {
-      // Filter by project through BRD documents
-      const projectBrds = this.brdDocuments
-        .filter(brd => brd.projectId === projectId)
-        .map(brd => brd.id);
-      console.log(`Storage: BRD IDs for project ${projectId}:`, projectBrds);
-      results = results.filter(req => projectBrds.includes(req.brdDocumentId));
+    // Only filter by projectId if brdDocumentId is not specified
+    if (projectId && !brdDocumentId) {
+      // Get BRD documents for the project and filter by those
+      const brdDocuments = await this.getBrdDocuments(projectId);
+      const brdIds = brdDocuments.map(doc => doc.id);
+      console.log(`Storage: BRD IDs for project ${projectId}:`, brdIds);
+      results = results.filter(req => brdIds.includes(req.brdId || req.brdDocumentId));
       console.log(`Storage: After filtering by projectId ${projectId}: ${results.length} requirements`);
     }
 
-    return results;
+    return results.sort((a, b) => a.requirementId.localeCompare(b.requirementId));
   }
 
   async getFunctionalRequirement(id: number): Promise<FunctionalRequirement | null> {
@@ -5013,8 +5017,8 @@ class MemStorage implements IStorage {
       ...data,
       id,
       requirementId,
-      createdAt: now,
-      updatedAt: now
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
 
     this.functionalRequirements.push(functionalRequirement);

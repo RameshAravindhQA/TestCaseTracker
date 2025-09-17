@@ -479,7 +479,11 @@ export default function BrdDocumentsPage() {
       if (response.ok) {
         const data = await response.json();
         setVersions(data.versions || []);
-        setSelectedDocument({...document, versions: data.versions || []});
+        setSelectedDocument({
+          ...document, 
+          versions: data.versions || [],
+          functionalRequirements: data.functionalRequirements || document.functionalRequirements || []
+        });
         setShowVersionHistory(true);
       } else {
         throw new Error("Failed to fetch versions");

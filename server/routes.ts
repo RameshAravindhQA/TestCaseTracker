@@ -609,7 +609,7 @@ const migrateOldDirectories = () => {
   }
 };
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Server {
   // Handle any directory migrations first
   migrateOldDirectories();
 
@@ -4090,7 +4090,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const responses = {
         'test-management': [
           "I can help you create test cases, manage bugs, and organize your testing workflow. What specific area would you like assistance with?",
-          "For test case management, I recommend organizing your test cases by modules and using clear naming conventions. Would you like me to help you create a test case?",
+          "For test case management, I recommend organizing your test cases by modules and using clear naming conventions. Would you like me to guide you through creating a test case?",
           "Bug reporting should include clear steps to reproduce, expected vs actual results, and severity level. Need help with a specific bug?",
           "I can help you generate test reports, analyze test coverage, and track project progress. What metrics are you interested in?",
           "For automation, consider starting with your most repetitive test cases. Would you like guidance on automation strategy?"
@@ -5292,8 +5292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // General update activity
         await storage.createActivity({
-          userId: req.session.userId!,
-          action: "updated",
+          userId: req.session.userId!,          action: "updated",
           entityType: "testCase",
           entityId: testCaseId,
           details: {
@@ -6239,14 +6238,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Found ${functionalRequirements.length} functional requirements for BRD ${brd.id}`);
 
           // Get mappings for each functional requirement
-          const requirementsWithMappings = await Promise.all(
-            functionalRequirements.map(async (req) => {
-              const mappings = await storage.getRequirementTestCaseMappings(req.id, undefined, projectId);
-              return { ...req, mappings };
-            })
-          );
+          const mappings = await storage.getRequirementTestCaseMappings(undefined, undefined, projectId);
 
-          return { ...brd, functionalRequirements: requirementsWithMappings };
+          // Group mappings by functional requirement
+          const mappingsByRequirement: Record<number, any[]> = {};
+          mappings.forEach(mapping => {
+            if (!mappingsByRequirement[mapping.functionalRequirementId]) {
+              mappingsByRequirement[mapping.functionalRequirementId] = [];
+            }
+            mappingsByRequirement[mapping.functionalRequirementId].push(mapping);
+          });
+
+          // Add mappings to each functional requirement
+          const functionalRequirementsWithMappings = functionalRequirements.map(req => ({
+            ...req,
+            mappings: mappingsByRequirement[req.id] || []
+          }));
+
+          return { ...brd, functionalRequirements: functionalRequirementsWithMappings };
         })
       );
 
