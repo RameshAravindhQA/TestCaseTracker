@@ -66,7 +66,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
   const [testCaseViewDialogOpen, setTestCaseViewDialogOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<any>(null);
-  const [treeViewMode, setTreeViewMode] = useState<'table' | 'tree'>('table');
+  // Removed treeViewMode state
 
   const { toast } = useToast();
 
@@ -229,6 +229,22 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
     }
 
     try {
+      // Get current project details
+      const currentProject = projects?.find(p => p.id === selectedProjectId);
+      
+      // Calculate statistics
+      const totalMappings = selectedBrd.functionalRequirements?.reduce((sum: number, req: any) => 
+        sum + (req.mappings?.length || 0), 0) || 0;
+      const passedMappings = selectedBrd.functionalRequirements?.reduce((sum: number, req: any) => 
+        sum + (req.mappings?.filter((m: any) => m.status === "Pass").length || 0), 0) || 0;
+      const failedMappings = selectedBrd.functionalRequirements?.reduce((sum: number, req: any) => 
+        sum + (req.mappings?.filter((m: any) => m.status === "Fail").length || 0), 0) || 0;
+      const notExecutedMappings = selectedBrd.functionalRequirements?.reduce((sum: number, req: any) => 
+        sum + (req.mappings?.filter((m: any) => m.status === "Not Executed").length || 0), 0) || 0;
+      
+      const passPercentage = totalMappings > 0 ? Math.round((passedMappings / totalMappings) * 100) : 0;
+      const failPercentage = totalMappings > 0 ? Math.round((failedMappings / totalMappings) * 100) : 0;
+
       // Create a hidden div with the RTM content
       const printDiv = document.createElement('div');
       printDiv.style.position = 'absolute';
@@ -247,6 +263,34 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
         </div>
 
         <div style="margin-bottom: 30px;">
+          <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Project Information</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Project Name:</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${currentProject?.name || 'Unknown Project'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Project Description:</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${currentProject?.description || 'No description'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Project Status:</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${currentProject?.status || 'Active'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Report Generated:</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${new Date().toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="margin-bottom: 30px;">
           <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Document Summary</h3>
           <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
             <tr>
@@ -261,11 +305,37 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
               <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Total Requirements:</td>
               <td style="padding: 8px; border: 1px solid #ddd;">${selectedBrd.functionalRequirements?.length || 0}</td>
             </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Total Mappings:</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${totalMappings}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+          <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Test Execution Summary</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #e8f5e8;">Passed:</td>
+              <td style="padding: 8px; border: 1px solid #ddd; color: #28a745; font-weight: bold;">${passedMappings} (${passPercentage}%)</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #fde8e8;">Failed:</td>
+              <td style="padding: 8px; border: 1px solid #ddd; color: #dc3545; font-weight: bold;">${failedMappings} (${failPercentage}%)</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f8f9fa;">Not Executed:</td>
+              <td style="padding: 8px; border: 1px solid #ddd; color: #6c757d; font-weight: bold;">${notExecutedMappings}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f0f8ff;">Overall Coverage:</td>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">${totalMappings > 0 ? Math.round(((passedMappings + failedMappings) / totalMappings) * 100) : 0}%</td>
+            </tr>
           </table>
         </div>
 
         <div>
-          <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Traceability Matrix</h3>
+          <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Detailed Traceability Matrix</h3>
           <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
             <thead>
               <tr style="background-color: #f8f9fa;">
@@ -284,13 +354,14 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
           req.mappings.forEach((mapping: any) => {
             const testCase = rtmData.testCases?.find((tc: any) => tc.id === mapping.testCaseId);
             const statusColor = mapping.status === 'Pass' ? '#28a745' : mapping.status === 'Fail' ? '#dc3545' : '#6c757d';
+            const statusBg = mapping.status === 'Pass' ? '#e8f5e8' : mapping.status === 'Fail' ? '#fde8e8' : '#f8f9fa';
             htmlContent += `
               <tr>
                 <td style="padding: 8px; border: 1px solid #ddd;">${req.requirementId}</td>
                 <td style="padding: 8px; border: 1px solid #ddd;">${req.title}</td>
                 <td style="padding: 8px; border: 1px solid #ddd;">${testCase?.testCaseId || 'Unknown'}</td>
                 <td style="padding: 8px; border: 1px solid #ddd;">${testCase?.feature || ''}</td>
-                <td style="padding: 8px; border: 1px solid #ddd; color: ${statusColor}; font-weight: bold;">${mapping.status}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; color: ${statusColor}; font-weight: bold; background-color: ${statusBg};">${mapping.status}</td>
               </tr>
             `;
           });
@@ -299,9 +370,9 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
             <tr>
               <td style="padding: 8px; border: 1px solid #ddd;">${req.requirementId}</td>
               <td style="padding: 8px; border: 1px solid #ddd;">${req.title}</td>
-              <td style="padding: 8px; border: 1px solid #ddd; color: #dc3545;">No mappings</td>
+              <td style="padding: 8px; border: 1px solid #ddd; color: #dc3545; background-color: #fde8e8;">No mappings</td>
               <td style="padding: 8px; border: 1px solid #ddd;">-</td>
-              <td style="padding: 8px; border: 1px solid #ddd; color: #6c757d;">Not Mapped</td>
+              <td style="padding: 8px; border: 1px solid #ddd; color: #6c757d; background-color: #f8f9fa;">Not Mapped</td>
             </tr>
           `;
         }
@@ -310,6 +381,17 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
       htmlContent += `
             </tbody>
           </table>
+        </div>
+
+        <div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+          <h4 style="color: #333; margin-bottom: 10px;">Report Footer</h4>
+          <p style="font-size: 12px; color: #666; margin: 0;">
+            This Requirements Traceability Matrix was generated automatically from the Test Case Tracker system.<br>
+            Project: ${currentProject?.name || 'Unknown'} | Generated: ${new Date().toLocaleString()}<br>
+            Total Requirements: ${selectedBrd.functionalRequirements?.length || 0} | 
+            Total Test Mappings: ${totalMappings} | 
+            Pass Rate: ${passPercentage}%
+          </p>
         </div>
       `;
 
@@ -352,234 +434,16 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
       }
 
       // Save the PDF
-      pdf.save(`RTM_${selectedBrd.documentId}.pdf`);
+      pdf.save(`RTM_${currentProject?.name || 'Project'}_${selectedBrd.documentId}_${new Date().toISOString().split('T')[0]}.pdf`);
       
-      toast({ title: "Success", description: "RTM exported to PDF successfully" });
+      toast({ title: "Success", description: "Enhanced RTM exported to PDF successfully" });
     } catch (error) {
       console.error('PDF export error:', error);
       toast({ title: "Error", description: "Failed to export RTM to PDF", variant: "destructive" });
     }
   };
 
-  const renderTreeView = () => {
-    const selectedBrd = rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
-    if (!selectedBrd) return null;
-
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Requirements Relationship Diagram</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Visual relationship flow: BRD Document → Functional Requirements → Test Cases (like UML Use Case diagram)
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="relative bg-gray-50 p-8 rounded-lg overflow-auto" style={{ minHeight: '600px' }}>
-              {/* Central BRD Document */}
-              <div className="absolute left-1/2 top-20 transform -translate-x-1/2">
-                <div className="bg-green-100 border-2 border-green-300 rounded-lg p-4 shadow-md min-w-[200px] text-center">
-                  <div className="font-bold text-green-800 text-sm mb-1">{selectedBrd.documentId}</div>
-                  <div className="text-xs text-green-600 font-medium">Manage Requirements</div>
-                  <div className="text-xs text-gray-600 mt-1 italic">({selectedBrd.title})</div>
-                </div>
-              </div>
-
-              {/* Functional Requirements - positioned around the BRD */}
-              {selectedBrd.functionalRequirements?.map((requirement: any, reqIndex: number) => {
-                const angle = (reqIndex * 360) / (selectedBrd.functionalRequirements?.length || 1);
-                const radius = 180;
-                const reqX = Math.cos((angle * Math.PI) / 180) * radius;
-                const reqY = Math.sin((angle * Math.PI) / 180) * radius;
-
-                return (
-                  <div key={requirement.id}>
-                    {/* Requirement Box */}
-                    <div 
-                      className="absolute transform -translate-x-1/2 -translate-y-1/2"
-                      style={{ 
-                        left: `calc(50% + ${reqX}px)`, 
-                        top: `calc(140px + ${reqY}px)` 
-                      }}
-                    >
-                      <div className="bg-yellow-100 border-2 border-yellow-400 rounded-lg p-3 shadow-md min-w-[160px] text-center">
-                        <div className="font-bold text-yellow-800 text-xs mb-1">{requirement.requirementId}</div>
-                        <div className="text-xs text-yellow-600 font-medium">
-                          {requirement.title?.substring(0, 30)}{requirement.title?.length > 30 ? '...' : ''}
-                        </div>
-                        <div className="text-xs text-gray-600 mt-1 italic">(from Manage Requirements)</div>
-                      </div>
-                    </div>
-
-                    {/* Connection line from BRD to Requirement */}
-                    <svg className="absolute" style={{ 
-                      left: `calc(50% + ${reqX > 0 ? 100 : reqX < 0 ? -100 : 0}px)`, 
-                      top: `calc(140px + ${reqY > 0 ? 40 : reqY < 0 ? -40 : 0}px)`,
-                      width: Math.abs(reqX) || 50,
-                      height: Math.abs(reqY) || 50
-                    }}>
-                      <defs>
-                        <marker id={`arrowhead-${reqIndex}`} markerWidth="10" markerHeight="7" 
-                          refX="10" refY="3.5" orient="auto" markerUnits="strokeWidth">
-                          <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
-                        </marker>
-                      </defs>
-                      <line 
-                        x1="0" y1="0" 
-                        x2={Math.abs(reqX) || 50} 
-                        y2={Math.abs(reqY) || 50}
-                        stroke="#666" 
-                        strokeWidth="2"
-                        markerEnd={`url(#arrowhead-${reqIndex})`}
-                        strokeDasharray="5,5"
-                      />
-                    </svg>
-
-                    {/* Test Cases - positioned around each requirement */}
-                    {requirement.mappings?.map((mapping: any, tcIndex: number) => {
-                      const testCase = rtmData.testCases?.find((tc: any) => tc.id === mapping.testCaseId);
-                      const tcAngle = (tcIndex * 120) / Math.max(requirement.mappings?.length || 1, 1) - 60;
-                      const tcRadius = 120;
-                      const tcX = Math.cos((tcAngle * Math.PI) / 180) * tcRadius;
-                      const tcY = Math.sin((tcAngle * Math.PI) / 180) * tcRadius;
-
-                      return (
-                        <div key={mapping.id}>
-                          {/* Test Case Box */}
-                          <div 
-                            className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-105 transition-transform"
-                            style={{ 
-                              left: `calc(50% + ${reqX + tcX}px)`, 
-                              top: `calc(140px + ${reqY + tcY}px)` 
-                            }}
-                            onClick={() => testCase && handleViewTestCase(testCase)}
-                          >
-                            <div className="bg-blue-100 border-2 border-blue-400 rounded-full p-3 shadow-md min-w-[100px] min-h-[100px] flex flex-col items-center justify-center text-center">
-                              <div className="font-bold text-blue-800 text-xs mb-1">
-                                {testCase?.testCaseId || `TC-${mapping.testCaseId}`}
-                              </div>
-                              <div className="text-xs text-blue-600 font-medium">
-                                {testCase?.feature?.substring(0, 15)}{testCase?.feature?.length > 15 ? '...' : ''}
-                              </div>
-                              <div className="text-xs text-gray-600 mt-1 italic">(from Manage Test Cases)</div>
-                            </div>
-                          </div>
-
-                          {/* Connection line from Requirement to Test Case */}
-                          <svg className="absolute" style={{ 
-                            left: `calc(50% + ${reqX + (tcX > 0 ? 80 : tcX < 0 ? -80 : 0)}px)`, 
-                            top: `calc(140px + ${reqY + (tcY > 0 ? 30 : tcY < 0 ? -30 : 0)}px)`,
-                            width: Math.abs(tcX) || 40,
-                            height: Math.abs(tcY) || 40
-                          }}>
-                            <defs>
-                              <marker id={`arrow-tc-${reqIndex}-${tcIndex}`} markerWidth="8" markerHeight="6" 
-                                refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
-                                <polygon points="0 0, 8 3, 0 6" fill="#333" />
-                              </marker>
-                            </defs>
-                            <line 
-                              x1="0" y1="0" 
-                              x2={Math.abs(tcX) || 40} 
-                              y2={Math.abs(tcY) || 40}
-                              stroke="#333" 
-                              strokeWidth="1.5"
-                              markerEnd={`url(#arrow-tc-${reqIndex}-${tcIndex})`}
-                            />
-                            {/* Add relationship label */}
-                            <text 
-                              x={(Math.abs(tcX) || 40) / 2} 
-                              y={(Math.abs(tcY) || 40) / 2 - 5}
-                              fontSize="10" 
-                              fill="#666" 
-                              textAnchor="middle"
-                            >
-                              «realize»
-                            </text>
-                          </svg>
-
-                          {/* Status indicator */}
-                          <div 
-                            className="absolute transform -translate-x-1/2 -translate-y-1/2"
-                            style={{ 
-                              left: `calc(50% + ${reqX + tcX + 40}px)`, 
-                              top: `calc(140px + ${reqY + tcY - 40}px)` 
-                            }}
-                          >
-                            <div className={`px-2 py-1 rounded text-xs font-bold ${
-                              mapping.status === 'Pass' ? 'bg-green-200 text-green-800' :
-                              mapping.status === 'Fail' ? 'bg-red-200 text-red-800' :
-                              'bg-gray-200 text-gray-800'
-                            }`}>
-                              {mapping.status}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Show unmapped requirements */}
-                    {(!requirement.mappings || requirement.mappings.length === 0) && (
-                      <div 
-                        className="absolute transform -translate-x-1/2 -translate-y-1/2"
-                        style={{ 
-                          left: `calc(50% + ${reqX}px)`, 
-                          top: `calc(140px + ${reqY + 80}px)` 
-                        }}
-                      >
-                        <div className="bg-red-100 border-2 border-red-300 rounded-lg p-2 shadow-md text-center">
-                          <div className="text-xs text-red-600 font-medium">No Test Cases Mapped</div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="mt-1 text-xs h-6"
-                            onClick={() => {
-                              setSelectedRequirement(requirement);
-                              setMappingDialogOpen(true);
-                            }}
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Map
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* Legend */}
-              <div className="absolute bottom-4 left-4 bg-white border rounded-lg p-3 shadow-md">
-                <div className="text-sm font-bold mb-2">Legend</div>
-                <div className="space-y-1 text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-green-100 border border-green-300 rounded"></div>
-                    <span>BRD Document</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-yellow-100 border border-yellow-400 rounded"></div>
-                    <span>Functional Requirement</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-blue-100 border border-blue-400 rounded-full"></div>
-                    <span>Test Case</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-1 border-t-2 border-dashed border-gray-400"></div>
-                    <span>«include» relationship</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-1 border-t-2 border-gray-600"></div>
-                    <span>«realize» relationship</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
+  
 
   const renderChartView = () => {
     const selectedBrd = rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
@@ -792,13 +656,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
                 >
                   Chart View
                 </Button>
-                <Button
-                  variant={treeViewMode === 'tree' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setTreeViewMode('tree')}
-                >
-                  Tree View
-                </Button>
+                
                 <Button
                   variant="outline"
                   size="sm"
@@ -828,8 +686,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
             </p>
           </CardHeader>
           <CardContent>
-            {viewMode === 'chart' ? renderChartView() : 
-             treeViewMode === 'tree' ? renderTreeView() : (
+            {viewMode === 'chart' ? renderChartView() : (
               <div className="overflow-x-auto">
                 <Table>
                 <TableHeader>
