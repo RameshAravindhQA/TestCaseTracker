@@ -2069,7 +2069,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Raw assignedEmployeeId from request:', req.body.assignedEmployeeId, 'type:', typeof req.body.assignedEmployeeId);
 
       // Ensure assignedEmployeeId is properly handled - convert to number if it's a valid value
-      let assignedEmployeeId: number | null = null;
+      let assignedEmployeeId: number | undefined = undefined;
       if (req.body.assignedEmployeeId !== undefined && req.body.assignedEmployeeId !== null && req.body.assignedEmployeeId !== '') {
         const parsed = Number(req.body.assignedEmployeeId);
         if (!isNaN(parsed) && parsed > 0) {
@@ -2091,9 +2091,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       console.log('Final work log data being sent to storage:', JSON.stringify(workLogData, null, 2));
+      console.log('assignedEmployeeId value and type being sent:', assignedEmployeeId, typeof assignedEmployeeId);
 
       const workLog = await storage.createTrackerWorkLog(workLogData);
       console.log('Created work log with final assignedEmployeeId:', workLog.assignedEmployeeId);
+      
+      // Additional verification
+      if (assignedEmployeeId && !workLog.assignedEmployeeId) {
+        console.error('ERROR: assignedEmployeeId was lost in storage operation!');
+        console.error('Sent:', assignedEmployeeId, 'Got back:', workLog.assignedEmployeeId);
+      }
+      
       res.status(201).json(workLog);
     } catch (error) {
       console.error('Error creating work log:', error);

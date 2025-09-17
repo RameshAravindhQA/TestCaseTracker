@@ -1362,25 +1362,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTrackerWorkLog(workLog: InsertTrackerWorkLog): Promise<TrackerWorkLog> {
-    console.log('DB: Creating work log with assignedEmployeeId:', workLog.assignedEmployeeId);
+    console.log('DB: Creating work log with assignedEmployeeId:', workLog.assignedEmployeeId, 'type:', typeof workLog.assignedEmployeeId);
     
-    // Ensure assignedEmployeeId is properly handled
-    let assignedEmployeeId: number | null = null;
-    if (workLog.assignedEmployeeId !== undefined && workLog.assignedEmployeeId !== null) {
-      const numValue = Number(workLog.assignedEmployeeId);
-      if (!isNaN(numValue) && numValue > 0) {
-        assignedEmployeeId = numValue;
-      }
-    }
-    
-    console.log('DB: Processing assignedEmployeeId - original:', workLog.assignedEmployeeId, 'processed:', assignedEmployeeId);
-    
-    const insertData = {
+    const insertData: any = {
       projectId: workLog.projectId,
       featureId: workLog.featureId || null,
       subFeatureId: workLog.subFeatureId || null,
       userId: workLog.userId,
-      assignedEmployeeId: assignedEmployeeId,
       workDate: workLog.workDate,
       hoursWorked: workLog.hoursWorked.toString(), // Convert to string for decimal field
       description: workLog.description,
@@ -1389,15 +1377,30 @@ export class DatabaseStorage implements IStorage {
       createdAt: new Date(),
       updatedAt: new Date()
     };
+
+    // Handle assignedEmployeeId explicitly - only add if it has a valid value
+    if (workLog.assignedEmployeeId !== undefined && workLog.assignedEmployeeId !== null) {
+      const numValue = Number(workLog.assignedEmployeeId);
+      if (!isNaN(numValue) && numValue > 0) {
+        insertData.assignedEmployeeId = numValue;
+        console.log('DB: Including assignedEmployeeId in insert:', numValue);
+      } else {
+        console.log('DB: Invalid assignedEmployeeId value, excluding from insert:', workLog.assignedEmployeeId);
+      }
+    } else {
+      console.log('DB: No assignedEmployeeId provided, excluding from insert');
+    }
     
-    console.log('DB: Insert data with assignedEmployeeId:', JSON.stringify(insertData, null, 2));
+    console.log('DB: Final insert data:', JSON.stringify(insertData, null, 2));
     
     const [result] = await db
       .insert(trackerWorkLogs)
       .values(insertData)
       .returning();
     
-    console.log('DB: Created work log with assignedEmployeeId:', result.assignedEmployeeId);
+    console.log('DB: Created work log - full result:', JSON.stringify(result, null, 2));
+    console.log('DB: Created work log assignedEmployeeId:', result.assignedEmployeeId, 'type:', typeof result.assignedEmployeeId);
+    
     return result;
   }
 
