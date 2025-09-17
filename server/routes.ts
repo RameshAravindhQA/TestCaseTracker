@@ -2069,7 +2069,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Raw assignedEmployeeId from request:', req.body.assignedEmployeeId, 'type:', typeof req.body.assignedEmployeeId);
 
       // Ensure assignedEmployeeId is properly handled - convert to number if it's a valid value
-      let assignedEmployeeId = null;
+      let assignedEmployeeId: number | null = null;
       if (req.body.assignedEmployeeId !== undefined && req.body.assignedEmployeeId !== null && req.body.assignedEmployeeId !== '') {
         const parsed = Number(req.body.assignedEmployeeId);
         if (!isNaN(parsed) && parsed > 0) {
@@ -2077,16 +2077,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const workLogData: any = {
+      const workLogData = {
         projectId: Number(req.body.projectId),
-        featureId: req.body.featureId ? Number(req.body.featureId) : null,
-        subFeatureId: req.body.subFeatureId ? Number(req.body.subFeatureId) : null,
+        featureId: req.body.featureId ? Number(req.body.featureId) : undefined,
+        subFeatureId: req.body.subFeatureId ? Number(req.body.subFeatureId) : undefined,
         userId: req.session.userId!,
         assignedEmployeeId: assignedEmployeeId,
         workDate: req.body.workDate,
         hoursWorked: Number(req.body.hoursWorked),
         description: req.body.description,
-        workType: req.body.workType || null,
+        workType: req.body.workType || undefined,
         status: req.body.status || 'In Progress'
       };
 

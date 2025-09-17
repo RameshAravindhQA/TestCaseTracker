@@ -1375,7 +1375,7 @@ export class DatabaseStorage implements IStorage {
     
     console.log('DB: Processing assignedEmployeeId - original:', workLog.assignedEmployeeId, 'processed:', assignedEmployeeId);
     
-    const insertData = {
+    const insertData: any = {
       projectId: workLog.projectId,
       featureId: workLog.featureId || null,
       subFeatureId: workLog.subFeatureId || null,
@@ -1394,7 +1394,20 @@ export class DatabaseStorage implements IStorage {
     
     const [result] = await db
       .insert(trackerWorkLogs)
-      .values(insertData)
+      .values({
+        projectId: insertData.projectId,
+        featureId: insertData.featureId,
+        subFeatureId: insertData.subFeatureId,
+        userId: insertData.userId,
+        assignedEmployeeId: insertData.assignedEmployeeId,
+        workDate: insertData.workDate,
+        hoursWorked: insertData.hoursWorked,
+        description: insertData.description,
+        workType: insertData.workType,
+        status: insertData.status,
+        createdAt: insertData.createdAt,
+        updatedAt: insertData.updatedAt
+      })
       .returning();
     
     console.log('DB: Created work log with assignedEmployeeId:', result.assignedEmployeeId);

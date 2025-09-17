@@ -1359,6 +1359,7 @@ export const insertTrackerWorkLogSchema = createInsertSchema(trackerWorkLogs, {
   workDate: z.string(),
   hoursWorked: z.number().positive(),
   description: z.string().min(1),
+}).extend({
   assignedEmployeeId: z.number().int().positive().optional().nullable(),
 }).omit({
   id: true,
@@ -1395,7 +1396,7 @@ export type InsertTrackerFeature = typeof trackerFeatures.$inferInsert;
 export type TrackerSubFeature = typeof trackerSubFeatures.$inferSelect;
 export type InsertTrackerSubFeature = typeof trackerSubFeatures.$inferInsert;
 export type TrackerWorkLog = typeof trackerWorkLogs.$inferSelect;
-export type InsertTrackerWorkLog = typeof trackerWorkLogs.$inferInsert;
+export type InsertTrackerWorkLog = z.infer<typeof insertTrackerWorkLogSchema>;
 export type TrackerTimelineExtension = typeof trackerTimelineExtensions.$inferSelect;
 export type InsertTrackerTimelineExtension = typeof trackerTimelineExtensions.$inferInsert;
 export type TrackerDependency = typeof trackerDependencies.$inferSelect;
