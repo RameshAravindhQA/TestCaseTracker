@@ -107,8 +107,10 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
   const [endDate, setEndDate] = useState('');
   const [searchQuery, setSearchQuery] = useState(''); // State for search input
   const [currentPage, setCurrentPage] = useState(1); // State for pagination
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false); // State for loading indicator
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false); // State to show summary report
   const [showSummaryReport, setShowSummaryReport] = useState(false); // State to show summary report
+  const [exporting, setExporting] = useState(false); // State for PDF export loading indicator
+
 
   // Fetch project-specific data when project changes
   const { data: projectFeatures } = useQuery({
@@ -403,6 +405,8 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
   const exportToPDF = () => {
     try {
+      setExporting(true); // Set exporting state
+
       const groupedData = getGroupedData();
 
       if (Object.keys(groupedData).length === 0) {
@@ -819,6 +823,8 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
         description: "Failed to generate comprehensive PDF report. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setExporting(false); // Ensure exporting state is reset
     }
   };
 
@@ -1004,9 +1010,9 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                   <FileDown className="h-4 w-4 mr-2" />
                   Export CSV
                 </Button>
-                <Button onClick={exportToPDF} variant="outline">
+                <Button onClick={exportToPDF} variant="outline" disabled={exporting}>
                   <FileDown className="h-4 w-4 mr-2" />
-                  Export PDF
+                  {exporting ? "Exporting..." : "Export PDF"}
                 </Button>
                 <Button 
                   onClick={generateSummaryReport}

@@ -2065,18 +2065,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/tracker/work-logs", isAuthenticated, async (req, res) => {
     try {
-      console.log('Creating work log with data:', req.body);
-      const workLogData = insertTrackerWorkLogSchema.parse({
+      const workLogData = {
         ...req.body,
-        userId: req.session.userId,
+        userId: req.session.userId!,
         assignedEmployeeId: req.body.assignedEmployeeId || null,
-      });
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      console.log('Creating work log with data:', workLogData);
+
       const workLog = await storage.createTrackerWorkLog(workLogData);
       console.log('Created work log:', workLog);
+
       res.status(201).json(workLog);
     } catch (error) {
-      console.error("Create tracker work log error:", error);
-      res.status(400).json({ message: "Invalid work log data" });
+      console.error('Create work log error:', error);
+      res.status(500).json({ error: 'Failed to create work log' });
     }
   });
 
@@ -6221,7 +6226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
 
         if (!isMember && project.createdById !== req.session.userId) {
-          return res.status(403).json({ message: "You don't have accessto this project" });
+          return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
 
@@ -6694,7 +6699,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileType: document.fileType,
         fileSize: document.fileSize,
         fileName: document.fileName,
-        folderId: targetFolderId === null ? null : targetFolderId,        projectId: document.projectId,
+        folderId: targetFolderId === null ? null : targetFolderId,
+        projectId: document.projectId,
         uploadedById: req.session.userId!,
       };
 

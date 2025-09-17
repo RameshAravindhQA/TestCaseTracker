@@ -518,10 +518,7 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              setSelectedFeatureId(feature.id);
-                              setShowSubFeatureForm(true);
-                            }}
+                            onClick={() => handleAddSubFeature(feature.id)}
                           >
                             <Plus className="h-3 w-3 mr-1" />
                             Add Sub-Feature
