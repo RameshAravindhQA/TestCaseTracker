@@ -1361,19 +1361,22 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async createTrackerWorkLog(workLog: InsertTrackerWorkLog): Promise<TrackerWorkLog> {
-    console.log('DB: Creating work log with assignedEmployeeId:', workLog.assignedEmployeeId);
-    const [result] = await db
-      .insert(trackerWorkLogs)
-      .values({
-        ...workLog,
-        assignedEmployeeId: workLog.assignedEmployeeId || null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      })
-      .returning();
-    console.log('DB: Created work log with assignedEmployeeId:', result.assignedEmployeeId);
-    return result;
+  async createTrackerWorkLog(data: InsertTrackerWorkLog): Promise<TrackerWorkLog> {
+    // Ensure assignedEmployeeId is properly handled
+    const workLogData = {
+      ...data,
+      assignedEmployeeId: data.assignedEmployeeId ? Number(data.assignedEmployeeId) : null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    console.log('DB: Creating work log with assignedEmployeeId:', workLogData.assignedEmployeeId, typeof workLogData.assignedEmployeeId);
+
+    const [newWorkLog] = await db.insert(trackerWorkLogs).values(workLogData).returning();
+
+    console.log('DB: Created work log with assignedEmployeeId:', newWorkLog.assignedEmployeeId);
+
+    return newWorkLog;
   }
 
   async updateTrackerWorkLog(id: number, workLogData: Partial<TrackerWorkLog>): Promise<TrackerWorkLog | undefined> {
