@@ -1,0 +1,101 @@
+Raw assignedEmployeeId from request: 4 type: number
+Final work log data being sent to storage: {
+  "projectId": 1,
+  "featureId": 1,
+  "subFeatureId": 104,
+  "userId": 3,
+  "assignedEmployeeId": 4,
+  "workDate": "2025-09-17",
+  "hoursWorked": 8,
+  "description": "Front end design",
+  "workType": "Development",
+  "status": "Completed"
+}
+Created work log with final assignedEmployeeId: undefined
+11:03:41 AM [express] POST /api/tracker/work-logs 201 in 2ms :: {"id":107,"projectId":1,"featureId":1…
+11:03:57 AM [express] GET /api/messages/unread-count 304 in 1ms :: {"count":0}
+GET /api/auth/user - Session data: {
+  sessionId: 'UzrDs-9nRDpNSxcQ9-B_AeTlwJLtNrPN',
+  userId: 3,
+  userRole: 'Admin',
+  userEmail: 'ramesh@navadhiti.com',
+  hasSession: true,
+  sessionKeys: [ 'cookie', 'userId', 'userRole', 'userName', 'userEmail' ]
+}
+User authenticated successfully: ramesh@navadhiti.com
+11:03:57 AM [express] GET /api/auth/user 200 in 2ms :: {"id":3,"firstName":"Ramesh","lastName":"Aravi…
+11:03:57 AM [express] GET /api/notifications/3 304 in 1ms :: []
+Creating work log with data: {
+  workDate: '2025-09-17',
+  hoursWorked: 8,
+  description: 'API Design',
+  workType: 'Development',
+  status: 'In Progress',
+  assignedEmployeeId: 7,
+  projectId: 1,
+  subFeatureId: 105,
+  featureId: 1
+}
+Raw assignedEmployeeId from request: 7 type: number
+Final work log data being sent to storage: {
+  "projectId": 1,
+  "featureId": 1,
+  "subFeatureId": 105,
+  "userId": 3,
+  "assignedEmployeeId": 7,
+  "workDate": "2025-09-17",
+  "hoursWorked": 8,
+  "description": "API Design",
+  "workType": "Development",
+  "status": "In Progress"
+}
+Created work log with final assignedEmployeeId: undefined
+11:03:58 AM [express] POST /api/tracker/work-logs 201 in 1ms :: {"id":108,"projectId":1,"featureId":1…
+Creating work log with data: {
+  workDate: '2025-09-17',
+  hoursWorked: 8,
+  description: 'Testing ',
+  workType: 'QA',
+  status: 'Completed',
+  assignedEmployeeId: 9,
+  projectId: 1,
+  subFeatureId: 106,
+  featureId: 1
+}
+Raw assignedEmployeeId from request: 9 type: number
+Final work log data being sent to storage: {
+  "projectId": 1,
+  "featureId": 1,
+  "subFeatureId": 106,
+  "userId": 3,
+  "assignedEmployeeId": 9,
+  "workDate": "2025-09-17",
+  "hoursWorked": 8,
+  "description": "Testing ",
+  "workType": "QA",
+  "status": "Completed"
+}
+Created work log with final assignedEmployeeId: undefined
+11:04:13 AM [express] POST /api/tracker/work-logs 201 in 2ms :: {"id":109,"projectId":1,"featureId":1…
+[API] Getting work logs with filters: {
+  projectId: 1,
+  featureId: undefined,
+  subFeatureId: undefined,
+  userId: undefined,
+  startDate: undefined,
+  endDate: undefined
+}
+[API] Returning 3 work logs for user 3: [
+  {
+    id: 107,
+    projectId: 1,
+    subFeatureId: 104,
+    description: 'Front end design'
+  },
+  {
+    id: 108,
+    projectId: 1,
+    subFeatureId: 105,
+    description: 'API Design'
+  },
+  { id: 109, projectId: 1, subFea
