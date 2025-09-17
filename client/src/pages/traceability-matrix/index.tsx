@@ -57,7 +57,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
-const RTMComponent = () => {
+const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null }) => {
   const [selectedBrdId, setSelectedBrdId] = useState<number | null>(null);
   const [rtmData, setRtmData] = useState<any>(null);
   const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
@@ -1252,7 +1252,7 @@ export default function TraceabilityMatrixPage() {
             </TabsContent>
 
             <TabsContent value="rtm" className="space-y-6 mt-6">
-              <RTMComponent />
+              <RTMComponent selectedProjectId={selectedProjectId} />
             </TabsContent>
           </Tabs>
         )}

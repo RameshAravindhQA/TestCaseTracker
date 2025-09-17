@@ -5435,7 +5435,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/bugs", isAuthenticated, async (req, res) => {
     try {
       const {projectId, moduleId, status, severity } = req.query;
-
       console.log(`[API] Fetching bugs with filters:`, { projectId, moduleId, status, severity });
 
       // Get bugs with proper security filtering
@@ -6199,9 +6198,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body using Zod schema
       const parseResult = insertBrdDocumentSchema.safeParse(req.body);
       if (!parseResult.success) {
-        return res.status(400).json({ 
-          message: "Invalid request data", 
-          errors: parseResult.error.issues 
+        return res.status(400).json({
+          message: "Invalid request data",
+          errors: parseResult.error.issues
         });
       }
 
@@ -6379,9 +6378,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body using Zod schema
       const parseResult = insertFunctionalRequirementSchema.safeParse(req.body);
       if (!parseResult.success) {
-        return res.status(400).json({ 
-          message: "Invalid request data", 
-          errors: parseResult.error.issues 
+        return res.status(400).json({
+          message: "Invalid request data",
+          errors: parseResult.error.issues
         });
       }
 
@@ -6528,9 +6527,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body using Zod schema
       const parseResult = insertRequirementTestCaseMappingSchema.safeParse(req.body);
       if (!parseResult.success) {
-        return res.status(400).json({ 
-          message: "Invalid request data", 
-          errors: parseResult.error.issues 
+        return res.status(400).json({
+          message: "Invalid request data",
+          errors: parseResult.error.issues
         });
       }
 
