@@ -221,6 +221,146 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
     URL.revokeObjectURL(url);
   };
 
+  const exportRTMToPDF = async () => {
+    const selectedBrd = rtmData?.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
+    if (!selectedBrd) {
+      toast({ title: "Error", description: "Please select a BRD document first", variant: "destructive" });
+      return;
+    }
+
+    try {
+      // Create a hidden div with the RTM content
+      const printDiv = document.createElement('div');
+      printDiv.style.position = 'absolute';
+      printDiv.style.left = '-9999px';
+      printDiv.style.width = '800px';
+      printDiv.style.backgroundColor = 'white';
+      printDiv.style.padding = '20px';
+      printDiv.style.fontFamily = 'Arial, sans-serif';
+
+      // Build RTM content
+      let htmlContent = `
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin-bottom: 10px;">Requirements Traceability Matrix</h1>
+          <h2 style="color: #666; font-weight: normal;">${selectedBrd.documentId} - ${selectedBrd.title}</h2>
+          <p style="color: #888; font-size: 14px;">Generated on ${new Date().toLocaleDateString()}</p>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+          <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Document Summary</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Document ID:</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${selectedBrd.documentId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Title:</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${selectedBrd.title}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Total Requirements:</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${selectedBrd.functionalRequirements?.length || 0}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div>
+          <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Traceability Matrix</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <thead>
+              <tr style="background-color: #f8f9fa;">
+                <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Requirement ID</th>
+                <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Requirement Title</th>
+                <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Test Case ID</th>
+                <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Test Case Feature</th>
+                <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      selectedBrd.functionalRequirements?.forEach((req: any) => {
+        if (req.mappings && req.mappings.length > 0) {
+          req.mappings.forEach((mapping: any) => {
+            const testCase = rtmData.testCases?.find((tc: any) => tc.id === mapping.testCaseId);
+            const statusColor = mapping.status === 'Pass' ? '#28a745' : mapping.status === 'Fail' ? '#dc3545' : '#6c757d';
+            htmlContent += `
+              <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">${req.requirementId}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${req.title}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${testCase?.testCaseId || 'Unknown'}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${testCase?.feature || ''}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; color: ${statusColor}; font-weight: bold;">${mapping.status}</td>
+              </tr>
+            `;
+          });
+        } else {
+          htmlContent += `
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;">${req.requirementId}</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${req.title}</td>
+              <td style="padding: 8px; border: 1px solid #ddd; color: #dc3545;">No mappings</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">-</td>
+              <td style="padding: 8px; border: 1px solid #ddd; color: #6c757d;">Not Mapped</td>
+            </tr>
+          `;
+        }
+      });
+
+      htmlContent += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      printDiv.innerHTML = htmlContent;
+      document.body.appendChild(printDiv);
+
+      // Use html2canvas to capture the content
+      const canvas = await html2canvas(printDiv, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        allowTaint: true
+      });
+
+      // Remove the temporary div
+      document.body.removeChild(printDiv);
+
+      // Create PDF
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pdfWidth - 20; // 10mm margin on each side
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 10; // 10mm top margin
+
+      // Add first page
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight - 20; // Account for margins
+
+      // Add additional pages if content is longer than one page
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      // Save the PDF
+      pdf.save(`RTM_${selectedBrd.documentId}.pdf`);
+      
+      toast({ title: "Success", description: "RTM exported to PDF successfully" });
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast({ title: "Error", description: "Failed to export RTM to PDF", variant: "destructive" });
+    }
+  };
+
   const renderTreeView = () => {
     const selectedBrd = rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
     if (!selectedBrd) return null;
@@ -229,107 +369,211 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Requirements Tree Diagram</CardTitle>
+            <CardTitle>Requirements Relationship Diagram</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Hierarchical view of BRD → Functional Requirements → Test Cases
+              Visual relationship flow: BRD Document → Functional Requirements → Test Cases (like UML Use Case diagram)
             </p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {/* BRD Document Root */}
-              <div className="flex items-center gap-2 p-4 border rounded-lg bg-blue-50">
-                <FileText className="h-6 w-6 text-blue-600" />
-                <div>
-                  <div className="font-semibold text-blue-900">{selectedBrd.documentId}</div>
-                  <div className="text-sm text-blue-700">{selectedBrd.title}</div>
+            <div className="relative bg-gray-50 p-8 rounded-lg overflow-auto" style={{ minHeight: '600px' }}>
+              {/* Central BRD Document */}
+              <div className="absolute left-1/2 top-20 transform -translate-x-1/2">
+                <div className="bg-green-100 border-2 border-green-300 rounded-lg p-4 shadow-md min-w-[200px] text-center">
+                  <div className="font-bold text-green-800 text-sm mb-1">{selectedBrd.documentId}</div>
+                  <div className="text-xs text-green-600 font-medium">Manage Requirements</div>
+                  <div className="text-xs text-gray-600 mt-1 italic">({selectedBrd.title})</div>
                 </div>
               </div>
 
-              {/* Functional Requirements */}
-              {selectedBrd.functionalRequirements?.map((requirement: any, reqIndex: number) => (
-                <div key={requirement.id} className="ml-8 space-y-2">
-                  {/* Connection line to parent */}
-                  <div className="flex items-center">
-                    <div className="w-6 border-l-2 border-t-2 border-gray-300 h-4"></div>
-                    <div className="flex items-center gap-2 p-3 border rounded-lg bg-green-50 flex-1">
-                      <Tag className="h-5 w-5 text-green-600" />
-                      <div className="flex-1">
-                        <div className="font-medium text-green-900">{requirement.requirementId}</div>
-                        <div className="text-sm text-green-700">{requirement.title}</div>
-                        <div className="flex items-center gap-2 mt-1">
-                          {getStatusBadge(requirement.status || "Not Executed")}
-                          <Badge variant="outline" className="text-xs">
-                            {requirement.mappings?.length || 0} Test Cases
-                          </Badge>
+              {/* Functional Requirements - positioned around the BRD */}
+              {selectedBrd.functionalRequirements?.map((requirement: any, reqIndex: number) => {
+                const angle = (reqIndex * 360) / (selectedBrd.functionalRequirements?.length || 1);
+                const radius = 180;
+                const reqX = Math.cos((angle * Math.PI) / 180) * radius;
+                const reqY = Math.sin((angle * Math.PI) / 180) * radius;
+
+                return (
+                  <div key={requirement.id}>
+                    {/* Requirement Box */}
+                    <div 
+                      className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                      style={{ 
+                        left: `calc(50% + ${reqX}px)`, 
+                        top: `calc(140px + ${reqY}px)` 
+                      }}
+                    >
+                      <div className="bg-yellow-100 border-2 border-yellow-400 rounded-lg p-3 shadow-md min-w-[160px] text-center">
+                        <div className="font-bold text-yellow-800 text-xs mb-1">{requirement.requirementId}</div>
+                        <div className="text-xs text-yellow-600 font-medium">
+                          {requirement.title?.substring(0, 30)}{requirement.title?.length > 30 ? '...' : ''}
                         </div>
+                        <div className="text-xs text-gray-600 mt-1 italic">(from Manage Requirements)</div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Test Cases */}
-                  {requirement.mappings?.map((mapping: any, mappingIndex: number) => {
-                    const testCase = rtmData.testCases?.find((tc: any) => tc.id === mapping.testCaseId);
-                    return (
-                      <div key={mapping.id} className="ml-8 flex items-center">
-                        <div className="w-6 border-l-2 border-t-2 border-gray-300 h-4"></div>
-                        <div className="flex items-center gap-2 p-2 border rounded-lg bg-yellow-50 flex-1 hover:bg-yellow-100 cursor-pointer"
-                             onClick={() => testCase && handleViewTestCase(testCase)}>
-                          <Check className="h-4 w-4 text-yellow-600" />
-                          <div className="flex-1">
-                            <div className="font-medium text-yellow-900">
-                              {testCase?.testCaseId || `TC-${mapping.testCaseId}`}
+                    {/* Connection line from BRD to Requirement */}
+                    <svg className="absolute" style={{ 
+                      left: `calc(50% + ${reqX > 0 ? 100 : reqX < 0 ? -100 : 0}px)`, 
+                      top: `calc(140px + ${reqY > 0 ? 40 : reqY < 0 ? -40 : 0}px)`,
+                      width: Math.abs(reqX) || 50,
+                      height: Math.abs(reqY) || 50
+                    }}>
+                      <defs>
+                        <marker id={`arrowhead-${reqIndex}`} markerWidth="10" markerHeight="7" 
+                          refX="10" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                          <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
+                        </marker>
+                      </defs>
+                      <line 
+                        x1="0" y1="0" 
+                        x2={Math.abs(reqX) || 50} 
+                        y2={Math.abs(reqY) || 50}
+                        stroke="#666" 
+                        strokeWidth="2"
+                        markerEnd={`url(#arrowhead-${reqIndex})`}
+                        strokeDasharray="5,5"
+                      />
+                    </svg>
+
+                    {/* Test Cases - positioned around each requirement */}
+                    {requirement.mappings?.map((mapping: any, tcIndex: number) => {
+                      const testCase = rtmData.testCases?.find((tc: any) => tc.id === mapping.testCaseId);
+                      const tcAngle = (tcIndex * 120) / Math.max(requirement.mappings?.length || 1, 1) - 60;
+                      const tcRadius = 120;
+                      const tcX = Math.cos((tcAngle * Math.PI) / 180) * tcRadius;
+                      const tcY = Math.sin((tcAngle * Math.PI) / 180) * tcRadius;
+
+                      return (
+                        <div key={mapping.id}>
+                          {/* Test Case Box */}
+                          <div 
+                            className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-105 transition-transform"
+                            style={{ 
+                              left: `calc(50% + ${reqX + tcX}px)`, 
+                              top: `calc(140px + ${reqY + tcY}px)` 
+                            }}
+                            onClick={() => testCase && handleViewTestCase(testCase)}
+                          >
+                            <div className="bg-blue-100 border-2 border-blue-400 rounded-full p-3 shadow-md min-w-[100px] min-h-[100px] flex flex-col items-center justify-center text-center">
+                              <div className="font-bold text-blue-800 text-xs mb-1">
+                                {testCase?.testCaseId || `TC-${mapping.testCaseId}`}
+                              </div>
+                              <div className="text-xs text-blue-600 font-medium">
+                                {testCase?.feature?.substring(0, 15)}{testCase?.feature?.length > 15 ? '...' : ''}
+                              </div>
+                              <div className="text-xs text-gray-600 mt-1 italic">(from Manage Test Cases)</div>
                             </div>
-                            <div className="text-sm text-yellow-700">
-                              {testCase?.feature || testCase?.title || 'Test Case'}
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              {getStatusBadge(mapping.status)}
-                              {testCase?.priority && (
-                                <Badge variant="outline" className="text-xs">
-                                  {testCase.priority}
-                                </Badge>
-                              )}
+                          </div>
+
+                          {/* Connection line from Requirement to Test Case */}
+                          <svg className="absolute" style={{ 
+                            left: `calc(50% + ${reqX + (tcX > 0 ? 80 : tcX < 0 ? -80 : 0)}px)`, 
+                            top: `calc(140px + ${reqY + (tcY > 0 ? 30 : tcY < 0 ? -30 : 0)}px)`,
+                            width: Math.abs(tcX) || 40,
+                            height: Math.abs(tcY) || 40
+                          }}>
+                            <defs>
+                              <marker id={`arrow-tc-${reqIndex}-${tcIndex}`} markerWidth="8" markerHeight="6" 
+                                refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <polygon points="0 0, 8 3, 0 6" fill="#333" />
+                              </marker>
+                            </defs>
+                            <line 
+                              x1="0" y1="0" 
+                              x2={Math.abs(tcX) || 40} 
+                              y2={Math.abs(tcY) || 40}
+                              stroke="#333" 
+                              strokeWidth="1.5"
+                              markerEnd={`url(#arrow-tc-${reqIndex}-${tcIndex})`}
+                            />
+                            {/* Add relationship label */}
+                            <text 
+                              x={(Math.abs(tcX) || 40) / 2} 
+                              y={(Math.abs(tcY) || 40) / 2 - 5}
+                              fontSize="10" 
+                              fill="#666" 
+                              textAnchor="middle"
+                            >
+                              «realize»
+                            </text>
+                          </svg>
+
+                          {/* Status indicator */}
+                          <div 
+                            className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                            style={{ 
+                              left: `calc(50% + ${reqX + tcX + 40}px)`, 
+                              top: `calc(140px + ${reqY + tcY - 40}px)` 
+                            }}
+                          >
+                            <div className={`px-2 py-1 rounded text-xs font-bold ${
+                              mapping.status === 'Pass' ? 'bg-green-200 text-green-800' :
+                              mapping.status === 'Fail' ? 'bg-red-200 text-red-800' :
+                              'bg-gray-200 text-gray-800'
+                            }`}>
+                              {mapping.status}
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
 
-                  {/* Show message if no test cases mapped */}
-                  {(!requirement.mappings || requirement.mappings.length === 0) && (
-                    <div className="ml-8 flex items-center">
-                      <div className="w-6 border-l-2 border-t-2 border-gray-300 h-4"></div>
-                      <div className="flex items-center gap-2 p-2 border rounded-lg bg-gray-50 flex-1">
-                        <X className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-500">No test cases mapped</span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedRequirement(requirement);
-                            setMappingDialogOpen(true);
-                          }}
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Map Test Case
-                        </Button>
+                    {/* Show unmapped requirements */}
+                    {(!requirement.mappings || requirement.mappings.length === 0) && (
+                      <div 
+                        className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                        style={{ 
+                          left: `calc(50% + ${reqX}px)`, 
+                          top: `calc(140px + ${reqY + 80}px)` 
+                        }}
+                      >
+                        <div className="bg-red-100 border-2 border-red-300 rounded-lg p-2 shadow-md text-center">
+                          <div className="text-xs text-red-600 font-medium">No Test Cases Mapped</div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-1 text-xs h-6"
+                            onClick={() => {
+                              setSelectedRequirement(requirement);
+                              setMappingDialogOpen(true);
+                            }}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Map
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    )}
+                  </div>
+                );
+              })}
 
-              {/* Show message if no requirements */}
-              {(!selectedBrd.functionalRequirements || selectedBrd.functionalRequirements.length === 0) && (
-                <div className="ml-8 flex items-center">
-                  <div className="w-6 border-l-2 border-t-2 border-gray-300 h-4"></div>
-                  <div className="flex items-center gap-2 p-4 border rounded-lg bg-gray-50 flex-1">
-                    <X className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-500">No functional requirements found</span>
+              {/* Legend */}
+              <div className="absolute bottom-4 left-4 bg-white border rounded-lg p-3 shadow-md">
+                <div className="text-sm font-bold mb-2">Legend</div>
+                <div className="space-y-1 text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-green-100 border border-green-300 rounded"></div>
+                    <span>BRD Document</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-yellow-100 border border-yellow-400 rounded"></div>
+                    <span>Functional Requirement</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-blue-100 border border-blue-400 rounded-full"></div>
+                    <span>Test Case</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-1 border-t-2 border-dashed border-gray-400"></div>
+                    <span>«include» relationship</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-1 border-t-2 border-gray-600"></div>
+                    <span>«realize» relationship</span>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -568,6 +812,14 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Export CSV
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportRTMToPDF()}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export PDF
                 </Button>
               </div>
             </div>

@@ -2945,7 +2945,7 @@ class MemStorage implements IStorage {
       ...marker,
       updatedAt: new Date()
     };
-    this.traceabilityMarkers[index] = updatedMarker;
+    this.traceabilityMatrixes[index] = updatedMarker;
     console.log(`Storage: Updated traceability marker with ID ${id}:`, updatedMarker);
     return updatedMarker;
   }
@@ -4446,11 +4446,7 @@ class MemStorage implements IStorage {
 
   // BRD Document operations
   async getBrdDocuments(projectId?: number): Promise<any[]> {
-    let results = [...this.brdDocuments];
-    if (projectId) {
-      results = results.filter(doc => doc.projectId === projectId);
-    }
-    return results;
+    return this.brdDocuments.filter(doc => projectId ? doc.projectId === projectId : true);
   }
 
   async getBrdDocument(id: number): Promise<any | null> {
@@ -4554,10 +4550,7 @@ class MemStorage implements IStorage {
     const id = this.nextBrdVersionId++;
     const version = {
       id,
-      brdId: versionData.brdId,
-      version: versionData.version,
-      data: versionData.data,
-      createdById: versionData.createdById,
+      ...versionData,
       createdAt: new Date(),
       comment: versionData.comment || 'Version created',
       ...versionData
@@ -5185,7 +5178,7 @@ class MemStorage implements IStorage {
         .filter(req => req.projectId === projectId)
         .map(req => req.id);
       mappings = mappings.filter(mapping => projectFRIds.includes(mapping.functionalRequirementId));
-    }
+   }
 
     return mappings;
   }
@@ -5200,14 +5193,29 @@ class MemStorage implements IStorage {
   async createRequirementTestCaseMapping(data: InsertRequirementTestCaseMapping): Promise<RequirementTestCaseMapping> {
     const id = this.getNextId();
 
-    // Check for duplicate mapping
+    // Check for existing mapping
+    if (!this.requirementTestCaseMappings) {
+      this.requirementTestCaseMappings = [];
+    }
+
     const existingMapping = this.requirementTestCaseMappings.find(
       mapping => mapping.functionalRequirementId === data.functionalRequirementId &&
                  mapping.testCaseId === data.testCaseId
     );
 
     if (existingMapping) {
-      throw new Error(`Mapping between Functional Requirement ${data.functionalRequirementId} and Test Case ${data.testCaseId} already exists`);
+      console.log(`Updating existing mapping ${existingMapping.id} instead of creating duplicate`);
+      // Update existing mapping instead of throwing error
+      const updatedMapping = {
+        ...existingMapping,
+        ...data,
+        updatedAt: new Date()
+      };
+
+      const index = this.requirementTestCaseMappings.findIndex(m => m.id === existingMapping.id);
+      this.requirementTestCaseMappings[index] = updatedMapping;
+      // this.saveToFile(); // Removed this line as it's not a real file save operation in memory storage
+      return updatedMapping;
     }
 
     const mapping: RequirementTestCaseMapping = {
@@ -5223,6 +5231,7 @@ class MemStorage implements IStorage {
     };
 
     this.requirementTestCaseMappings.push(mapping);
+    // this.saveToFile(); // Removed this line as it's not a real file save operation in memory storage
     return mapping;
   }
 
