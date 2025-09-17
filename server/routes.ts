@@ -2065,25 +2065,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/tracker/work-logs", isAuthenticated, async (req, res) => {
     try {
+      console.log('Creating work log with data:', req.body);
+
+      // Ensure assignedEmployeeId is properly handled
+      const assignedEmployeeId = req.body.assignedEmployeeId ? Number(req.body.assignedEmployeeId) : null;
+
       const workLogData = {
         ...req.body,
         userId: req.session.userId!,
-        assignedEmployeeId: req.body.assignedEmployeeId && req.body.assignedEmployeeId !== 'undefined' 
-          ? parseInt(req.body.assignedEmployeeId.toString()) 
-          : null,
+        assignedEmployeeId: assignedEmployeeId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
-      console.log('Creating work log with data:', workLogData);
       console.log('assignedEmployeeId type:', typeof workLogData.assignedEmployeeId, 'value:', workLogData.assignedEmployeeId);
 
       const workLog = await storage.createTrackerWorkLog(workLogData);
       console.log('Created work log:', workLog);
-
       res.status(201).json(workLog);
     } catch (error) {
-      console.error('Create work log error:', error);
+      console.error('Error creating work log:', error);
       res.status(500).json({ error: 'Failed to create work log' });
     }
   });
@@ -5632,8 +5633,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     path.join(process.cwd(), 'attached_assets', filename)
                   ];
 
-                  let foundPath = null;
-                  for (const possiblePath of possiblePaths) {
+                  let foundPath = null                for (const possiblePath of possiblePaths) {
                     if (fs.existsSync(possiblePath)) {
                       foundPath = possiblePath;
                       break;
@@ -7556,7 +7556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         todos = await storage.getTodos(req.session.userId!);
       }
 
-      // Ensure we always return an array
+      // Ensure we return an array
       const todosArray = Array.isArray(todos) ? todos : [];
       console.log(`[API] Returning ${todosArray.length} todos for user ${req.session.userId}`);
       res.json(todosArray);
