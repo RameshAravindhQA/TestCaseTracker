@@ -568,6 +568,20 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
                                       </span>
                                     )}
                                   </div>
+                                  {/* Display assigned employees */}
+                                  {subFeature.assignedEmployeeIds && subFeature.assignedEmployeeIds.length > 0 && (
+                                    <div className="flex items-center gap-1 mt-2">
+                                      <Users className="h-3 w-3 text-blue-500" />
+                                      <div className="flex flex-wrap gap-1">
+                                        {employeesData?.filter((emp: any) => subFeature.assignedEmployeeIds.includes(emp.id))
+                                          .map((emp: any) => (
+                                            <Badge key={emp.id} variant="secondary" className="text-xs">
+                                              {emp.firstName} {emp.lastName}
+                                            </Badge>
+                                          )) || <span className="text-xs text-muted-foreground">No employees assigned</span>}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
@@ -771,7 +785,7 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
                   <p className="mt-1">{selectedSubFeature.endDate || 'Not set'}</p>
                 </div>
               </div>
-              
+
               {/* Added for displaying assigned employees */}
               {selectedSubFeature.assignedEmployeeIds && selectedSubFeature.assignedEmployeeIds.length > 0 && (
                 <div className="mt-4">

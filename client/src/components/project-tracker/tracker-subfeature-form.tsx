@@ -152,6 +152,7 @@ export function TrackerSubFeatureForm({
         form.setValue('department', subFeature.department || '');
         form.setValue('priority', subFeature.priority || 'Medium');
         form.setValue('workType', subFeature.workType || 'Development');
+        form.setValue('assignedEmployeeIds', subFeature.assignedEmployeeIds || []);
       }, 0);
     } else {
       // Creating new sub-feature
@@ -184,15 +185,17 @@ export function TrackerSubFeatureForm({
       estimatedHours: data.estimatedHours ? Number(data.estimatedHours) : undefined,
       parentSubFeatureId: data.parentSubFeatureId ? Number(data.parentSubFeatureId) : undefined,
     };
+    console.log('Submitting sub-feature with assigned employees:', selectedEmployees);
     onSubmit(formData);
   };
 
   const handleEmployeeToggle = (employeeId: number) => {
-    setSelectedEmployees(prev => 
-      prev.includes(employeeId)
-        ? prev.filter(id => id !== employeeId)
-        : [...prev, employeeId]
-    );
+    const newSelectedEmployees = selectedEmployees.includes(employeeId)
+      ? selectedEmployees.filter(id => id !== employeeId)
+      : [...selectedEmployees, employeeId];
+    
+    setSelectedEmployees(newSelectedEmployees);
+    form.setValue('assignedEmployeeIds', newSelectedEmployees);
   };
 
   const getSelectedEmployeeNames = () => {
@@ -581,6 +584,19 @@ export function TrackerSubFeatureForm({
                 />
               </FormControl>
               <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Hidden field to sync selectedEmployees with form */}
+        <FormField
+          control={form.control}
+          name="assignedEmployeeIds"
+          render={({ field }) => (
+            <FormItem style={{ display: 'none' }}>
+              <FormControl>
+                <Input {...field} value={selectedEmployees.join(',')} readOnly />
+              </FormControl>
             </FormItem>
           )}
         />

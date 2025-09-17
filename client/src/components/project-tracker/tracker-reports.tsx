@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileDown, Calendar, TrendingUp, Clock, Target, Filter, FileText, BarChart3, Eye } from 'lucide-react';
+import { FileDown, Calendar, TrendingUp, Clock, Target, Filter, FileText, BarChart3, Eye, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -52,6 +52,7 @@ interface TrackerSubFeature {
   estimatedHours: number | null;
   startDate: string | null;
   endDate: string | null;
+  assignedEmployeeIds?: number[]; // Add this for assigned employees
 }
 
 interface TrackerWorkLog {
@@ -62,6 +63,7 @@ interface TrackerWorkLog {
   workType: string | null;
   status: string;
   description: string;
+  assignedEmployeeId?: number; // Add this for assigned employee
   subFeature?: TrackerSubFeature; // Optional: to access sub-feature details directly
 }
 
@@ -93,7 +95,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
       return response.json();
     },
   });
-  
+
   const [reportType, setReportType] = useState('summary');
   const [dateRange, setDateRange] = useState('all');
   const [selectedFeature, setSelectedFeature] = useState('all');
@@ -684,7 +686,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
           const totalDays = totalHours / 8;
           const avgHours = logs.length > 0 ? totalHours / logs.length : 0;
           const workTypes = _.uniq(logs.map(log => log.workType).filter(Boolean)).join(', ');
-          
+
           return [
             employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown Employee',
             employee?.department || 'N/A',
@@ -1200,7 +1202,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                           const subFeature = group.subFeatures.find(sf => sf.id === wl.subFeatureId);
                           const assignedEmployee = employeesData?.find((emp: any) => emp.id === wl.assignedEmployeeId);
                           const assignedName = assignedEmployee ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}` : 'Unassigned';
-                          
+
                           return (
                             <tr key={wl.id}>
                               <td className="border border-gray-200 px-4 py-2">#{wl.id}</td>
@@ -1331,7 +1333,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                       const avgHours = logs.length > 0 ? totalHours / logs.length : 0;
                       const workTypes = _.uniq(logs.map(log => log.workType).filter(Boolean));
                       const statusCounts = _.countBy(logs, 'status');
-                      
+
                       return {
                         employee: employee || { firstName: 'Unknown', lastName: 'Employee', department: 'N/A' },
                         totalLogs: logs.length,
