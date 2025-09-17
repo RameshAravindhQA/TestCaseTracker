@@ -47,42 +47,17 @@ import {
   InsertDocument,
   Tag,
   InsertTag,
-  TestingType,
-  InsertTestingTypeField,
-  TestingTypeField,
   Notebook,
   NotebookCategory,
   NotebookComment,
-  TodoList,
-  Todo,
   BugComment,
-  AutomationScript,
-  AutomationRun,
-  AutomationSchedule,
-  AutomationEnvironment,
-  Role,
-  Permission,
-  UserProject,
-  Marker,
-  RequestFormType,
-  RequestForm,
-  RequestComment,
-  ChatMessage,
-  GitHubConfig,
-  ProjectUser,
   EmployeeProject,
-  EmployeeProjectHistory,
-  TechnologyOption,
-  DepartmentOption,
-  NavadhitiProject,
-  StatusReview,
-  ResourceRequest,
-  ResourceRequestExtension,
-  Notification,
-  TestCaseStatus,
-  BugStatus,
-  TestCaseStatusCounts,
-  BugStatusCounts,
+  BrdDocument,
+  InsertBrdDocument,
+  FunctionalRequirement,
+  InsertFunctionalRequirement,
+  RequirementTestCaseMapping,
+  InsertRequirementTestCaseMapping,
   InsertMessageReadStatus,
   MessageReadStatus,
   TrackerProject,
@@ -302,6 +277,25 @@ export interface IStorage {
   createTraceabilityMatrixCell(cell: any): Promise<any>;
   updateTraceabilityMatrixCell(id: number, cell: any): Promise<any>;
 
+  // RTM (Requirements Traceability Matrix) operations
+  getBrdDocuments(projectId?: number): Promise<BrdDocument[]>;
+  getBrdDocument(id: number): Promise<BrdDocument | null>;
+  createBrdDocument(data: InsertBrdDocument): Promise<BrdDocument>;
+  updateBrdDocument(id: number, data: Partial<BrdDocument>): Promise<BrdDocument | null>;
+  deleteBrdDocument(id: number): Promise<boolean>;
+  
+  getFunctionalRequirements(brdDocumentId?: number, projectId?: number): Promise<FunctionalRequirement[]>;
+  getFunctionalRequirement(id: number): Promise<FunctionalRequirement | null>;
+  createFunctionalRequirement(data: InsertFunctionalRequirement): Promise<FunctionalRequirement>;
+  updateFunctionalRequirement(id: number, data: Partial<FunctionalRequirement>): Promise<FunctionalRequirement | null>;
+  deleteFunctionalRequirement(id: number): Promise<boolean>;
+  
+  getRequirementTestCaseMappings(functionalRequirementId?: number, testCaseId?: number, projectId?: number): Promise<RequirementTestCaseMapping[]>;
+  getRequirementTestCaseMapping(id: number): Promise<RequirementTestCaseMapping | null>;
+  createRequirementTestCaseMapping(data: InsertRequirementTestCaseMapping): Promise<RequirementTestCaseMapping>;
+  updateRequirementTestCaseMapping(id: number, data: Partial<RequirementTestCaseMapping>): Promise<RequirementTestCaseMapping | null>;
+  deleteRequirementTestCaseMapping(id: number): Promise<boolean>;
+
   // Enhanced Chat and Messaging methods
   getChatsByUser(userId: number): Promise<any[]>;
   addParticipantToConversation(conversationId: number, userId: number): Promise<boolean>;
@@ -389,18 +383,18 @@ export interface IStorage {
   markNotificationAsRead(id: number): Promise<any>;
 
   // Role and Permission Methods (for Role-Based Access Control)
-  getRoles(): Promise<Role[]>;
-  createRole(role: Omit<Role, 'id'>): Promise<Role>;
-  updateRole(id: number, data: Partial<Role>): Promise<Role | null>;
+  getRoles(): Promise<any[]>;
+  createRole(role: Omit<any, 'id'>): Promise<any>;
+  updateRole(id: number, data: Partial<any>): Promise<any | null>;
   deleteRole(id: number): Promise<boolean>;
-  getPermissions(): Promise<Permission[]>;
-  createPermission(permission: Omit<Permission, 'id'>): Promise<Permission>;
-  updatePermission(id: number, data: Partial<Permission>): Promise<Permission | null>;
+  getPermissions(): Promise<any[]>;
+  createPermission(permission: Omit<any, 'id'>): Promise<any>;
+  updatePermission(id: number, data: Partial<any>): Promise<any | null>;
   deletePermission(id: number): Promise<boolean>;
   assignRoleToUser(userId: number, roleId: number): Promise<boolean>;
   removeRoleFromUser(userId: number, roleId: number): Promise<boolean>;
-  getUserRoles(userId: number): Promise<Role[]>;
-  getRolePermissions(roleId: number): Promise<Permission[]>;
+  getUserRoles(userId: number): Promise<any[]>;
+  getRolePermissions(roleId: number): Promise<any[]>;
   assignPermissionToRole(roleId: number, permissionId: number): Promise<boolean>;
   removePermissionFromRole(roleId: number, permissionId: number): Promise<boolean>;
   getModulesWithPermissions(): Promise<any[]>;
@@ -490,10 +484,10 @@ export interface IStorage {
   }>;
 
   // Test Case Status operations
-  updateTestCaseStatus(id: number, status: TestCaseStatus): Promise<TestCase | null>;
+  updateTestCaseStatus(id: number, status: any): Promise<TestCase | null>;
 
   // Bug Status operations
-  updateBugStatus(id: number, status: BugStatus): Promise<Bug | null>;
+  updateBugStatus(id: number, status: any): Promise<Bug | null>;
 
   // Test Sheet operations (re-declared for consistency)
   getTestSheets(projectId?: number): Promise<TestSheet[]>;
@@ -4093,12 +4087,12 @@ class MemStorage implements IStorage {
     });
   }
 
-  async updateTestCaseStatus(id: number, status: TestCaseStatus): Promise<TestCase | null> {
+  async updateTestCaseStatus(id: number, status: any): Promise<TestCase | null> {
     console.log(`Storage: updateTestCaseStatus(${id}, ${status})`);
     return this.updateTestCase(id, { status });
   }
 
-  async updateBugStatus(id: number, status: BugStatus): Promise<Bug | null> {
+  async updateBugStatus(id: number, status: any): Promise<Bug | null> {
     console.log(`Storage: updateBugStatus(${id}, ${status})`);
     return this.updateBug(id, { status });
   }
@@ -5030,20 +5024,22 @@ class MemStorage implements IStorage {
   }
 
   // Role and Permission Methods (for Role-Based Access Control)
-  async getRoles(): Promise<Role[]> {
-    return this.roles;
+  async getRoles(): Promise<any[]> {
+    return this.roles || [];
   }
 
-  async createRole(role: Omit<Role, 'id'>): Promise<Role> {
+  async createRole(role: Omit<any, 'id'>): Promise<any> {
     const newRole = {
       ...role,
-      id: this.roles.length + 1
+      id: (this.roles?.length || 0) + 1
     };
+    this.roles = this.roles || [];
     this.roles.push(newRole);
     return newRole;
   }
 
-  async updateRole(id: number, data: Partial<Role>): Promise<Role | null> {
+  async updateRole(id: number, data: Partial<any>): Promise<any | null> {
+    this.roles = this.roles || [];
     const index = this.roles.findIndex(role => role.id === id);
     if (index === -1) return null;
 
@@ -5057,25 +5053,28 @@ class MemStorage implements IStorage {
   }
 
   async deleteRole(id: number): Promise<boolean> {
+    this.roles = this.roles || [];
     const initialLength = this.roles.length;
     this.roles = this.roles.filter(role => role.id !== id);
     return this.roles.length < initialLength;
   }
 
-  async getPermissions(): Promise<Permission[]> {
-    return this.permissions;
+  async getPermissions(): Promise<any[]> {
+    return this.permissions || [];
   }
 
-  async createPermission(permission: Omit<Permission, 'id'>): Promise<Permission> {
+  async createPermission(permission: Omit<any, 'id'>): Promise<any> {
     const newPermission = {
       ...permission,
-      id: this.permissions.length + 1
+      id: (this.permissions?.length || 0) + 1
     };
+    this.permissions = this.permissions || [];
     this.permissions.push(newPermission);
     return newPermission;
   }
 
-  async updatePermission(id: number, data: Partial<Permission>): Promise<Permission | null> {
+  async updatePermission(id: number, data: Partial<any>): Promise<any | null> {
+    this.permissions = this.permissions || [];
     const index = this.permissions.findIndex(permission => permission.id === id);
     if (index === -1) return null;
 
@@ -5089,6 +5088,7 @@ class MemStorage implements IStorage {
   }
 
   async deletePermission(id: number): Promise<boolean> {
+    this.permissions = this.permissions || [];
     const initialLength = this.permissions.length;
     this.permissions = this.permissions.filter(permission => permission.id !== id);
     return this.permissions.length < initialLength;
@@ -5106,7 +5106,7 @@ class MemStorage implements IStorage {
     return true;
   }
 
-  async getUserRoles(userId: number): Promise<Role[]> {
+  async getUserRoles(userId: number): Promise<any[]> {
     // This is a placeholder; actual implementation would query user-role mappings
     console.log(`Getting roles for user ${userId}`);
     return [];
