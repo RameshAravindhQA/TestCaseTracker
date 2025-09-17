@@ -5214,7 +5214,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  apiRouter.put("/test-cases/:id", isAuthenticated, async (req.params.id);
+  apiRouter.put("/test-cases/:id", isAuthenticated, async (req, res) => {
+    try {
+      const testCaseId = parseInt(req.params.id);
       const testCase = await storage.getTestCase(testCaseId);
 
       if (!testCase) {
