@@ -1371,22 +1371,26 @@ export class DatabaseStorage implements IStorage {
     
     console.log('DB: Processing assignedEmployeeId - original:', workLog.assignedEmployeeId, 'processed:', assignedEmployeeId);
     
+    const insertData = {
+      projectId: workLog.projectId,
+      featureId: workLog.featureId || null,
+      subFeatureId: workLog.subFeatureId || null,
+      userId: workLog.userId,
+      assignedEmployeeId: assignedEmployeeId,
+      workDate: workLog.workDate,
+      hoursWorked: workLog.hoursWorked.toString(), // Convert to string for decimal field
+      description: workLog.description,
+      workType: workLog.workType || null,
+      status: workLog.status,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    console.log('DB: Insert data:', JSON.stringify(insertData, null, 2));
+    
     const [result] = await db
       .insert(trackerWorkLogs)
-      .values({
-        projectId: workLog.projectId,
-        featureId: workLog.featureId,
-        subFeatureId: workLog.subFeatureId,
-        userId: workLog.userId,
-        assignedEmployeeId: assignedEmployeeId,
-        workDate: workLog.workDate,
-        hoursWorked: workLog.hoursWorked,
-        description: workLog.description,
-        workType: workLog.workType,
-        status: workLog.status,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      })
+      .values(insertData)
       .returning();
     console.log('DB: Created work log with assignedEmployeeId:', result.assignedEmployeeId);
     return result;

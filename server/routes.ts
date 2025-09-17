@@ -2077,27 +2077,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const workLogData = {
-        projectId: req.body.projectId,
-        featureId: req.body.featureId,
-        subFeatureId: req.body.subFeatureId,
+      const workLogData: any = {
+        projectId: Number(req.body.projectId),
+        featureId: req.body.featureId ? Number(req.body.featureId) : null,
+        subFeatureId: req.body.subFeatureId ? Number(req.body.subFeatureId) : null,
         userId: req.session.userId!,
         assignedEmployeeId: assignedEmployeeId,
         workDate: req.body.workDate,
         hoursWorked: Number(req.body.hoursWorked),
         description: req.body.description,
-        workType: req.body.workType,
-        status: req.body.status
+        workType: req.body.workType || null,
+        status: req.body.status || 'In Progress'
       };
 
-      console.log('Processed work log data - assignedEmployeeId:', assignedEmployeeId, 'type:', typeof assignedEmployeeId);
+      console.log('Final work log data being sent to storage:', JSON.stringify(workLogData, null, 2));
 
       const workLog = await storage.createTrackerWorkLog(workLogData);
       console.log('Created work log with final assignedEmployeeId:', workLog.assignedEmployeeId);
       res.status(201).json(workLog);
     } catch (error) {
       console.error('Error creating work log:', error);
-      res.status(500).json({ error: 'Failed to create work log' });
+      res.status(500).json({ error: 'Failed to create work log', details: error.message });
     }
   });
 
