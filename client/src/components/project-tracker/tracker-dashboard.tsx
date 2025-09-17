@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { TrackerProjectForm } from './tracker-project-form';
 import {
   Target,
   Calendar,
@@ -11,6 +16,7 @@ import {
   CheckCircle,
   Users,
   DollarSign,
+  Plus,
 } from 'lucide-react';
 
 // Assuming TrackerProjectTable component exists and accepts pagination props
@@ -152,6 +158,7 @@ interface TrackerDashboardProps {
 }
 
 export function TrackerDashboard({ projects }: TrackerDashboardProps) {
+  const { toast } = useToast();
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
@@ -159,21 +166,109 @@ export function TrackerDashboard({ projects }: TrackerDashboardProps) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-
-  // Dummy data and handlers for demonstration purposes
   const [isLoading, setIsLoading] = useState(false);
+
+  // Create project mutation
+  const createProjectMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('POST', '/api/tracker/projects', data);
+      if (!response.ok) throw new Error('Failed to create project');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Project created successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/tracker/projects'] });
+      setShowProjectForm(false);
+      setSelectedProject(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to create project',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Update project mutation
+  const updateProjectMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const response = await apiRequest('PUT', `/api/tracker/projects/${id}`, data);
+      if (!response.ok) throw new Error('Failed to update project');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Project updated successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/tracker/projects'] });
+      setShowProjectForm(false);
+      setSelectedProject(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to update project',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Delete project mutation
+  const deleteProjectMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest('DELETE', `/api/tracker/projects/${id}`);
+      if (!response.ok) throw new Error('Failed to delete project');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Project deleted successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/tracker/projects'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete project',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleCreateProject = (data: any) => {
+    console.log('Creating project with data:', data);
+    createProjectMutation.mutate(data);
+  };
+
+  const handleUpdateProject = (data: any) => {
+    if (selectedProject?.id) {
+      console.log('Updating project with data:', data);
+      updateProjectMutation.mutate({ id: selectedProject.id, data });
+    }
+  };
+
   const handleEditProject = (project: any) => {
     console.log("Editing project:", project);
     setSelectedProject(project);
     setShowProjectForm(true);
   };
+
   const handleDeleteProject = (projectId: number) => {
-    console.log("Deleting project:", projectId);
-    // Actual delete logic would go here
+    if (confirm('Are you sure you want to delete this project?')) {
+      deleteProjectMutation.mutate(projectId);
+    }
   };
+
   const handleViewDetails = (project: any) => {
     console.log("Viewing details for project:", project);
-    // Logic to show details, e.g., in a modal
+    setSelectedProjectId(project.id);
+    // Logic to show details, e.g., navigate to project details page
   };
 
   // Calculate statistics
@@ -378,12 +473,17 @@ export function TrackerDashboard({ projects }: TrackerDashboardProps) {
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-2">
             <span>Project List</span>
-            <button
-              onClick={() => setShowProjectForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            <Button
+              onClick={() => {
+                setSelectedProject(null);
+                setShowProjectForm(true);
+              }}
+              className="flex items-center gap-2"
+              disabled={createProjectMutation.isPending}
             >
-              Add Project
-            </button>
+              <Plus className="h-4 w-4" />
+              {createProjectMutation.isPending ? 'Adding...' : 'Add Project'}
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -398,6 +498,39 @@ export function TrackerDashboard({ projects }: TrackerDashboardProps) {
             setCurrentPage={setCurrentPage}
             itemsPerPage={10}
           />
+        </CardContent>
+      </Card>
+
+      {/* Add Project Form Dialog */}
+      {showProjectForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">
+                {selectedProject ? 'Edit Project' : 'Add New Project'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowProjectForm(false);
+                  setSelectedProject(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <TrackerProjectForm
+              project={selectedProject}
+              onSubmit={selectedProject ? handleUpdateProject : handleCreateProject}
+              onCancel={() => {
+                setShowProjectForm(false);
+                setSelectedProject(null);
+              }}
+              isLoading={false}
+            />
+          </div>
+        </div>
+      )}
         </CardContent>
       </Card>
 
