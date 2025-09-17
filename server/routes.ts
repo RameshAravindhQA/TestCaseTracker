@@ -5290,7 +5290,8 @@ export async function registerRoutes(app: Express): Server {
       } else {
         // General update activity
         await storage.createActivity({
-          userId: req.session.userId!,          action: "updated",
+          userId: req.session.userId!,
+          action: "updated",
           entityType: "testCase",
           entityId: testCaseId,
           details: {
@@ -5466,7 +5467,7 @@ export async function registerRoutes(app: Express): Server {
         filteredBugs = filteredBugs.filter(bug => bug.projectId === projectIdNum);
       }
 
-      if (moduleId) {
+if (moduleId) {
         const moduleIdNum = parseInt(moduleId as string);
         filteredBugs = filteredBugs.filter(bug => bug.moduleId === moduleIdNum);
       }
@@ -6321,7 +6322,7 @@ export async function registerRoutes(app: Express): Server {
       res.json(mapping);
     } catch (error) {
       console.error("Update RTM mapping error:", error);
-      res.status(500).json({ error: "Failed to update mapping" });
+      res.status(500).json({ error: "Failed to update RTM mapping" });
     }
   });
 

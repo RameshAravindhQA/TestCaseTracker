@@ -197,17 +197,29 @@ async createFunctionalRequirement(data: any): Promise<any> {
 
   // Generate requirement ID: BEG-REQ-001-FR-001
   const existingRequirements = await this.getFunctionalRequirements(data.brdId);
-  const nextNumber = existingRequirements.length + 1;
+  
+  // Filter out any requirements that don't have proper IDs to avoid counting issues
+  const validRequirements = existingRequirements.filter(req => 
+    req.requirementId && req.requirementId.includes('-FR-')
+  );
+  
+  const nextNumber = validRequirements.length + 1;
   const requirementId = `${brdDocument.documentId}-FR-${String(nextNumber).padStart(3, '0')}`;
+
+  console.log(`Creating functional requirement with ID: ${requirementId} for BRD: ${brdDocument.documentId}`);
 
   const requirement = {
     id,
     requirementId,
     brdId: data.brdId,
     brdDocumentId: data.brdId, // Keep both for compatibility
-    ...data,
-    status: data.status || "Not Executed",
+    title: data.title,
+    description: data.description,
     priority: data.priority || "Medium",
+    status: data.status || "Not Executed",
+    acceptanceCriteria: data.acceptanceCriteria,
+    notes: data.notes,
+    createdById: data.createdById,
     createdAt: now,
     updatedAt: now
   };
@@ -311,6 +323,52 @@ async deleteRequirementTestCaseMapping(id: number): Promise<boolean> {
   this.data.requirementTestCaseMappings = this.data.requirementTestCaseMappings.filter(mapping => mapping.id !== id);
   this.saveToFile();
   return this.data.requirementTestCaseMappings.length < initialLength;
+}
+
+// RTM Status Synchronization
+async syncRequirementStatusWithTestCases(functionalRequirementId: number): Promise<void> {
+  try {
+    if (!this.data.requirementTestCaseMappings) {
+      this.data.requirementTestCaseMappings = [];
+    }
+    
+    // Get all mappings for this requirement
+    const mappings = this.data.requirementTestCaseMappings.filter(
+      mapping => mapping.functionalRequirementId === functionalRequirementId
+    );
+    
+    if (mappings.length === 0) return;
+    
+    // Calculate overall status based on test case mappings
+    const passedMappings = mappings.filter(m => m.status === 'Pass').length;
+    const failedMappings = mappings.filter(m => m.status === 'Fail').length;
+    const totalMappings = mappings.length;
+    
+    let overallStatus = 'Not Executed';
+    
+    if (failedMappings > 0) {
+      overallStatus = 'Fail';
+    } else if (passedMappings === totalMappings) {
+      overallStatus = 'Pass';
+    } else if (passedMappings > 0) {
+      overallStatus = 'Partial';
+    }
+    
+    // Update the functional requirement status
+    const requirement = this.data.functionalRequirements.find(
+      fr => fr.id === functionalRequirementId
+    );
+    
+    if (requirement) {
+      requirement.status = overallStatus;
+      requirement.updatedAt = new Date();
+      this.saveToFile();
+    }
+    
+    console.log(`Updated requirement ${functionalRequirementId} status to: ${overallStatus}`);
+  } catch (error) {
+    console.error('Error syncing requirement status:', error);
+  }
 }
 
 // RTM Status Synchronization

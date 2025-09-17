@@ -241,15 +241,34 @@ router.get("/:id/export-pdf", async (req, res) => {
     // Get project information
     const project = await storage.getProject(document.projectId);
     
+    console.log(`Generating PDF for BRD: ${document.title}`);
+    
     // Generate PDF content with project info
-    const pdfContent = await generatePDFContent(document, project);
+    let pdfContent: Buffer;
+    let contentType = 'application/pdf';
+    
+    try {
+      pdfContent = await generatePDFContent(document, project);
+    } catch (pdfError) {
+      console.warn('PDF generation failed, falling back to text:', pdfError);
+      pdfContent = await generateSimplePDF(document, project);
+      contentType = 'text/plain';
+    }
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${document.title}_v${document.version}.pdf"`);
+    const filename = `${document.title.replace(/[^a-zA-Z0-9]/g, '_')}_v${document.version}.${contentType === 'application/pdf' ? 'pdf' : 'txt'}`;
+    
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfContent.length);
+    
+    console.log(`Sending ${contentType} file: ${filename} (${pdfContent.length} bytes)`);
     res.send(pdfContent);
   } catch (error) {
     console.error("Error exporting BRD document to PDF:", error);
-    res.status(500).json({ error: "Failed to export PDF" });
+    res.status(500).json({ 
+      error: "Failed to export PDF", 
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
@@ -324,8 +343,20 @@ router.get("/:id/versions", async (req, res) => {
 // Helper function to generate PDF content using jsPDF
 async function generatePDFContent(document: any, project?: any): Promise<Buffer> {
   try {
-    // Import jsPDF dynamically
-    const { jsPDF } = await import('jspdf');
+    // Check if jsPDF is available
+    let jsPDF;
+    try {
+      const jsPDFModule = await import('jspdf');
+      jsPDF = jsPDFModule.jsPDF;
+    } catch (importError) {
+      console.error('jsPDF import failed:', importError);
+      // Fallback to simple PDF generation
+      return generateSimplePDF(document, project);
+    }
+
+    if (!jsPDF) {
+      throw new Error('jsPDF not available');
+    }
 
     const doc = new jsPDF();
 
@@ -451,6 +482,44 @@ async function generatePDFContent(document: any, project?: any): Promise<Buffer>
     return Buffer.from(pdfArrayBuffer);
   } catch (error) {
     console.error('Error generating PDF:', error);
+    throw new Error('Failed to generate PDF');
+  }
+}
+
+// Fallback PDF generation using simple text formatting
+async function generateSimplePDF(document: any, project?: any): Promise<Buffer> {
+  try {
+    // Create a simple text-based PDF content
+    const content = [
+      `BRD Document: ${document.title}`,
+      `Author: ${document.author || 'N/A'}`,
+      `Version: ${document.version || '1.0'}`,
+      `Status: ${document.status || 'Draft'}`,
+      `Created: ${document.createdAt ? new Date(document.createdAt).toLocaleDateString() : 'N/A'}`,
+      '',
+      'Overview:',
+      document.overview || 'No overview provided',
+      '',
+      'Problem Statement:',
+      document.problemStatement || 'No problem statement provided',
+      '',
+      'Objectives:',
+      document.objectives || 'No objectives provided',
+      '',
+      'Scope:',
+      document.scope || 'No scope defined',
+      '',
+      'Functional Requirements:',
+      document.functionalRequirements || 'No functional requirements defined',
+      '',
+      'Non-Functional Requirements:',
+      document.nonFunctionalRequirements || 'No non-functional requirements defined'
+    ].join('\n');
+
+    // Convert to buffer (simple text format)
+    return Buffer.from(content, 'utf-8');
+  } catch (error) {
+    console.error('Fallback PDF generation failed:', error);
     throw new Error('Failed to generate PDF');
   }
 }
