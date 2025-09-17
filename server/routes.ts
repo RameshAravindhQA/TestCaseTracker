@@ -2063,41 +2063,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  apiRouter.post("/tracker/work-logs", isAuthenticated, async (req, res) => {
+  // Create work log
+  apiRouter.post('/tracker/work-logs', requireAuth, async (req, res) => {
     try {
       console.log('Creating work log with data:', req.body);
-      console.log('Raw assignedEmployeeId from request:', req.body.assignedEmployeeId, 'type:', typeof req.body.assignedEmployeeId);
 
-      // Ensure assignedEmployeeId is properly handled - convert to number if it's a valid value
-      let assignedEmployeeId = null;
-      if (req.body.assignedEmployeeId !== undefined && req.body.assignedEmployeeId !== null && req.body.assignedEmployeeId !== '') {
-        const parsed = Number(req.body.assignedEmployeeId);
-        if (!isNaN(parsed) && parsed > 0) {
-          assignedEmployeeId = parsed;
+      // Ensure assignedEmployeeId is properly preserved
+      let assignedEmployeeId = req.body.assignedEmployeeId;
+      if (assignedEmployeeId !== undefined && assignedEmployeeId !== null) {
+        assignedEmployeeId = Number(assignedEmployeeId);
+        if (isNaN(assignedEmployeeId) || assignedEmployeeId <= 0) {
+          assignedEmployeeId = null;
         }
+      } else {
+        assignedEmployeeId = null;
       }
 
       const workLogData: any = {
-        projectId: Number(req.body.projectId),
-        featureId: req.body.featureId ? Number(req.body.featureId) : null,
-        subFeatureId: req.body.subFeatureId ? Number(req.body.subFeatureId) : null,
-        userId: req.session.userId!,
-        assignedEmployeeId: assignedEmployeeId,
-        workDate: req.body.workDate,
-        hoursWorked: Number(req.body.hoursWorked),
-        description: req.body.description,
-        workType: req.body.workType || null,
-        status: req.body.status || 'In Progress'
+        ...req.body,
+        userId: req.session?.userId,
+        assignedEmployeeId: assignedEmployeeId
       };
 
+      console.log('Raw assignedEmployeeId from request:', req.body.assignedEmployeeId, 'type:', typeof req.body.assignedEmployeeId);
+      console.log('Processed assignedEmployeeId:', assignedEmployeeId, 'type:', typeof assignedEmployeeId);
       console.log('Final work log data being sent to storage:', JSON.stringify(workLogData, null, 2));
 
       const workLog = await storage.createTrackerWorkLog(workLogData);
       console.log('Created work log with final assignedEmployeeId:', workLog.assignedEmployeeId);
-      res.status(201).json(workLog);
+
+      res.json(workLog);
     } catch (error) {
       console.error('Error creating work log:', error);
-      res.status(500).json({ error: 'Failed to create work log', details: error.message });
+      res.status(500).json({ message: 'Failed to create work log', error: error.message });
     }
   });
 
@@ -5756,7 +5754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bug = await storage.getBug(bugId);
 
       if (!bug) {
-        return res.status(404).json({ message: "Bug not found" });
+        return res.status(404).json({ message: ""Bug not found" });
       }
 
       const project = await storage.getProject(bug.projectId);
