@@ -571,25 +571,20 @@ export interface IStorage {
   updateKanbanCard(id: number, cardData: Partial<KanbanCard>): Promise<KanbanCard | undefined>;
   deleteKanbanCard(id: number): Promise<boolean>;
 
-  // Matrix operations
-  upsertMatrixCell(cell: any): Promise<any>;
-  getMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<MatrixCell | undefined>;
-  deleteMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<boolean>;
-
-  // Custom marker operations with proper ID handling
+  // Custom Marker operations (re-declared for consistency)
   createCustomMarker(data: InsertCustomMarker): Promise<CustomMarker>;
   getCustomMarkers(): Promise<CustomMarker[]>;
   getCustomMarkersByProject(projectId: number): Promise<CustomMarker[]>;
   updateCustomMarker(id: number, data: Partial<CustomMarker>): Promise<CustomMarker | null>;
   deleteCustomMarker(id: number): Promise<boolean>;
 
-  // Matrix cell operations with proper storage
+  // Matrix Cell operations (re-declared for consistency)
   createMatrixCell(data: InsertMatrixCell): Promise<MatrixCell>;
   getMatrixCells(): Promise<MatrixCell[]>;
   getMatrixCellsByProject(projectId: number): Promise<MatrixCell[]>;
   updateMatrixCell(id: number, data: Partial<MatrixCell>): Promise<MatrixCell | null>;
 
-  // Additional missing methods for traceability
+  // Traceability operations (re-declared for consistency)
   getTraceabilityMatrix(projectId: number): Promise<any>;
   saveTraceabilityMatrix(projectId: number, matrixData: any[]): Promise<any>;
   getTraceabilityMatrixById(id: number): Promise<any | undefined>;
@@ -687,6 +682,7 @@ class MemStorage implements IStorage {
   private employeePermissions: { employeeId: number; permissions: any[] }[] = [];
 
   // BRD Documents storage
+  private brdDocuments: any[] = [];
   private brdVersions: any[] = [];
   private brdTestCases: any[] = [];
   private nextBrdId = 1;
@@ -726,14 +722,6 @@ class MemStorage implements IStorage {
   // Flow diagram storage
   private flowDiagrams = new Map<string, any>();
   private nextFlowDiagramId = 1;
-
-  // Todo and other missing properties
-  private todosMap = new Map<number, any>();
-  private todoListsMap = new Map<number, any>();
-  private chats: any[] = [];
-  private bugComments: any[] = [];
-  private roles: any[] = [];
-  private permissions: any[] = [];
 
   // ID counters
   private nextUserId = 1;
@@ -2269,7 +2257,7 @@ class MemStorage implements IStorage {
   }
 
   // Customer Projects operations
-  async getCustomerProjects(): Promise<CustomerProject>;
+  async getCustomerProjects(): Promise<CustomerProject[]>;
   async getCustomerProjects(): Promise<CustomerProject[]> {
     return [...this.customerProjects];
   }
@@ -2432,7 +2420,7 @@ class MemStorage implements IStorage {
   async deleteTimeSheetFolder(id: number): Promise<boolean> {
     const initialLength = this.timeSheetFolders.length;
     this.timeSheetFolders = this.timeSheetFolders.filter(folder => folder.id !== id);
-    return this.timeSheetFolders.length < initialLength;
+    return this.initialLength < initialLength;
   }
 
   async getTimesheetsByFolder(folderId: number): Promise<TimeSheet[]> {
@@ -2565,7 +2553,7 @@ class MemStorage implements IStorage {
     if (index === -1) throw new Error("Card not found");
 
     const updatedCard = { ...this.kanbanCards[index], ...cardData, updatedAt: new Date() };
-    this.kanbanCards[index] =updatedCard;
+    this.kanbanCards[index] =updateCard;
     return updatedCard;
   }
 
@@ -2945,7 +2933,7 @@ class MemStorage implements IStorage {
 
       // Update the test case
       testCase.testCaseId = newTestCaseId;
-      testcase.updatedAt = new Date();
+      testCase.updatedAt = new Date();
 
       console.log(`✅ Fixed test case ID ${testCase.id}: ${testCase.testCaseId} (module: ${module.name}, modulePrefix: ${modulePrefix})`);
     }
@@ -3002,7 +2990,7 @@ class MemStorage implements IStorage {
       id,
       title: notebookData.title,
       content: notebookData.content || '',
-      color: notebookData.color || '#4F46E5',
+      color: notebookData.color || '#4F4E5',
       isPinned: notebookData.isPinned || false,
       isArchived: notebookData.isArchived || false,
       tags: notebookData.tags || [],
@@ -3145,7 +3133,7 @@ class MemStorage implements IStorage {
     return comment;
   }
 
-  async updateNotebookComment(id: number, authorId: number, updates: any):Promise<NotebookComment | null> {
+  async updateNotebookComment(id: number, authorId: number, updates: any): Promise<NotebookComment | null> {
     const index = this.notebookComments.findIndex(c => c.id === id && c.authorId === authorId);
     if (index === -1) return null;
 
@@ -4326,8 +4314,7 @@ class MemStorage implements IStorage {
   }
 
   async createBrdDocument(data: any): Promise<any> {
-    const id = this.nextBrdId++;
-    const now = new Date();
+    const id = this.nextBrdId++;    const now = new Date();
 
     const document = {
       id,
@@ -4660,7 +4647,7 @@ class MemStorage implements IStorage {
       actualEndDate: data.actualEndDate,
       priority: data.priority || 'Medium',
       assignedToId: data.assignedToId,
-      estimatedHours: data.estimatedHours,
+      estimatedHours: data.data.estimatedHours,
       actualHours: data.actualHours,
       progressPercentage: data.progressPercentage || 0,
       workType: data.workType || 'Development',
@@ -5110,269 +5097,56 @@ class MemStorage implements IStorage {
 export const storage = new MemStorage();
 
 export { MemStorage };
-</original>
-<changes>
-Fix duplicate BRD properties declaration
+</new_str>
+Add BRD properties to MemStorage class
 Replacing
 <old_str>
-// BRD Documents storage
+class MemStorage implements Storage {
+  private testCases: TestCase[] = [];
+  private bugs: Bug[] = [];
+  private projects: Project[] = [];
+  private modules: Module[] = [];
+  private employees: Employee[] = [];
+  private users: User[] = [];
+  private projectMembers: ProjectMember[] = [];
+  private bugComments: BugComment[] = [];
+  private nextId: number = 1;
+  private activities: Activity[] = [];
+  private deletedTestCases: DeletedTestCase[] = [];
+  private markers: Marker[] = [];
+  private customMarkers: CustomMarker[] = [];
+  private matrixCells: MatrixCell[] = [];
+  private notifications: Notification[] = [];
+  private messages: Message[] = [];
+  private chatRooms: ChatRoom[] = [];
+  private nextChatRoomId: number = 1;
+</old_str>
+with
+<new_str>
+class MemStorage implements Storage {
+  private testCases: TestCase[] = [];
+  private bugs: Bug[] = [];
+  private projects: Project[] = [];
+  private modules: Module[] = [];
+  private employees: Employee[] = [];
+  private users: User[] = [];
+  private projectMembers: ProjectMember[] = [];
+  private bugComments: BugComment[] = [];
+  private nextId: number = 1;
+  private activities: Activity[] = [];
+  private deletedTestCases: DeletedTestCase[] = [];
+  private markers: Marker[] = [];
+  private customMarkers: CustomMarker[] = [];
+  private matrixCells: MatrixCell[] = [];
+  private notifications: Notification[] = [];
+  private messages: Message[] = [];
+  private chatRooms: ChatRoom[] = [];
+  private nextChatRoomId: number = 1;
+
+  // BRD and RTM related properties
   private brdDocuments: any[] = [];
-  private brdVersions: any[] = [];
-  private brdTestCases: any[] = [];
-  private nextBrdId = 1;
-  private nextBrdVersionId = 1;
-  private nextBrdTestCaseId = 1;
-</old_str>
-with
-<new_str>
-// BRD Documents storage
-  private brdVersions: any[] = [];
-  private brdTestCases: any[] = [];
-  private nextBrdId = 1;
-  private nextBrdVersionId = 1;
-  private nextBrdTestCaseId = 1;
-</new_str>
-Fix duplicate BRD properties declaration
-Replacing
-<old_str>
-// BRD Documents storage
-  private brdDocuments: any[] = [];
-  private brdVersions: any[] = [];
-  private brdTestCases: any[] = [];
-  private nextBrdId = 1;
-  private nextBrdVersionId = 1;
-  private nextBrdTestCaseId = 1;
-</old_str>
-with
-<new_str>
-// BRD Documents storage
-  private brdVersions: any[] = [];
-  private brdTestCases: any[] = [];
-  private nextBrdId = 1;
-  private nextBrdVersionId = 1;
-  private nextBrdTestCaseId = 1;
-</new_str>
-Add missing properties declarations
-Replacing
-<old_str>
-// Flow diagram storage
-  private flowDiagrams = new Map<string, any>();
-  private nextFlowDiagramId = 1;
-</old_str>
-with
-<new_str>
-// Flow diagram storage
-  private flowDiagrams = new Map<string, any>();
-  private nextFlowDiagramId = 1;
-
-  // Todo and other missing properties
-  private todosMap = new Map<number, any>();
-  private todoListsMap = new Map<number, any>();
-  private chats: any[] = [];
-  private bugComments: any[] = [];
-  private roles: any[] = [];
-  private permissions: any[] = [];
-</new_str>
-Fix duplicate BRD properties declaration
-Replacing
-<old_str>
-// BRD Documents storage
-  private brdDocuments: any[] = [];
-  private brdVersions: any[] = [];
-  private brdTestCases: any[] = [];
-  private nextBrdId = 1;
-  private nextBrdVersionId = 1;
-  private nextBrdTestCaseId = 1;
-</old_str>
-with
-<new_str>
-// BRD Documents storage
-  private brdVersions: any[] = [];
-  private brdTestCases: any[] = [];
-  private nextBrdId = 1;
-  private nextBrdVersionId = 1;
-  private nextBrdTestCaseId = 1;
-</new_str>
-Add missing properties declarations
-Replacing
-<old_str>
-// Flow diagram storage
-  private flowDiagrams = new Map<string, any>();
-  private nextFlowDiagramId = 1;
-</old_str>
-with
-<new_str>
-// Flow diagram storage
-  private flowDiagrams = new Map<string, any>();
-  private nextFlowDiagramId = 1;
-
-  // Todo and other missing properties
-  private todosMap = new Map<number, any>();
-  private todoListsMap = new Map<number, any>();
-  private chats: any[] = [];
-  private bugComments: any[] = [];
-  private roles: any[] = [];
-  private permissions: any[] = [];
-</new_str>
-Fix missing return statement
-Replacing
-<old_str>
-async deleteTimeSheetFolder(id: number): Promise<boolean> {
-    const initialLength = this.timeSheetFolders.length;
-    this.timeSheetFolders = this.timeSheetFolders.filter(folder => folder.id !== id);
-    return this.initialLength < initialLength;
-  }
-</old_str>
-with
-<new_str>
-async deleteTimeSheetFolder(id: number): Promise<boolean> {
-    const initialLength = this.timeSheetFolders.length;
-    this.timeSheetFolders = this.timeSheetFolders.filter(folder => folder.id !== id);
-    return this.timeSheetFolders.length < initialLength;
-  }
-</new_str>
-Fix duplicate BRD properties declaration
-Replacing
-<old_str>
-// BRD Documents storage
-  private brdDocuments: any[] = [];
-  private brdVersions: any[] = [];
-  private brdTestCases: any[] = [];
-  private nextBrdId = 1;
-  private nextBrdVersionId = 1;
-  private nextBrdTestCaseId = 1;
-</old_str>
-with
-<new_str>
-// BRD Documents storage
-  private brdVersions: any[] = [];
-  private brdTestCases: any[] = [];
-  private nextBrdId = 1;
-  private nextBrdVersionId = 1;
-  private nextBrdTestCaseId = 1;
-</new_str>
-Add missing properties declarations
-Replacing
-<old_str>
-// Flow diagram storage
-  private flowDiagrams = new Map<string, any>();
-  private nextFlowDiagramId = 1;
-</old_str>
-with
-<new_str>
-// Flow diagram storage
-  private flowDiagrams = new Map<string, any>();
-  private nextFlowDiagramId = 1;
-
-  // Todo and other missing properties
-  private todosMap = new Map<number, any>();
-  private todoListsMap = new Map<number, any>();
-  private chats: any[] = [];
-  private bugComments: any[] = [];
-  private roles: any[] = [];
-  private permissions: any[] = [];
-</new_str>
-Fix missing return statement
-Replacing
-<old_str>
-async deleteTimeSheetFolder(id: number): Promise<boolean> {
-    const initialLength = this.timeSheetFolders.length;
-    this.timeSheetFolders = this.timeSheetFolders.filter(folder => folder.id !== id);
-    return this.initialLength < initialLength;
-  }
-</old_str>
-with
-<new_str>
-async deleteTimeSheetFolder(id: number): Promise<boolean> {
-    const initialLength = this.timeSheetFolders.length;
-    this.timeSheetFolders = this.timeSheetFolders.filter(folder => folder.id !== id);
-    return this.timeSheetFolders.length < initialLength;
-  }
-</new_str>
-Fix BRD document creation
-Replacing
-<old_str>
-async createBrdDocument(data: any): Promise<any> {
-    const id = this.nextBrdId++;    const now = new Date();
-</old_str>
-with
-<new_str>
-async createBrdDocument(data: any): Promise<any> {
-    const id = this.nextBrdId++;
-    const now = new Date();
-</new_str>
-Fix duplicate BRD properties declaration
-Replacing
-<old_str>
-// BRD Documents storage
-  private brdDocuments: any[] = [];
-  private brdVersions: any[] = [];
-  private brdTestCases: any[] = [];
-  private nextBrdId = 1;
-  private nextBrdVersionId = 1;
-  private nextBrdTestCaseId = 1;
-</old_str>
-with
-<new_str>
-// BRD Documents storage
-  private brdVersions: any[] = [];
-  private brdTestCases: any[] = [];
-  private nextBrdId = 1;
-  private nextBrdVersionId = 1;
-  private nextBrdTestCaseId = 1;
-</new_str>
-Add missing properties declarations
-Replacing
-<old_str>
-// Flow diagram storage
-  private flowDiagrams = new Map<string, any>();
-  private nextFlowDiagramId = 1;
-</old_str>
-with
-<new_str>
-// Flow diagram storage
-  private flowDiagrams = new Map<string, any>();
-  private nextFlowDiagramId = 1;
-
-  // Todo and other missing properties
-  private todosMap = new Map<number, any>();
-  private todoListsMap = new Map<number, any>();
-  private chats: any[] = [];
-  private bugComments: any[] = [];
-  private roles: any[] = [];
-  private permissions: any[] = [];
-</new_str>
-Fix missing return statement
-Replacing
-<old_str>
-async deleteTimeSheetFolder(id: number): Promise<boolean> {
-    const initialLength = this.timeSheetFolders.length;
-    this.timeSheetFolders = this.timeSheetFolders.filter(folder => folder.id !== id);
-    return this.initialLength < initialLength;
-  }
-</old_str>
-with
-<new_str>
-async deleteTimeSheetFolder(id: number): Promise<boolean> {
-    const initialLength = this.timeSheetFolders.length;
-    this.timeSheetFolders = this.timeSheetFolders.filter(folder => folder.id !== id);
-    return this.timeSheetFolders.length < initialLength;
-  }
-</new_str>
-Fix incomplete export at end of file
-Replacing
-<old_str>
-// Export storage and class
-export const storage = new MemStorage();
-
-export { MemStorage };
-</old_str>
-with
-<new_str>
-// Export storage and class
-export const storage = new MemStorage();
-
-export { MemStorage };
+  private functionalRequirements: any[] = [];
+  private requirementTestCaseMappings: any[] = [];
 </new_str>
 </changes>
 <replit_final_file>
@@ -6065,6 +5839,7 @@ class MemStorage implements IStorage {
   private employeePermissions: { employeeId: number; permissions: any[] }[] = [];
 
   // BRD Documents storage
+  private brdDocuments: any[] = [];
   private brdVersions: any[] = [];
   private brdTestCases: any[] = [];
   private nextBrdId = 1;
@@ -6104,14 +5879,6 @@ class MemStorage implements IStorage {
   // Flow diagram storage
   private flowDiagrams = new Map<string, any>();
   private nextFlowDiagramId = 1;
-
-  // Todo and other missing properties
-  private todosMap = new Map<number, any>();
-  private todoListsMap = new Map<number, any>();
-  private chats: any[] = [];
-  private bugComments: any[] = [];
-  private roles: any[] = [];
-  private permissions: any[] = [];
 
   // ID counters
   private nextUserId = 1;
@@ -8172,7 +7939,7 @@ class MemStorage implements IStorage {
       updatedAt: new Date()
     };
     this.traceabilityMarkers.push(newMarker);
-    console.log(`Storage: Created traceability marker withID ${id}:`, newMarker);
+    console.log(`Storage: Created traceability marker with ID ${id}:`, newMarker);
     return newMarker;
   }
 
@@ -9704,8 +9471,7 @@ class MemStorage implements IStorage {
   }
 
   async createBrdDocument(data: any): Promise<any> {
-    const id = this.nextBrdId++;
-    const now = new Date();
+    const id = this.nextBrdId++;    const now = new Date();
 
     const document = {
       id,
