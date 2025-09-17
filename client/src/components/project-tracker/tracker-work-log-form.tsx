@@ -90,7 +90,7 @@ export function TrackerWorkLogForm({
       description: workLog?.description || '',
       workType: workLog?.workType || '',
       status: workLog?.status || 'In Progress',
-      assignedEmployeeId: workLog?.assignedEmployeeId || undefined,
+      assignedEmployeeId: workLog?.assignedEmployeeId ? Number(workLog.assignedEmployeeId) : undefined,
     },
   });
 
@@ -291,7 +291,7 @@ export function TrackerWorkLogForm({
                                   type="radio"
                                   id={`assigned-${employee.id}`}
                                   name="assignedEmployee"
-                                  checked={field.value === employee.id}
+                                  checked={Number(field.value) === Number(employee.id)}
                                   onChange={() => field.onChange(Number(employee.id))}
                                   className="rounded"
                                 />
@@ -356,7 +356,7 @@ export function TrackerWorkLogForm({
                                   type="radio"
                                   id={`other-${employee.id}`}
                                   name="assignedEmployee"
-                                  checked={field.value === employee.id}
+                                  checked={Number(field.value) === Number(employee.id)}
                                   onChange={() => field.onChange(Number(employee.id))}
                                   className="rounded"
                                 />
