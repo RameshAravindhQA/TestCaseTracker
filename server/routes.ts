@@ -91,7 +91,6 @@ import session from "express-session";
 import MemoryStore from "memorystore";
 import multer from "multer";
 import path from "path";
-import fs from "fs";
 import flowDiagramRoutes from './api/flow-diagram-routes';
 import brdRoutes from "./brd-routes";
 import { OAuthService } from './oauth-service';
@@ -2108,13 +2107,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const workLog = await storage.createTrackerWorkLog(workLogData);
       console.log('Created work log with final assignedEmployeeId:', workLog.assignedEmployeeId);
-      
+
       // Additional verification
       if (assignedEmployeeId && !workLog.assignedEmployeeId) {
         console.error('ERROR: assignedEmployeeId was lost in storage operation!');
         console.error('Sent:', assignedEmployeeId, 'Got back:', workLog.assignedEmployeeId);
       }
-      
+
       res.status(201).json(workLog);
     } catch (error) {
       console.error('Error creating work log:', error);
@@ -5215,9 +5214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  apiRouter.put("/test-cases/:id", isAuthenticated, async (req, res) => {
-    try {
-      const testCaseId = parseInt(req.params.id);
+  apiRouter.put("/test-cases/:id", isAuthenticated, async (req.params.id);
       const testCase = await storage.getTestCase(testCaseId);
 
       if (!testCase) {
@@ -6129,12 +6126,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================================================
 
   // BRD Documents Routes
-  
+
   // Get BRD Documents for a project
   apiRouter.get("/rtm/brd-documents", isAuthenticated, async (req, res) => {
     try {
       const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
-      
+
       if (projectId) {
         // Check if user has access to this project
         const project = await storage.getProject(projectId);
@@ -6165,7 +6162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const brdDocument = await storage.getBrdDocument(id);
-      
+
       if (!brdDocument) {
         return res.status(404).json({ message: "BRD Document not found" });
       }
@@ -6314,7 +6311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const brdDocumentId = req.query.brdDocumentId ? parseInt(req.query.brdDocumentId as string) : undefined;
       const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
-      
+
       if (projectId) {
         // Check if user has access to this project
         const project = await storage.getProject(projectId);
@@ -6345,7 +6342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const functionalRequirement = await storage.getFunctionalRequirement(id);
-      
+
       if (!functionalRequirement) {
         return res.status(404).json({ message: "Functional Requirement not found" });
       }
@@ -6495,7 +6492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const functionalRequirementId = req.query.functionalRequirementId ? parseInt(req.query.functionalRequirementId as string) : undefined;
       const testCaseId = req.query.testCaseId ? parseInt(req.query.testCaseId as string) : undefined;
       const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
-      
+
       if (projectId) {
         // Check if user has access to this project
         const project = await storage.getProject(projectId);
@@ -6648,6 +6645,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Delete requirement test case mapping error:", error);
       res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // RTM Status sync endpoint
+  apiRouter.post("/rtm/sync-status/:requirementId", isAuthenticated, async (req, res) => {
+    try {
+      const requirementId = parseInt(req.params.requirementId);
+      await storage.syncRequirementStatusWithTestCases(requirementId);
+
+      const updatedRequirement = await storage.getFunctionalRequirement(requirementId);
+      res.json(updatedRequirement);
+    } catch (error) {
+      console.error("Sync RTM status error:", error);
+      res.status(500).json({ success: false, error: "Failed to sync status" });
     }
   });
 

@@ -57,21 +57,348 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
-// Placeholder for RTMComponent. In a real application, this would be imported from a separate file.
 const RTMComponent = () => {
-  // This is a placeholder component. Implement the RTM logic here.
-  // It should fetch BRD documents, modules, and test cases,
-  // display them in a matrix, allow mapping, and update statuses.
+  const [selectedBrdId, setSelectedBrdId] = useState<number | null>(null);
+  const [rtmData, setRtmData] = useState<any>(null);
+  const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
+
+  const { toast } = useToast();
+
+  // Fetch RTM data for the selected project
+  const { data: rtmProjectData, refetch: refetchRtmData } = useQuery({
+    queryKey: ["/api/projects", selectedProjectId, "rtm"],
+    queryFn: async () => {
+      if (!selectedProjectId) return null;
+      const response = await apiRequest("GET", `/api/projects/${selectedProjectId}/rtm`);
+      if (!response.ok) throw new Error("Failed to fetch RTM data");
+      return response.json();
+    },
+    enabled: !!selectedProjectId,
+  });
+
+  useEffect(() => {
+    if (rtmProjectData) {
+      setRtmData(rtmProjectData);
+    }
+  }, [rtmProjectData]);
+
+  // Create requirement-test case mapping
+  const createMappingMutation = useMutation({
+    mutationFn: async (mappingData: any) => {
+      const response = await apiRequest("POST", "/api/rtm/mappings", mappingData);
+      if (!response.ok) throw new Error("Failed to create mapping");
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchRtmData();
+      toast({ title: "Mapping created successfully" });
+      setMappingDialogOpen(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to create mapping", variant: "destructive" });
+    }
+  });
+
+  // Update mapping status
+  const updateMappingMutation = useMutation({
+    mutationFn: async ({ mappingId, status }: { mappingId: number; status: string }) => {
+      const response = await apiRequest("PUT", `/api/rtm/mappings/${mappingId}`, { status });
+      if (!response.ok) throw new Error("Failed to update mapping");
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchRtmData();
+      toast({ title: "Status updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update status", variant: "destructive" });
+    }
+  });
+
+  // Delete mapping
+  const deleteMappingMutation = useMutation({
+    mutationFn: async (mappingId: number) => {
+      const response = await apiRequest("DELETE", `/api/rtm/mappings/${mappingId}`);
+      if (!response.ok) throw new Error("Failed to delete mapping");
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchRtmData();
+      toast({ title: "Mapping deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete mapping", variant: "destructive" });
+    }
+  });
+
+  const handleCreateMapping = (testCaseId: number) => {
+    if (!selectedRequirement) return;
+    
+    createMappingMutation.mutate({
+      functionalRequirementId: selectedRequirement.id,
+      testCaseId,
+      projectId: selectedProjectId,
+      status: "Not Executed"
+    });
+  };
+
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, "default" | "secondary" | "destructive"> = {
+      "Pass": "default",
+      "Fail": "destructive", 
+      "Not Executed": "secondary"
+    };
+
+    return (
+      <Badge variant={variants[status] || "secondary"}>
+        {status}
+      </Badge>
+    );
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Pass": return "bg-green-100 text-green-800";
+      case "Fail": return "bg-red-100 text-red-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  if (!rtmData) {
+    return (
+      <Card>
+        <CardContent className="pt-6 text-center">
+          <div className="text-center py-8">
+            <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No RTM Data</h3>
+            <p className="text-gray-600">
+              Please select a project to view the Requirements Traceability Matrix
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Requirements Traceability Matrix</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-muted-foreground">RTM functionality will be implemented here.</p>
-        {/* TODO: Implement RTM functionality */}
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      {/* BRD Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Requirements Traceability Matrix</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Map functional requirements to test cases and track their execution status
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <Select
+              value={selectedBrdId?.toString() || ""}
+              onValueChange={(value) => setSelectedBrdId(parseInt(value))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select BRD Document">
+                  {selectedBrdId && rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId)?.documentId}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {rtmData.brdDocuments.map((brd: any) => (
+                  <SelectItem key={brd.id} value={brd.id.toString()}>
+                    {brd.documentId} - {brd.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* RTM Statistics */}
+          {selectedBrdId && (
+            <div className="grid grid-cols-4 gap-4 mb-6">
+              {(() => {
+                const selectedBrd = rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
+                if (!selectedBrd) return null;
+
+                const totalRequirements = selectedBrd.functionalRequirements.length;
+                const totalMappings = selectedBrd.functionalRequirements.reduce((sum: number, req: any) => sum + req.mappings.length, 0);
+                const passedMappings = selectedBrd.functionalRequirements.reduce((sum: number, req: any) => 
+                  sum + req.mappings.filter((m: any) => m.status === "Pass").length, 0);
+                const failedMappings = selectedBrd.functionalRequirements.reduce((sum: number, req: any) => 
+                  sum + req.mappings.filter((m: any) => m.status === "Fail").length, 0);
+
+                return (
+                  <>
+                    <div className="text-center p-4 bg-blue-50 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600">{totalRequirements}</div>
+                      <div className="text-sm text-gray-500">Total Requirements</div>
+                    </div>
+                    <div className="text-center p-4 bg-purple-50 rounded-lg">
+                      <div className="text-2xl font-bold text-purple-600">{totalMappings}</div>
+                      <div className="text-sm text-gray-500">Total Mappings</div>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">{passedMappings}</div>
+                      <div className="text-sm text-gray-500">Passed</div>
+                    </div>
+                    <div className="text-center p-4 bg-red-50 rounded-lg">
+                      <div className="text-2xl font-bold text-red-600">{failedMappings}</div>
+                      <div className="text-sm text-gray-500">Failed</div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* RTM Table */}
+      {selectedBrdId && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Requirements to Test Cases Mapping</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Requirement ID</TableHead>
+                    <TableHead>Requirement Title</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Mapped Test Cases</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(() => {
+                    const selectedBrd = rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
+                    if (!selectedBrd || selectedBrd.functionalRequirements.length === 0) {
+                      return (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                            No functional requirements found for this BRD document
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+
+                    return selectedBrd.functionalRequirements.map((requirement: any) => (
+                      <TableRow key={requirement.id}>
+                        <TableCell className="font-medium">
+                          <Badge variant="outline">{requirement.requirementId}</Badge>
+                        </TableCell>
+                        <TableCell>{requirement.title}</TableCell>
+                        <TableCell>
+                          {getStatusBadge(requirement.status || "Not Executed")}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            {requirement.mappings.map((mapping: any) => {
+                              const testCase = rtmData.testCases.find((tc: any) => tc.id === mapping.testCaseId);
+                              return (
+                                <div key={mapping.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                                  <Badge variant="outline" className="text-xs">
+                                    {testCase?.testCaseId || 'Unknown'}
+                                  </Badge>
+                                  <Select
+                                    value={mapping.status}
+                                    onValueChange={(status) => 
+                                      updateMappingMutation.mutate({ mappingId: mapping.id, status })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-6 text-xs w-24">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Pass">Pass</SelectItem>
+                                      <SelectItem value="Fail">Fail</SelectItem>
+                                      <SelectItem value="Not Executed">Not Executed</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteMappingMutation.mutate(mapping.id)}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              );
+                            })}
+                            {requirement.mappings.length === 0 && (
+                              <span className="text-sm text-gray-500">No test cases mapped</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedRequirement(requirement);
+                              setMappingDialogOpen(true);
+                            }}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Map Test Case
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ));
+                  })()}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Test Case Mapping Dialog */}
+      <Dialog open={mappingDialogOpen} onOpenChange={setMappingDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Map Test Case to Requirement</DialogTitle>
+            <DialogDescription>
+              {selectedRequirement && (
+                <>Select test cases to map to requirement: <strong>{selectedRequirement.requirementId}</strong></>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-96 overflow-y-auto">
+            <div className="space-y-2">
+              {rtmData.testCases.map((testCase: any) => {
+                const isAlreadyMapped = selectedRequirement?.mappings.some((m: any) => m.testCaseId === testCase.id);
+                return (
+                  <div
+                    key={testCase.id}
+                    className={`flex items-center justify-between p-3 border rounded-lg ${
+                      isAlreadyMapped ? 'bg-gray-100 opacity-50' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <div className="font-medium">{testCase.testCaseId}</div>
+                      <div className="text-sm text-gray-600">{testCase.feature}</div>
+                      <div className="text-xs text-gray-500">Status: {testCase.status}</div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isAlreadyMapped}
+                      onClick={() => handleCreateMapping(testCase.id)}
+                    >
+                      {isAlreadyMapped ? 'Already Mapped' : 'Map'}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 
