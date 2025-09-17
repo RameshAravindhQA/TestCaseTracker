@@ -116,7 +116,7 @@ export function TrackerSubFeatureForm({
       department: '',
       startDate: '',
       endDate: '',
-      assignedEmployeeIds: selectedEmployees,
+      assignedEmployeeIds: [],
       estimatedHours: undefined,
       tags: [],
     },
@@ -191,12 +191,7 @@ export function TrackerSubFeatureForm({
       estimatedHours: data.estimatedHours ? Number(data.estimatedHours) : undefined,
       parentSubFeatureId: data.parentSubFeatureId ? Number(data.parentSubFeatureId) : undefined,
     };
-    
-    // Ensure assignedEmployeeIds is properly set in the form data
-    form.setValue('assignedEmployeeIds', selectedEmployees);
-    
     console.log('Submitting sub-feature with assigned employees:', selectedEmployees);
-    console.log('Complete form data:', formData);
     onSubmit(formData);
   };
 
@@ -207,9 +202,6 @@ export function TrackerSubFeatureForm({
     
     setSelectedEmployees(newSelectedEmployees);
     form.setValue('assignedEmployeeIds', newSelectedEmployees);
-    
-    // Trigger form validation to ensure the field is recognized as dirty
-    form.trigger('assignedEmployeeIds');
   };
 
   const getSelectedEmployeeNames = () => {
@@ -609,21 +601,7 @@ export function TrackerSubFeatureForm({
           render={({ field }) => (
             <FormItem style={{ display: 'none' }}>
               <FormControl>
-                <Input 
-                  {...field} 
-                  value={JSON.stringify(selectedEmployees)} 
-                  onChange={(e) => {
-                    try {
-                      const parsed = JSON.parse(e.target.value);
-                      if (Array.isArray(parsed)) {
-                        setSelectedEmployees(parsed);
-                        field.onChange(parsed);
-                      }
-                    } catch {
-                      // Invalid JSON, ignore
-                    }
-                  }}
-                />
+                <Input {...field} value={selectedEmployees.join(',')} readOnly />
               </FormControl>
             </FormItem>
           )}

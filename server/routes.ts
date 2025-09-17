@@ -1959,38 +1959,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create sub-feature
-  app.post('/api/tracker/sub-features', requireAuth, async (req, res) => {
+  apiRouter.post("/tracker/sub-features", isAuthenticated, async (req, res) => {
     try {
-      console.log('Creating sub-feature with data:', req.body);
-      console.log('Assigned Employee IDs received:', req.body.assignedEmployeeIds);
-
-      // Ensure assignedEmployeeIds is properly processed
-      let assignedEmployeeIds = req.body.assignedEmployeeIds;
-      if (typeof assignedEmployeeIds === 'string') {
-        try {
-          assignedEmployeeIds = JSON.parse(assignedEmployeeIds);
-        } catch {
-          assignedEmployeeIds = [];
-        }
-      }
-      if (!Array.isArray(assignedEmployeeIds)) {
-        assignedEmployeeIds = [];
-      }
-
-      const subFeatureData = {
+      const subFeatureData = insertTrackerSubFeatureSchema.parse({
         ...req.body,
-        assignedEmployeeIds,
-        createdById: req.session.userId
-      };
-
-      console.log('Processed sub-feature data:', subFeatureData);
+        createdById: req.session.userId,
+      });
       const subFeature = await storage.createTrackerSubFeature(subFeatureData);
-      console.log('Created sub-feature:', subFeature);
       res.status(201).json(subFeature);
     } catch (error) {
-      console.error('Error creating sub-feature:', error);
-      res.status(500).json({ message: 'Failed to create sub-feature' });
+      console.error("Create tracker sub-feature error:", error);
+      res.status(400).json({ message: "Invalid sub-feature data" });
     }
   });
 
