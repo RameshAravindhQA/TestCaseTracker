@@ -155,7 +155,8 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
       functionalRequirementId: selectedRequirement.id,
       testCaseId,
       projectId: selectedProjectId,
-      status: "Not Executed"
+      status: "Not Executed",
+      createdById: 1 // Replace with actual user ID from session
     });
   };
 
@@ -232,15 +233,16 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
       // Get current project details
       const currentProject = projects?.find(p => p.id === selectedProjectId);
       
-      // Calculate statistics
-      const totalMappings = selectedBrd.functionalRequirements?.reduce((sum: number, req: any) => 
-        sum + (req.mappings?.length || 0), 0) || 0;
-      const passedMappings = selectedBrd.functionalRequirements?.reduce((sum: number, req: any) => 
-        sum + (req.mappings?.filter((m: any) => m.status === "Pass").length || 0), 0) || 0;
-      const failedMappings = selectedBrd.functionalRequirements?.reduce((sum: number, req: any) => 
-        sum + (req.mappings?.filter((m: any) => m.status === "Fail").length || 0), 0) || 0;
-      const notExecutedMappings = selectedBrd.functionalRequirements?.reduce((sum: number, req: any) => 
-        sum + (req.mappings?.filter((m: any) => m.status === "Not Executed").length || 0), 0) || 0;
+      // Calculate statistics - handle missing data gracefully
+      const functionalReqs = selectedBrd.functionalRequirements || [];
+      const totalMappings = functionalReqs.reduce((sum: number, req: any) => 
+        sum + (req.mappings?.length || 0), 0);
+      const passedMappings = functionalReqs.reduce((sum: number, req: any) => 
+        sum + (req.mappings?.filter((m: any) => m.status === "Pass").length || 0), 0);
+      const failedMappings = functionalReqs.reduce((sum: number, req: any) => 
+        sum + (req.mappings?.filter((m: any) => m.status === "Fail").length || 0), 0);
+      const notExecutedMappings = functionalReqs.reduce((sum: number, req: any) => 
+        sum + (req.mappings?.filter((m: any) => m.status === "Not Executed").length || 0), 0);
       
       const passPercentage = totalMappings > 0 ? Math.round((passedMappings / totalMappings) * 100) : 0;
       const failPercentage = totalMappings > 0 ? Math.round((failedMappings / totalMappings) * 100) : 0;
@@ -253,6 +255,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
       printDiv.style.backgroundColor = 'white';
       printDiv.style.padding = '20px';
       printDiv.style.fontFamily = 'Arial, sans-serif';
+      printDiv.style.fontSize = '12px';
 
       // Build RTM content
       let htmlContent = `
@@ -349,7 +352,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
             <tbody>
       `;
 
-      selectedBrd.functionalRequirements?.forEach((req: any) => {
+      functionalReqs.forEach((req: any) => {
         if (req.mappings && req.mappings.length > 0) {
           req.mappings.forEach((mapping: any) => {
             const testCase = rtmData.testCases?.find((tc: any) => tc.id === mapping.testCaseId);
@@ -357,10 +360,10 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
             const statusBg = mapping.status === 'Pass' ? '#e8f5e8' : mapping.status === 'Fail' ? '#fde8e8' : '#f8f9fa';
             htmlContent += `
               <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;">${req.requirementId}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${req.title}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${req.requirementId || 'N/A'}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${req.title || 'N/A'}</td>
                 <td style="padding: 8px; border: 1px solid #ddd;">${testCase?.testCaseId || 'Unknown'}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${testCase?.feature || ''}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${testCase?.feature || testCase?.title || 'N/A'}</td>
                 <td style="padding: 8px; border: 1px solid #ddd; color: ${statusColor}; font-weight: bold; background-color: ${statusBg};">${mapping.status}</td>
               </tr>
             `;
@@ -368,8 +371,8 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
         } else {
           htmlContent += `
             <tr>
-              <td style="padding: 8px; border: 1px solid #ddd;">${req.requirementId}</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${req.title}</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${req.requirementId || 'N/A'}</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${req.title || 'N/A'}</td>
               <td style="padding: 8px; border: 1px solid #ddd; color: #dc3545; background-color: #fde8e8;">No mappings</td>
               <td style="padding: 8px; border: 1px solid #ddd;">-</td>
               <td style="padding: 8px; border: 1px solid #ddd; color: #6c757d; background-color: #f8f9fa;">Not Mapped</td>
@@ -388,7 +391,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
           <p style="font-size: 12px; color: #666; margin: 0;">
             This Requirements Traceability Matrix was generated automatically from the Test Case Tracker system.<br>
             Project: ${currentProject?.name || 'Unknown'} | Generated: ${new Date().toLocaleString()}<br>
-            Total Requirements: ${selectedBrd.functionalRequirements?.length || 0} | 
+            Total Requirements: ${functionalReqs.length} | 
             Total Test Mappings: ${totalMappings} | 
             Pass Rate: ${passPercentage}%
           </p>
@@ -398,12 +401,18 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
       printDiv.innerHTML = htmlContent;
       document.body.appendChild(printDiv);
 
-      // Use html2canvas to capture the content
+      // Wait for content to render
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Use html2canvas to capture the content with better error handling
       const canvas = await html2canvas(printDiv, {
         backgroundColor: '#ffffff',
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
-        allowTaint: true
+        allowTaint: false,
+        logging: false,
+        width: 800,
+        height: printDiv.scrollHeight
       });
 
       // Remove the temporary div
@@ -411,35 +420,48 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
 
       // Create PDF
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/png', 0.8);
       
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pdfWidth - 20; // 10mm margin on each side
+      const imgWidth = pdfWidth - 20;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      let heightLeft = imgHeight;
-      let position = 10; // 10mm top margin
-
-      // Add first page
-      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight - 20; // Account for margins
-
-      // Add additional pages if content is longer than one page
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
+      let yPosition = 10;
+      
+      // Add image to PDF (handle multi-page if needed)
+      if (imgHeight <= pdfHeight - 20) {
+        pdf.addImage(imgData, 'PNG', 10, yPosition, imgWidth, imgHeight);
+      } else {
+        // Multi-page handling
+        let remainingHeight = imgHeight;
+        let pagePosition = 0;
+        
+        while (remainingHeight > 0) {
+          const pageHeight = Math.min(remainingHeight, pdfHeight - 20);
+          
+          if (pagePosition > 0) {
+            pdf.addPage();
+          }
+          
+          pdf.addImage(imgData, 'PNG', 10, 10 - pagePosition, imgWidth, imgHeight);
+          pagePosition += pdfHeight - 20;
+          remainingHeight -= pdfHeight - 20;
+        }
       }
 
       // Save the PDF
-      pdf.save(`RTM_${currentProject?.name || 'Project'}_${selectedBrd.documentId}_${new Date().toISOString().split('T')[0]}.pdf`);
+      const fileName = `RTM_${currentProject?.name?.replace(/[^a-zA-Z0-9]/g, '_') || 'Project'}_${selectedBrd.documentId}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
       
-      toast({ title: "Success", description: "Enhanced RTM exported to PDF successfully" });
-    } catch (error) {
+      toast({ title: "Success", description: "RTM exported to PDF successfully" });
+    } catch (error: any) {
       console.error('PDF export error:', error);
-      toast({ title: "Error", description: "Failed to export RTM to PDF", variant: "destructive" });
+      toast({ 
+        title: "Export Failed", 
+        description: error.message || "Failed to export RTM to PDF. Please try again.", 
+        variant: "destructive" 
+      });
     }
   };
 

@@ -686,17 +686,17 @@ class MemStorage implements IStorage {
 
   // BRD Documents methods
   async getBrdDocuments(projectId?: number): Promise<any[]> {
-    if (!this.data.brdDocuments) {
-      this.data.brdDocuments = [];
+    if (!this.brdDocumentsStore) {
+      this.brdDocumentsStore = [];
     }
 
-    let results = [...this.data.brdDocuments];
+    let results = [...this.brdDocumentsStore];
     if (projectId) {
       results = results.filter(doc => doc.projectId === projectId);
     }
 
     console.log(`Storage: getBrdDocuments called with projectId: ${projectId}`);
-    console.log(`Storage: Total BRD documents in storage: ${this.data.brdDocuments.length}`);
+    console.log(`Storage: Total BRD documents in storage: ${this.brdDocumentsStore.length}`);
     console.log(`Storage: Found ${results.length} BRD documents for project ${projectId}:`,
       results.map(doc => ({ id: doc.id, title: doc.title, documentId: doc.documentId, projectId: doc.projectId })));
 
@@ -704,10 +704,10 @@ class MemStorage implements IStorage {
   }
 
   async getBrdDocument(id: number): Promise<any | null> {
-    if (!this.data.brdDocuments) {
-      this.data.brdDocuments = [];
+    if (!this.brdDocumentsStore) {
+      this.brdDocumentsStore = [];
     }
-    return this.data.brdDocuments.find(doc => doc.id === id) || null;
+    return this.brdDocumentsStore.find(doc => doc.id === id) || null;
   }
 
   async createBrdDocument(data: any): Promise<any> {
@@ -736,17 +736,17 @@ class MemStorage implements IStorage {
       updatedAt: now
     };
 
-    if (!this.data.brdDocuments) {
-      this.data.brdDocuments = [];
+    if (!this.brdDocumentsStore) {
+      this.brdDocumentsStore = [];
     }
-    this.data.brdDocuments.push(document);
+    this.brdDocumentsStore.push(document);
 
     console.log(`Storage: Created BRD document with ID ${id}:`, document);
     return document;
   }
 
   // BRD Documents storage
-  private brdDocuments: any[] = []; // This seems to be a duplicate declaration, ensure consistency
+  private brdDocuments: any[] = [];
   private brdVersions: any[] = [];
   private brdTestCases: any[] = [];
   private nextBrdId = 1;
@@ -755,11 +755,11 @@ class MemStorage implements IStorage {
 
   // Functional Requirements methods
   async getFunctionalRequirements(brdDocumentId?: number, projectId?: number): Promise<FunctionalRequirement[]> {
-    if (!this.data.functionalRequirements) {
-      this.data.functionalRequirements = [];
+    if (!this.functionalRequirements) {
+      this.functionalRequirements = [];
     }
 
-    let results = [...this.data.functionalRequirements];
+    let results = [...this.functionalRequirements];
 
     if (brdDocumentId) {
       results = results.filter(req => req.brdId === brdDocumentId || req.brdDocumentId === brdDocumentId);
@@ -803,10 +803,10 @@ class MemStorage implements IStorage {
       updatedAt: now
     };
 
-    if (!this.data.functionalRequirements) {
-      this.data.functionalRequirements = [];
+    if (!this.functionalRequirements) {
+      this.functionalRequirements = [];
     }
-    this.data.functionalRequirements.push(requirement);
+    this.functionalRequirements.push(requirement);
 
     console.log(`Storage: Created functional requirement with ID ${id}:`, requirement);
     return requirement;
@@ -5204,34 +5204,24 @@ class MemStorage implements IStorage {
     );
 
     if (existingMapping) {
-      console.log(`Updating existing mapping ${existingMapping.id} instead of creating duplicate`);
-      // Update existing mapping instead of throwing error
-      const updatedMapping = {
-        ...existingMapping,
-        ...data,
-        updatedAt: new Date()
-      };
-
-      const index = this.requirementTestCaseMappings.findIndex(m => m.id === existingMapping.id);
-      this.requirementTestCaseMappings[index] = updatedMapping;
-      // this.saveToFile(); // Removed this line as it's not a real file save operation in memory storage
-      return updatedMapping;
+      throw new Error(`Mapping between Functional Requirement ${data.functionalRequirementId} and Test Case ${data.testCaseId} already exists`);
     }
 
     const mapping: RequirementTestCaseMapping = {
       id,
       functionalRequirementId: data.functionalRequirementId,
       testCaseId: data.testCaseId,
+      projectId: data.projectId,
       status: data.status || "NOT_EXECUTED",
       executionDate: data.executionDate,
       notes: data.notes,
-      createdById: data.createdById,
+      createdById: data.createdById || 1,
       createdAt: new Date(),
       updatedAt: new Date()
     };
 
     this.requirementTestCaseMappings.push(mapping);
-    // this.saveToFile(); // Removed this line as it's not a real file save operation in memory storage
+    console.log(`Storage: Created RTM mapping with ID ${id}:`, mapping);
     return mapping;
   }
 
