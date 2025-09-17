@@ -684,6 +684,67 @@ class MemStorage implements IStorage {
   // Employee permissions storage
   private employeePermissions: { employeeId: number; permissions: any[] }[] = [];
 
+  // BRD Documents methods
+  async getBrdDocuments(projectId?: number): Promise<any[]> {
+    if (!this.data.brdDocuments) {
+      this.data.brdDocuments = [];
+    }
+
+    let results = [...this.data.brdDocuments];
+    if (projectId) {
+      results = results.filter(doc => doc.projectId === projectId);
+    }
+
+    console.log(`Storage: getBrdDocuments called with projectId: ${projectId}`);
+    console.log(`Storage: Total BRD documents in storage: ${this.data.brdDocuments.length}`);
+    console.log(`Storage: Found ${results.length} BRD documents for project ${projectId}:`, 
+      results.map(doc => ({ id: doc.id, title: doc.title, documentId: doc.documentId, projectId: doc.projectId })));
+
+    return results.sort((a, b) => a.documentId.localeCompare(b.documentId));
+  }
+
+  async getBrdDocument(id: number): Promise<any | null> {
+    if (!this.data.brdDocuments) {
+      this.data.brdDocuments = [];
+    }
+    return this.data.brdDocuments.find(doc => doc.id === id) || null;
+  }
+
+  async createBrdDocument(data: any): Promise<any> {
+    const id = this.getNextId();
+    const now = new Date();
+
+    // Get project to generate document ID
+    const project = await this.getProject(data.projectId);
+    if (!project) {
+      throw new Error(`Project with ID ${data.projectId} not found`);
+    }
+
+    // Generate document ID: BEG-REQ-001
+    const projectPrefix = project.prefix || project.name.substring(0, 3).toUpperCase();
+    const existingDocs = await this.getBrdDocuments(data.projectId);
+    const nextNumber = existingDocs.length + 1;
+    const documentId = `${projectPrefix}-REQ-${String(nextNumber).padStart(3, '0')}`;
+
+    const document = {
+      id,
+      documentId,
+      ...data,
+      version: "1.0",
+      status: "Draft",
+      createdAt: now,
+      updatedAt: now
+    };
+
+    if (!this.data.brdDocuments) {
+      this.data.brdDocuments = [];
+    }
+    this.data.brdDocuments.push(document);
+
+    console.log(`Storage: Created BRD document with ID ${id}:`, document);
+    return document;
+  }
+
   // BRD Documents storage
   private brdDocuments: any[] = []; // This seems to be a duplicate declaration, ensure consistency
   private brdVersions: any[] = [];
@@ -691,6 +752,65 @@ class MemStorage implements IStorage {
   private nextBrdId = 1;
   private nextBrdVersionId = 1;
   private nextBrdTestCaseId = 1;
+
+  // Functional Requirements methods
+  async getFunctionalRequirements(brdDocumentId?: number, projectId?: number): Promise<FunctionalRequirement[]> {
+    if (!this.data.functionalRequirements) {
+      this.data.functionalRequirements = [];
+    }
+
+    let results = [...this.data.functionalRequirements];
+
+    if (brdDocumentId) {
+      results = results.filter(req => req.brdId === brdDocumentId || req.brdDocumentId === brdDocumentId);
+    }
+
+    if (projectId && !brdDocumentId) {
+      // Get all BRD documents for the project
+      const brdDocuments = await this.getBrdDocuments(projectId);
+      const brdIds = brdDocuments.map(doc => doc.id);
+      results = results.filter(req => brdIds.includes(req.brdId || req.brdDocumentId));
+    }
+
+    console.log(`Storage: getFunctionalRequirements(${brdDocumentId}, ${projectId}) returning ${results.length} requirements`);
+    return results;
+  }
+
+  async createFunctionalRequirement(data: any): Promise<any> {
+    const id = this.getNextId();
+    const now = new Date();
+
+    // Get BRD document to generate requirement ID
+    const brdDocument = await this.getBrdDocument(data.brdId);
+    if (!brdDocument) {
+      throw new Error(`BRD Document with ID ${data.brdId} not found`);
+    }
+
+    // Generate requirement ID: BEG-REQ-001-FR-001
+    const existingRequirements = await this.getFunctionalRequirements(data.brdId);
+    const nextNumber = existingRequirements.length + 1;
+    const requirementId = `${brdDocument.documentId}-FR-${String(nextNumber).padStart(3, '0')}`;
+
+    const requirement = {
+      id,
+      requirementId,
+      brdId: data.brdId,
+      brdDocumentId: data.brdId, // Keep both for compatibility
+      ...data,
+      status: data.status || "Not Executed",
+      priority: data.priority || "Medium",
+      createdAt: now,
+      updatedAt: now
+    };
+
+    if (!this.data.functionalRequirements) {
+      this.data.functionalRequirements = [];
+    }
+    this.data.functionalRequirements.push(requirement);
+    
+    console.log(`Storage: Created functional requirement with ID ${id}:`, requirement);
+    return requirement;
+  }
 
   // Initialize data property for compatibility
   private data: any = {

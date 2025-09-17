@@ -126,7 +126,9 @@ export default function BrdDocumentsPage() {
         : "/api/brd-documents";
       const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch BRD documents");
-      return response.json();
+      const data = await response.json();
+      console.log("Fetched BRD documents:", data);
+      return data;
     },
     enabled: !!selectedProjectId,
   });
@@ -683,13 +685,18 @@ export default function BrdDocumentsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        setSelectedDocument(document);
+                        console.log("Opening functional requirements for document:", document);
+                        console.log("Document functional requirements:", document.functionalRequirements);
+                        setSelectedDocument({
+                          ...document,
+                          functionalRequirements: document.functionalRequirements || []
+                        });
                         setShowTestCases(true);
                       }}
                       className="flex items-center gap-1"
                     >
                       <CheckCircle2 className="h-4 w-4" />
-                      Functional Requirements
+                      Functional Requirements ({(document.functionalRequirements || []).length})
                     </Button>
                   </div>
 

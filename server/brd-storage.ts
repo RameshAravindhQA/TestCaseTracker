@@ -163,11 +163,11 @@ async getFunctionalRequirements(brdId?: number, projectId?: number): Promise<any
   let results = [...this.data.functionalRequirements];
 
   if (brdId) {
-    results = results.filter(req => req.brdId === brdId);
+    results = results.filter(req => req.brdId === brdId || req.brdDocumentId === brdId);
   }
 
   // Get BRD document IDs for the project if projectId is provided
-  if (projectId && !brdDocumentId) {
+  if (projectId && !brdId) {
     const brdDocuments = await this.getBrdDocuments(projectId);
     const brdIds = brdDocuments.map(doc => doc.id);
     console.log(`Storage: BRD IDs for project ${projectId}:`, brdIds);
@@ -177,7 +177,8 @@ async getFunctionalRequirements(brdId?: number, projectId?: number): Promise<any
     console.log(`Storage: After filtering by projectId ${projectId}: ${results.length} requirements`);
   }
 
-  return results.sort((a, b) => a.requirementId.localeCompare(b.requirementId));
+  console.log(`Storage: getFunctionalRequirements(${brdId}, ${projectId}) returning ${results.length} requirements:`, results.map(r => ({ id: r.id, requirementId: r.requirementId, brdId: r.brdId || r.brdDocumentId })));
+  return results.sort((a, b) => (a.requirementId || '').localeCompare(b.requirementId || ''));
 }
 
 async getFunctionalRequirement(id: number): Promise<any | null> {
@@ -202,6 +203,8 @@ async createFunctionalRequirement(data: any): Promise<any> {
   const requirement = {
     id,
     requirementId,
+    brdId: data.brdId,
+    brdDocumentId: data.brdId, // Keep both for compatibility
     ...data,
     status: data.status || "Not Executed",
     priority: data.priority || "Medium",
@@ -213,6 +216,8 @@ async createFunctionalRequirement(data: any): Promise<any> {
     this.data.functionalRequirements = [];
   }
   this.data.functionalRequirements.push(requirement);
+  
+  console.log(`Storage: Created functional requirement with ID ${id}:`, requirement);
   this.saveToFile();
   return requirement;
 }

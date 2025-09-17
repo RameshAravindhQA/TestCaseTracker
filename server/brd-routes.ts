@@ -11,15 +11,16 @@ router.get("/", async (req, res) => {
       projectId ? parseInt(projectId as string) : undefined
     );
 
-    // Include test cases for each document
-    const documentsWithTestCases = await Promise.all(
+    // Include test cases and functional requirements for each document
+    const documentsWithDetails = await Promise.all(
       documents.map(async (doc: any) => {
         const testCases = await storage.getBrdTestCases(doc.id);
-        return { ...doc, testCases };
+        const functionalRequirements = await storage.getFunctionalRequirements(doc.id);
+        return { ...doc, testCases, functionalRequirements };
       })
     );
 
-    res.json(documentsWithTestCases);
+    res.json(documentsWithDetails);
   } catch (error) {
     console.error("Error fetching BRD documents:", error);
     res.status(500).json({ error: "Failed to fetch BRD documents" });
