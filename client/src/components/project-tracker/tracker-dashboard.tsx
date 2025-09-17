@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { TrackerProjectForm } from './tracker-project-form';
+import { TrackerProjectTable } from './tracker-project-table';
 import {
   Target,
   Calendar,
@@ -18,127 +19,6 @@ import {
   DollarSign,
   Plus,
 } from 'lucide-react';
-
-// Assuming TrackerProjectTable component exists and accepts pagination props
-// import TrackerProjectTable from './TrackerProjectTable'; // Placeholder for actual import
-
-// Mocking the TrackerProjectTable component for demonstration purposes
-const TrackerProjectTable = ({
-  projects,
-  isLoading,
-  onEdit,
-  onDelete,
-  onViewDetails,
-  currentPage,
-  setCurrentPage,
-  itemsPerPage,
-}: any) => {
-  const totalItems = projects.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-  const currentProjects = projects.slice(startIndex, endIndex);
-
-  return (
-    <div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project Name</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
-              <th scope="col" className="relative px-6 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {isLoading ? (
-              <tr>
-                <td colSpan={6} className="text-center py-4">Loading...</td>
-              </tr>
-            ) : currentProjects.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="text-center py-4 text-muted-foreground">No projects found.</td>
-              </tr>
-            ) : (
-              currentProjects.map((project: any) => (
-                <tr key={project.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{project.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <Badge
-                      className={
-                        project.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                        project.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
-                        project.status === 'On Hold' ? 'bg-orange-100 text-orange-800' :
-                        project.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
-                        'bg-blue-100 text-blue-800'
-                      }
-                    >
-                      {project.status}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <Badge
-                      variant={
-                        project.priority === 'High' || project.priority === 'Critical' ? 'destructive' :
-                        project.priority === 'Medium' ? 'secondary' : 'outline'
-                      }
-                    >
-                      {project.priority}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {project.endDate ? new Date(project.endDate).toLocaleDateString() : 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                    <button onClick={() => onEdit(project)} className="text-indigo-600 hover:text-indigo-900">Edit</button>
-                    <button onClick={() => onDelete(project.id)} className="text-red-600 hover:text-red-900">Delete</button>
-                    <button onClick={() => onViewDetails(project)} className="text-blue-600 hover:text-blue-900">Details</button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-      {totalItems > itemsPerPage && (
-        <div className="mt-4 flex justify-center">
-          <nav className="relative z-0 inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-            <button
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="relative inline-flex items-center px-2 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            {Array.from({ length: totalPages }).map((_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => setCurrentPage(i + 1)}
-                aria-current={currentPage === i + 1 ? 'page' : undefined}
-                className={`relative inline-flex items-center px-4 py-2 text-sm font-medium border ${currentPage === i + 1 ? 'bg-indigo-50 border-indigo-500 text-white' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'} focus:z-20 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500`}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="relative inline-flex items-center px-2 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50 disabled:opacity-50"
-            >
-              Next
-            </button>
-          </nav>
-        </div>
-      )}
-    </div>
-  );
-};
 
 
 interface TrackerProject {
@@ -531,8 +411,7 @@ export function TrackerDashboard({ projects }: TrackerDashboardProps) {
           </div>
         </div>
       )}
-        </CardContent>
-      </Card>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Overdue Projects */}

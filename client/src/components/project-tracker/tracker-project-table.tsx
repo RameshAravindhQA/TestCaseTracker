@@ -282,3 +282,170 @@ export function TrackerProjectTable({
     </Card>
   );
 }
+import React from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+
+interface TrackerProject {
+  id: number;
+  name: string;
+  status: 'Planning' | 'In Progress' | 'Completed' | 'On Hold' | 'Cancelled';
+  priority: 'Low' | 'Medium' | 'High' | 'Critical';
+  startDate?: string;
+  endDate?: string;
+  budget?: number;
+  currency?: string;
+  createdAt?: string;
+}
+
+interface TrackerProjectTableProps {
+  projects: TrackerProject[];
+  isLoading: boolean;
+  onEdit: (project: TrackerProject) => void;
+  onDelete: (id: number) => void;
+  onViewDetails: (project: TrackerProject) => void;
+  currentPage: number;
+  setCurrentPage: (page: number) => void;
+  itemsPerPage: number;
+}
+
+export function TrackerProjectTable({
+  projects,
+  isLoading,
+  onEdit,
+  onDelete,
+  onViewDetails,
+  currentPage,
+  setCurrentPage,
+  itemsPerPage,
+}: TrackerProjectTableProps) {
+  const totalItems = projects.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const currentProjects = projects.slice(startIndex, endIndex);
+
+  return (
+    <div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project Name</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
+              <th scope="col" className="relative px-6 py-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {isLoading ? (
+              <tr>
+                <td colSpan={6} className="text-center py-4">Loading...</td>
+              </tr>
+            ) : currentProjects.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="text-center py-4 text-muted-foreground">No projects found.</td>
+              </tr>
+            ) : (
+              currentProjects.map((project: TrackerProject) => (
+                <tr key={project.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{project.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <Badge
+                      className={
+                        project.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                        project.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
+                        project.status === 'On Hold' ? 'bg-orange-100 text-orange-800' :
+                        project.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                        'bg-blue-100 text-blue-800'
+                      }
+                    >
+                      {project.status}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <Badge
+                      variant={
+                        project.priority === 'High' || project.priority === 'Critical' ? 'destructive' :
+                        project.priority === 'Medium' ? 'secondary' : 'outline'
+                      }
+                    >
+                      {project.priority}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    {project.endDate ? new Date(project.endDate).toLocaleDateString() : 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEdit(project)}
+                      className="text-indigo-600 hover:text-indigo-900"
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDelete(project.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onViewDetails(project)}
+                      className="text-blue-600 hover:text-blue-900"
+                    >
+                      Details
+                    </Button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      {totalItems > itemsPerPage && (
+        <div className="mt-4 flex justify-center">
+          <nav className="relative z-0 inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <Button
+                key={i + 1}
+                variant={currentPage === i + 1 ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrentPage(i + 1)}
+                className="mx-1"
+              >
+                {i + 1}
+              </Button>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </nav>
+        </div>
+      )}
+    </div>
+  );
+}
