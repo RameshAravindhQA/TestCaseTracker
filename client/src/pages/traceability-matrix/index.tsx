@@ -20,18 +20,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  Check, 
-  ChevronDown, 
-  Download, 
-  Edit, 
-  FileText, 
-  FileType, 
-  Palette, 
-  Plus, 
-  Save, 
-  Settings, 
-  Trash, 
+import {
+  Check,
+  ChevronDown,
+  Download,
+  Edit,
+  FileText,
+  FileType,
+  Palette,
+  Plus,
+  Save,
+  Settings,
+  Trash,
   X,
   Tag,
   Loader2
@@ -54,6 +54,27 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+
+// Placeholder for RTMComponent. In a real application, this would be imported from a separate file.
+const RTMComponent = () => {
+  // This is a placeholder component. Implement the RTM logic here.
+  // It should fetch BRD documents, modules, and test cases,
+  // display them in a matrix, allow mapping, and update statuses.
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Requirements Traceability Matrix</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-muted-foreground">RTM functionality will be implemented here.</p>
+        {/* TODO: Implement RTM functionality */}
+      </CardContent>
+    </Card>
+  );
+};
+
 
 interface CustomMarker {
   id: string;
@@ -209,7 +230,7 @@ export default function TraceabilityMatrixPage() {
     },
     onSuccess: (updatedMarker) => {
       // Immediately update local state
-      setCustomMarkers(prev => prev.map(marker => 
+      setCustomMarkers(prev => prev.map(marker =>
         marker.id === updatedMarker.id ? updatedMarker : marker
       ));
 
@@ -265,10 +286,10 @@ export default function TraceabilityMatrixPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "matrix/cells"] });
     },
     onError: (error) => {
-      toast({ 
-        title: "Save failed", 
-        description: "Failed to save matrix cell", 
-        variant: "destructive" 
+      toast({
+        title: "Save failed",
+        description: "Failed to save matrix cell",
+        variant: "destructive",
       });
       // Revert optimistic update by refetching
       queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "matrix/cells"] });
@@ -405,10 +426,10 @@ export default function TraceabilityMatrixPage() {
 
     updateCellMutation.mutate(cellData);
 
-    toast({ 
-      title: "Matrix updated", 
+    toast({
+      title: "Matrix updated",
       description: "Changes saved to database",
-      duration: 1000 
+      duration: 1000
     });
   };
 
@@ -586,7 +607,7 @@ export default function TraceabilityMatrixPage() {
 
     // Reset matrix data when project changes
     // This is now handled by the useEffect hook that watches selectedProjectId
-    // setMatrixData({}); 
+    // setMatrixData({});
     // setCustomMarkers([]);
     // setModules([]);
 
@@ -598,46 +619,6 @@ export default function TraceabilityMatrixPage() {
         queryClient.invalidateQueries({ queryKey: ["/api/projects", newProjectId, "matrix/cells"] });
     }
   };
-
-  if (!selectedProjectId || !projects || projects.length === 0) {
-    return (
-      <MainLayout>
-        <div className="container mx-auto p-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl shadow-lg">
-                <FileText className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">Module Traceability Matrix</h1>
-                <p className="text-muted-foreground">
-                  Map module relationships using custom markers with colors
-                </p>
-              </div>
-            </div>
-            <ProjectSelect
-              selectedProjectId={selectedProjectId}
-              onProjectChange={setSelectedProjectId}
-              projects={projects || []}
-            />
-          </div>
-          <Card>
-            <CardContent className="pt-4 text-center">
-              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {!projects || projects.length === 0 ? 'No Projects Available' : 'No Project Selected'}
-              </h3>
-              <p className="text-gray-500">
-                {!projects || projects.length === 0 
-                  ? 'Please create a project first to use the traceability matrix.'
-                  : 'Please select a project to view the traceability matrix.'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </MainLayout>
-    );
-  }
 
   return (
     <MainLayout>
@@ -701,8 +682,8 @@ export default function TraceabilityMatrixPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-            <Button 
-                variant="default" 
+            <Button
+                variant="default"
                 size="sm"
                 onClick={handleSaveMatrix}
                 disabled={saveMatrixMutation.isPending}
@@ -722,8 +703,8 @@ export default function TraceabilityMatrixPage() {
               <Download className="h-4 w-4 mr-2" />
               Export PDF
             </Button>
-            <Select 
-              value={selectedProjectId?.toString() || ""} 
+            <Select
+              value={selectedProjectId?.toString() || ""}
               onValueChange={handleProjectChange}
               key={selectedProjectId} // Force re-render when project changes
             >
@@ -751,192 +732,202 @@ export default function TraceabilityMatrixPage() {
                 {!projects || projects.length === 0 ? 'No Projects Available' : 'No Project Selected'}
               </h3>
               <p className="text-gray-500">
-                {!projects || projects.length === 0 
+                {!projects || projects.length === 0
                   ? 'Please create a project first to use the traceability matrix.'
                   : 'Please select a project to view the traceability matrix.'}
               </p>
             </CardContent>
           </Card>
         ) : (
-          <>
-            {/* Project Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Project: {currentProject?.name || 'Unknown Project'}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Modules:</span> {modules.length}
-                  </div>
-                  <div>
-                    <span className="font-medium">Custom Markers:</span> {customMarkers.length}
-                  </div>
-                  <div>
-                    <span className="font-medium">Matrix Cells:</span> {Object.keys(matrixCells).length}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Selected Marker Display */}
-            {customMarkers.length > 0 && (
+          <Tabs defaultValue="matrix" className="w-full mt-6">
+            <TabsList>
+              <TabsTrigger value="matrix">Module Matrix</TabsTrigger>
+              <TabsTrigger value="rtm">RTM</TabsTrigger>
+            </TabsList>
+            <TabsContent value="matrix" className="space-y-6">
+              {/* Project Information */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Available Markers</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Select a marker and click on matrix cells to assign it. Changes are automatically saved to database.
-                  </p>
+                  <CardTitle>Project: {currentProject?.name || 'Unknown Project'}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {customMarkers.map((marker) => (
-                      <div
-                        key={marker.id}
-                        className={`flex items-center gap-2 p-2 rounded-lg border-2 cursor-pointer transition-all ${
-                          selectedMarkerId === marker.markerId
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                        onClick={() => setSelectedMarkerId(
-                          selectedMarkerId === marker.markerId ? null : marker.markerId
-                        )}
-                      >
-                        <div
-                          className="w-4 h-4 rounded-full border border-gray-300"
-                          style={{ backgroundColor: marker.color }}
-                        />
-                        <span className="text-sm font-medium">{marker.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {selectedMarkerId && (
-                    <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
-                      <strong>Selected:</strong> {customMarkers.find(m => m.markerId === selectedMarkerId)?.label} - 
-                      Click on matrix cells to assign this marker
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Modules:</span> {modules.length}
                     </div>
-                  )}
+                    <div>
+                      <span className="font-medium">Custom Markers:</span> {customMarkers.length}
+                    </div>
+                    <div>
+                      <span className="font-medium">Matrix Cells:</span> {Object.keys(matrixCells).length}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-            )}
 
-            {/* Module Traceability Matrix */}
-            {modules.length > 0 ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Module-to-Module Traceability Matrix</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Select a marker above, then click on matrix cells to assign relationships. All changes are saved to database.
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto border rounded-lg" ref={matrixRef}>
-                    <Table className="matrix-table">
-                      <TableHeader>
-                        <TableRow className="bg-gray-50">
-                          <TableHead className="w-[120px] sticky left-0 bg-gray-50 z-10 border-r-2 border-gray-200 font-semibold">
-                            <div className="flex items-center gap-1 px-2">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              <span className="text-xs">Modules</span>
-                            </div>
-                          </TableHead>
-                          {modules.map(module => (
-                            <TableHead key={module.id} className="text-center w-[60px] bg-gray-50 border-r border-gray-200 p-1">
-                              <div className="h-24 flex items-center justify-center">
-                                <div className="transform rotate-270 whitespace-nowrap font-medium text-xs" title={module.name}>
-                                  {module.name}
-                                </div>
+              {/* Selected Marker Display */}
+              {customMarkers.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Available Markers</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Select a marker and click on matrix cells to assign it. Changes are automatically saved to database.
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {customMarkers.map((marker) => (
+                        <div
+                          key={marker.id}
+                          className={`flex items-center gap-2 p-2 rounded-lg border-2 cursor-pointer transition-all ${
+                            selectedMarkerId === marker.markerId
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => setSelectedMarkerId(
+                            selectedMarkerId === marker.markerId ? null : marker.markerId
+                          )}
+                        >
+                          <div
+                            className="w-4 h-4 rounded-full border border-gray-300"
+                            style={{ backgroundColor: marker.color }}
+                          />
+                          <span className="text-sm font-medium">{marker.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {selectedMarkerId && (
+                      <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                        <strong>Selected:</strong> {customMarkers.find(m => m.markerId === selectedMarkerId)?.label} -
+                        Click on matrix cells to assign this marker
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Module Traceability Matrix */}
+              {modules.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Module-to-Module Traceability Matrix</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Select a marker above, then click on matrix cells to assign relationships. All changes are saved to database.
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto border rounded-lg" ref={matrixRef}>
+                      <Table className="matrix-table">
+                        <TableHeader>
+                          <TableRow className="bg-gray-50">
+                            <TableHead className="w-[120px] sticky left-0 bg-gray-50 z-10 border-r-2 border-gray-200 font-semibold">
+                              <div className="flex items-center gap-1 px-2">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span className="text-xs">Modules</span>
                               </div>
                             </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {modules.map((rowModule, rowIndex) => (
-                          <TableRow key={rowModule.id} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
-                            <TableCell className="sticky left-0 bg-inherit z-10 border-r-2 border-gray-200 p-1 text-center">
-                              <div className="flex items-center justify-center gap-1 px-1">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <div className="font-medium text-xs truncate max-w-[80px]" title={rowModule.name}>
-                                  {rowModule.name}
+                            {modules.map(module => (
+                              <TableHead key={module.id} className="text-center w-[60px] bg-gray-50 border-r border-gray-200 p-1">
+                                <div className="h-24 flex items-center justify-center">
+                                  <div className="transform rotate-270 whitespace-nowrap font-medium text-xs" title={module.name}>
+                                    {module.name}
+                                  </div>
                                 </div>
-                              </div>
-                            </TableCell>
-                            {modules.map(colModule => {
-                              const key = `${rowModule.id}-${colModule.id}`;
-                              const cell = matrixCells[key];
-                              const isDisabled = rowModule.id === colModule.id;
-
-                              return (
-                                <TableCell key={colModule.id} className="text-center p-1 border-r border-gray-200 w-[80px]">
-                                  {isDisabled ? (
-                                    <div className="h-8 flex items-center justify-center bg-gray-100 rounded">
-                                      <X className="h-3 w-3 text-gray-400" />
-                                    </div>
-                                  ) : (
-                                    <Select
-                                      value={cell?.value || 'no-marker'}
-                                      onValueChange={(value) => handleCellValueChange(rowModule.id, colModule.id, value)}
-                                    >
-                                      <SelectTrigger className="h-8 w-full border-dashed text-xs">
-                                        <SelectValue>
-                                          {cell?.value && cell.value !== 'no-marker' ? (
-                                            <div className="flex items-center gap-1">
-                                              <div
-                                                className="w-3 h-3 rounded-full border"
-                                                style={{ 
-                                                  backgroundColor: customMarkers.find(m => m.markerId === cell.value)?.color || '#ccc'
-                                                }}
-                                              />
-                                              <span className="text-xs">
-                                                {customMarkers.find(m => m.markerId === cell.value)?.label || '...'}
-                                              </span>
-                                            </div>
-                                          ) : (
-                                            <span className="text-gray-400 text-xs">...</span>
-                                          )}
-                                        </SelectValue>
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="no-marker">
-                                          <span className="text-gray-400">No marker</span>
-                                        </SelectItem>
-                                        {customMarkers.map(marker => (
-                                          <SelectItem key={marker.markerId} value={marker.markerId}>
-                                            <div className="flex items-center gap-2">
-                                              <div
-                                                className="w-3 h-3 rounded-full border"
-                                                style={{ backgroundColor: marker.color }}
-                                              />
-                                              <span className="text-xs">{marker.label}</span>
-                                            </div>
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  )}
-                                </TableCell>
-                              );
-                            })}
+                              </TableHead>
+                            ))}
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent className="pt-4 text-center">
-                  <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No modules available</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    No modules found for this project. Please add modules first to create a traceability matrix.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </>
+                        </TableHeader>
+                        <TableBody>
+                          {modules.map((rowModule, rowIndex) => (
+                            <TableRow key={rowModule.id} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
+                              <TableCell className="sticky left-0 bg-inherit z-10 border-r-2 border-gray-200 p-1 text-center">
+                                <div className="flex items-center justify-center gap-1 px-1">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                  <div className="font-medium text-xs truncate max-w-[80px]" title={rowModule.name}>
+                                    {rowModule.name}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              {modules.map(colModule => {
+                                const key = `${rowModule.id}-${colModule.id}`;
+                                const cell = matrixCells[key];
+                                const isDisabled = rowModule.id === colModule.id;
+
+                                return (
+                                  <TableCell key={colModule.id} className="text-center p-1 border-r border-gray-200 w-[80px]">
+                                    {isDisabled ? (
+                                      <div className="h-8 flex items-center justify-center bg-gray-100 rounded">
+                                        <X className="h-3 w-3 text-gray-400" />
+                                      </div>
+                                    ) : (
+                                      <Select
+                                        value={cell?.value || 'no-marker'}
+                                        onValueChange={(value) => handleCellValueChange(rowModule.id, colModule.id, value)}
+                                      >
+                                        <SelectTrigger className="h-8 w-full border-dashed text-xs">
+                                          <SelectValue>
+                                            {cell?.value && cell.value !== 'no-marker' ? (
+                                              <div className="flex items-center gap-1">
+                                                <div
+                                                  className="w-3 h-3 rounded-full border"
+                                                  style={{
+                                                    backgroundColor: customMarkers.find(m => m.markerId === cell.value)?.color || '#ccc'
+                                                  }}
+                                                />
+                                                <span className="text-xs">
+                                                  {customMarkers.find(m => m.markerId === cell.value)?.label || '...'}
+                                                </span>
+                                              </div>
+                                            ) : (
+                                              <span className="text-gray-400 text-xs">...</span>
+                                            )}
+                                          </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="no-marker">
+                                            <span className="text-gray-400">No marker</span>
+                                          </SelectItem>
+                                          {customMarkers.map(marker => (
+                                            <SelectItem key={marker.markerId} value={marker.markerId}>
+                                              <div className="flex items-center gap-2">
+                                                <div
+                                                  className="w-3 h-3 rounded-full border"
+                                                  style={{ backgroundColor: marker.color }}
+                                                />
+                                                <span className="text-xs">{marker.label}</span>
+                                              </div>
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    )}
+                                  </TableCell>
+                                );
+                              })}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="pt-4 text-center">
+                    <FileText className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No modules available</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      No modules found for this project. Please add modules first to create a traceability matrix.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="rtm" className="space-y-6 mt-6">
+              <RTMComponent />
+            </TabsContent>
+          </Tabs>
         )}
       </div>
     </MainLayout>

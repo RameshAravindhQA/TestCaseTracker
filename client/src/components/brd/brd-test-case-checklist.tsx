@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,43 +14,52 @@ import {
   Edit, 
   Save,
   X,
-  Trash2
+  Trash2,
+  Target
 } from "lucide-react";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-interface BrdTestCase {
+interface FunctionalRequirement {
   id: number;
-  testCaseId: string;
+  requirementId: string;
   title: string;
   description?: string;
-  expectedResult?: string;
+  priority: "High" | "Medium" | "Low";
   status: "Pass" | "Fail" | "Not Executed";
+  acceptanceCriteria?: string;
   notes?: string;
-  testedById?: number;
-  testedAt?: string;
+  createdAt?: string;
 }
 
-interface BrdTestCaseChecklistProps {
+interface BrdFunctionalRequirementsProps {
   brdId: number;
-  testCases: BrdTestCase[];
-  onUpdateTestCase: (testCase: BrdTestCase) => void;
-  onAddTestCase: (testCase: Omit<BrdTestCase, "id">) => void;
-  onDeleteTestCase: (testCaseId: number) => void;
+  functionalRequirements: FunctionalRequirement[];
+  onUpdateFunctionalRequirement: (requirement: FunctionalRequirement) => void;
+  onAddFunctionalRequirement: (requirement: Omit<FunctionalRequirement, "id" | "requirementId">) => void;
+  onDeleteFunctionalRequirement: (requirementId: number) => void;
 }
 
-export function BrdTestCaseChecklist({
+export function BrdFunctionalRequirements({
   brdId,
-  testCases,
-  onUpdateTestCase,
-  onAddTestCase,
-  onDeleteTestCase
-}: BrdTestCaseChecklistProps) {
+  functionalRequirements,
+  onUpdateFunctionalRequirement,
+  onAddFunctionalRequirement,
+  onDeleteFunctionalRequirement
+}: BrdFunctionalRequirementsProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingTestCase, setEditingTestCase] = useState<BrdTestCase | null>(null);
-  const [newTestCase, setNewTestCase] = useState({
+  const [editingRequirement, setEditingRequirement] = useState<FunctionalRequirement | null>(null);
+  const [newRequirement, setNewRequirement] = useState({
     title: "",
     description: "",
-    expectedResult: "",
+    priority: "Medium" as const,
+    acceptanceCriteria: "",
     notes: ""
   });
 
@@ -78,64 +88,76 @@ export function BrdTestCaseChecklist({
     );
   };
 
-  const handleStatusChange = (testCase: BrdTestCase, newStatus: "Pass" | "Fail" | "Not Executed") => {
-    onUpdateTestCase({
-      ...testCase,
-      status: newStatus,
-      testedAt: new Date().toISOString()
-    });
-  };
-
-  const handleAddTestCase = () => {
-    if (!newTestCase.title.trim()) {
-      return; // Don't add empty test cases
-    }
-
-    const testCase = {
-      brdId,
-      testCaseId: `TC-${String(testCases.length + 1).padStart(3, '0')}`,
-      title: newTestCase.title,
-      description: newTestCase.description,
-      expectedResult: newTestCase.expectedResult,
-      status: "Not Executed" as const,
-      notes: newTestCase.notes
+  const getPriorityBadge = (priority: string) => {
+    const variants: Record<string, "default" | "secondary" | "destructive"> = {
+      "High": "destructive",
+      "Medium": "default",
+      "Low": "secondary"
     };
 
-    onAddTestCase(testCase);
-    setNewTestCase({ title: "", description: "", expectedResult: "", notes: "" });
+    return (
+      <Badge variant={variants[priority] || "secondary"}>
+        {priority}
+      </Badge>
+    );
+  };
+
+  const handleAddFunctionalRequirement = () => {
+    if (!newRequirement.title.trim()) {
+      return;
+    }
+
+    const requirement = {
+      brdId,
+      title: newRequirement.title,
+      description: newRequirement.description,
+      priority: newRequirement.priority,
+      status: "Not Executed" as const,
+      acceptanceCriteria: newRequirement.acceptanceCriteria,
+      notes: newRequirement.notes
+    };
+
+    onAddFunctionalRequirement(requirement);
+    setNewRequirement({ 
+      title: "", 
+      description: "", 
+      priority: "Medium", 
+      acceptanceCriteria: "", 
+      notes: "" 
+    });
     setShowAddForm(false);
   };
 
-  const handleEditTestCase = (testCase: BrdTestCase) => {
-    setEditingTestCase({ ...testCase });
-    setEditingId(testCase.id);
+  const handleEditRequirement = (requirement: FunctionalRequirement) => {
+    setEditingRequirement({ ...requirement });
+    setEditingId(requirement.id);
   };
 
   const handleSaveEdit = () => {
-    if (editingTestCase) {
-      onUpdateTestCase(editingTestCase);
-      setEditingTestCase(null);
+    if (editingRequirement) {
+      onUpdateFunctionalRequirement(editingRequirement);
+      setEditingRequirement(null);
       setEditingId(null);
     }
   };
 
   const handleCancelEdit = () => {
-    setEditingTestCase(null);
+    setEditingRequirement(null);
     setEditingId(null);
   };
 
-  const handleDeleteTestCase = (testCaseId: number) => {
-    if (confirm("Are you sure you want to delete this test case?")) {
-      onDeleteTestCase(testCaseId);
+  const handleDeleteRequirement = (requirementId: number) => {
+    if (confirm("Are you sure you want to delete this functional requirement?")) {
+      onDeleteFunctionalRequirement(requirementId);
     }
   };
 
   // Calculate statistics
   const stats = {
-    total: testCases.length,
-    passed: testCases.filter(tc => tc.status === "Pass").length,
-    failed: testCases.filter(tc => tc.status === "Fail").length,
-    notExecuted: testCases.filter(tc => tc.status === "Not Executed").length
+    total: functionalRequirements.length,
+    passed: functionalRequirements.filter(req => req.status === "Pass").length,
+    failed: functionalRequirements.filter(req => req.status === "Fail").length,
+    notExecuted: functionalRequirements.filter(req => req.status === "Not Executed").length
   };
 
   const passRate = stats.total > 0 ? Math.round((stats.passed / stats.total) * 100) : 0;
@@ -145,17 +167,20 @@ export function BrdTestCaseChecklist({
       {/* Statistics */}
       <Card>
         <CardHeader>
-          <CardTitle>Test Execution Summary</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Functional Requirements Summary
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-              <div className="text-sm text-gray-500">Total Tests</div>
+              <div className="text-sm text-gray-500">Total Requirements</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">{stats.passed}</div>
-              <div className="text-sm text-gray-500">Passed</div>
+              <div className="text-sm text-gray-500">Satisfied</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-red-600">{stats.failed}</div>
@@ -163,54 +188,69 @@ export function BrdTestCaseChecklist({
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-orange-600">{passRate}%</div>
-              <div className="text-sm text-gray-500">Pass Rate</div>
+              <div className="text-sm text-gray-500">Success Rate</div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Test Cases List */}
+      {/* Functional Requirements List */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Test Cases</CardTitle>
+          <CardTitle>Functional Requirements</CardTitle>
           <Button 
             onClick={() => setShowAddForm(true)}
             size="sm"
             className="flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Add Test Case
+            Add Functional Requirement
           </Button>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Add New Test Case Form */}
+            {/* Add New Functional Requirement Form */}
             {showAddForm && (
               <Card className="border-dashed">
                 <CardContent className="pt-6">
                   <div className="space-y-4">
                     <Input
-                      placeholder="Test case title"
-                      value={newTestCase.title}
-                      onChange={(e) => setNewTestCase(prev => ({
+                      placeholder="Functional requirement title"
+                      value={newRequirement.title}
+                      onChange={(e) => setNewRequirement(prev => ({
                         ...prev,
                         title: e.target.value
                       }))}
                     />
                     <Textarea
                       placeholder="Description"
-                      value={newTestCase.description}
-                      onChange={(e) => setNewTestCase(prev => ({
+                      value={newRequirement.description}
+                      onChange={(e) => setNewRequirement(prev => ({
                         ...prev,
                         description: e.target.value
                       }))}
                     />
+                    <Select
+                      value={newRequirement.priority}
+                      onValueChange={(value: "High" | "Medium" | "Low") => 
+                        setNewRequirement(prev => ({ ...prev, priority: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="High">High</SelectItem>
+                        <SelectItem value="Medium">Medium</SelectItem>
+                        <SelectItem value="Low">Low</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <Textarea
-                      placeholder="Expected result"
-                      value={newTestCase.expectedResult}
-                      onChange={(e) => setNewTestCase(prev => ({
+                      placeholder="Acceptance criteria"
+                      value={newRequirement.acceptanceCriteria}
+                      onChange={(e) => setNewRequirement(prev => ({
                         ...prev,
-                        expectedResult: e.target.value
+                        acceptanceCriteria: e.target.value
                       }))}
                     />
                     <div className="flex justify-end space-x-2">
@@ -221,9 +261,9 @@ export function BrdTestCaseChecklist({
                         <X className="h-4 w-4 mr-2" />
                         Cancel
                       </Button>
-                      <Button onClick={handleAddTestCase}>
+                      <Button onClick={handleAddFunctionalRequirement}>
                         <Save className="h-4 w-4 mr-2" />
-                        Add Test Case
+                        Add Requirement
                       </Button>
                     </div>
                   </div>
@@ -231,22 +271,23 @@ export function BrdTestCaseChecklist({
               </Card>
             )}
 
-            {/* Test Cases */}
-            {testCases.map((testCase) => (
-              <Card key={testCase.id} className="border-l-4 border-l-blue-200">
+            {/* Functional Requirements */}
+            {functionalRequirements.map((requirement) => (
+              <Card key={requirement.id} className="border-l-4 border-l-blue-200">
                 <CardContent className="pt-6">
-                  {editingId === testCase.id && editingTestCase ? (
+                  {editingId === requirement.id && editingRequirement ? (
                     // Edit Mode
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline">{testCase.testCaseId}</Badge>
-                        {getStatusBadge(testCase.status)}
+                        <Badge variant="outline">{requirement.requirementId}</Badge>
+                        {getStatusBadge(requirement.status)}
+                        {getPriorityBadge(requirement.priority)}
                       </div>
                       
                       <Input
-                        placeholder="Test case title"
-                        value={editingTestCase.title}
-                        onChange={(e) => setEditingTestCase(prev => prev ? {
+                        placeholder="Requirement title"
+                        value={editingRequirement.title}
+                        onChange={(e) => setEditingRequirement(prev => prev ? {
                           ...prev,
                           title: e.target.value
                         } : null)}
@@ -254,26 +295,42 @@ export function BrdTestCaseChecklist({
                       
                       <Textarea
                         placeholder="Description"
-                        value={editingTestCase.description || ""}
-                        onChange={(e) => setEditingTestCase(prev => prev ? {
+                        value={editingRequirement.description || ""}
+                        onChange={(e) => setEditingRequirement(prev => prev ? {
                           ...prev,
                           description: e.target.value
                         } : null)}
                       />
+
+                      <Select
+                        value={editingRequirement.priority}
+                        onValueChange={(value: "High" | "Medium" | "Low") => 
+                          setEditingRequirement(prev => prev ? { ...prev, priority: value } : null)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select priority" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="High">High</SelectItem>
+                          <SelectItem value="Medium">Medium</SelectItem>
+                          <SelectItem value="Low">Low</SelectItem>
+                        </SelectContent>
+                      </Select>
                       
                       <Textarea
-                        placeholder="Expected result"
-                        value={editingTestCase.expectedResult || ""}
-                        onChange={(e) => setEditingTestCase(prev => prev ? {
+                        placeholder="Acceptance criteria"
+                        value={editingRequirement.acceptanceCriteria || ""}
+                        onChange={(e) => setEditingRequirement(prev => prev ? {
                           ...prev,
-                          expectedResult: e.target.value
+                          acceptanceCriteria: e.target.value
                         } : null)}
                       />
                       
                       <Textarea
                         placeholder="Notes"
-                        value={editingTestCase.notes || ""}
-                        onChange={(e) => setEditingTestCase(prev => prev ? {
+                        value={editingRequirement.notes || ""}
+                        onChange={(e) => setEditingRequirement(prev => prev ? {
                           ...prev,
                           notes: e.target.value
                         } : null)}
@@ -283,11 +340,11 @@ export function BrdTestCaseChecklist({
                       <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center space-x-2">
                           <Checkbox
-                            id={`edit-pass-${testCase.id}`}
-                            checked={editingTestCase.status === "Pass"}
+                            id={`edit-pass-${requirement.id}`}
+                            checked={editingRequirement.status === "Pass"}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setEditingTestCase(prev => prev ? {
+                                setEditingRequirement(prev => prev ? {
                                   ...prev,
                                   status: "Pass"
                                 } : null);
@@ -295,20 +352,20 @@ export function BrdTestCaseChecklist({
                             }}
                           />
                           <label 
-                            htmlFor={`edit-pass-${testCase.id}`}
+                            htmlFor={`edit-pass-${requirement.id}`}
                             className="text-sm font-medium text-green-600"
                           >
-                            Pass
+                            Satisfied
                           </label>
                         </div>
 
                         <div className="flex items-center space-x-2">
                           <Checkbox
-                            id={`edit-fail-${testCase.id}`}
-                            checked={editingTestCase.status === "Fail"}
+                            id={`edit-fail-${requirement.id}`}
+                            checked={editingRequirement.status === "Fail"}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setEditingTestCase(prev => prev ? {
+                                setEditingRequirement(prev => prev ? {
                                   ...prev,
                                   status: "Fail"
                                 } : null);
@@ -316,20 +373,20 @@ export function BrdTestCaseChecklist({
                             }}
                           />
                           <label 
-                            htmlFor={`edit-fail-${testCase.id}`}
+                            htmlFor={`edit-fail-${requirement.id}`}
                             className="text-sm font-medium text-red-600"
                           >
-                            Fail
+                            Failed
                           </label>
                         </div>
 
                         <div className="flex items-center space-x-2">
                           <Checkbox
-                            id={`edit-not-executed-${testCase.id}`}
-                            checked={editingTestCase.status === "Not Executed"}
+                            id={`edit-not-executed-${requirement.id}`}
+                            checked={editingRequirement.status === "Not Executed"}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setEditingTestCase(prev => prev ? {
+                                setEditingRequirement(prev => prev ? {
                                   ...prev,
                                   status: "Not Executed"
                                 } : null);
@@ -337,10 +394,10 @@ export function BrdTestCaseChecklist({
                             }}
                           />
                           <label 
-                            htmlFor={`edit-not-executed-${testCase.id}`}
+                            htmlFor={`edit-not-executed-${requirement.id}`}
                             className="text-sm font-medium text-gray-600"
                           >
-                            Not Executed
+                            Not Evaluated
                           </label>
                         </div>
                       </div>
@@ -364,16 +421,17 @@ export function BrdTestCaseChecklist({
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="outline">{testCase.testCaseId}</Badge>
-                          {getStatusBadge(testCase.status)}
+                          <Badge variant="outline">{requirement.requirementId}</Badge>
+                          {getStatusBadge(requirement.status)}
+                          {getPriorityBadge(requirement.priority)}
                         </div>
-                        <h4 className="font-medium mb-2">{testCase.title}</h4>
-                        {testCase.description && (
-                          <p className="text-sm text-gray-600 mb-2">{testCase.description}</p>
+                        <h4 className="font-medium mb-2">{requirement.title}</h4>
+                        {requirement.description && (
+                          <p className="text-sm text-gray-600 mb-2">{requirement.description}</p>
                         )}
-                        {testCase.expectedResult && (
-                          <div className="text-sm">
-                            <strong>Expected:</strong> {testCase.expectedResult}
+                        {requirement.acceptanceCriteria && (
+                          <div className="text-sm mb-2">
+                            <strong>Acceptance Criteria:</strong> {requirement.acceptanceCriteria}
                           </div>
                         )}
                       </div>
@@ -381,18 +439,18 @@ export function BrdTestCaseChecklist({
                       {/* Action Controls */}
                       <div className="flex flex-col items-end gap-2 ml-4">
                         <div className="flex items-center gap-2">
-                          {getStatusIcon(testCase.status)}
+                          {getStatusIcon(requirement.status)}
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleEditTestCase(testCase)}
+                            onClick={() => handleEditRequirement(requirement)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeleteTestCase(testCase.id)}
+                            onClick={() => handleDeleteRequirement(requirement.id)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -401,18 +459,18 @@ export function BrdTestCaseChecklist({
                     </div>
                   )}
 
-                  {testCase.notes && !editingId && (
+                  {requirement.notes && !editingId && (
                     <div className="mt-3 p-2 bg-yellow-50 border-l-4 border-yellow-200">
-                      <p className="text-sm">{testCase.notes}</p>
+                      <p className="text-sm">{requirement.notes}</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
             ))}
 
-            {testCases.length === 0 && !showAddForm && (
+            {functionalRequirements.length === 0 && !showAddForm && (
               <div className="text-center py-8 text-gray-500">
-                No test cases defined yet. Click "Add Test Case" to get started.
+                No functional requirements defined yet. Click "Add Functional Requirement" to get started.
               </div>
             )}
           </div>

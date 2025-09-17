@@ -36,7 +36,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { BrdDocumentForm } from "@/components/brd/brd-document-form";
-import { BrdTestCaseChecklist } from "@/components/brd/brd-test-case-checklist";
+import { BrdFunctionalRequirements } from "@/components/brd/brd-test-case-checklist";
 import { useToast } from "@/hooks/use-toast";
 import { MainLayout } from "@/components/layout/main-layout";
 import { 
@@ -190,105 +190,105 @@ export default function BrdDocumentsPage() {
     },
   });
 
-  // Add test case mutation
-  const addTestCaseMutation = useMutation({
-    mutationFn: async ({ brdId, testCase }: { brdId: number; testCase: any }) => {
-      const response = await fetch(`/api/brd-documents/${brdId}/test-cases`, {
+  // Add functional requirement mutation
+  const addFunctionalRequirementMutation = useMutation({
+    mutationFn: async ({ brdId, functionalRequirement }: { brdId: number; functionalRequirement: any }) => {
+      const response = await fetch(`/api/brd-documents/${brdId}/functional-requirements`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(testCase),
+        body: JSON.stringify(functionalRequirement),
       });
-      if (!response.ok) throw new Error("Failed to add test case");
+      if (!response.ok) throw new Error("Failed to add functional requirement");
       return response.json();
     },
-    onSuccess: (newTestCase) => {
-      // Update the selected document's test cases immediately
+    onSuccess: (newRequirement) => {
+      // Update the selected document's functional requirements immediately
       if (selectedDocument) {
         const updatedDocument = {
           ...selectedDocument,
-          testCases: [...(selectedDocument.testCases || []), newTestCase]
+          functionalRequirements: [...(selectedDocument.functionalRequirements || []), newRequirement]
         };
         setSelectedDocument(updatedDocument);
       }
 
       queryClient.invalidateQueries({ queryKey: ["/api/brd-documents"] });
-      toast({ title: "Success", description: "Test case added successfully" });
+      toast({ title: "Success", description: "Functional requirement added successfully" });
     },
     onError: (error) => {
-      console.error("Add test case error:", error);
+      console.error("Add functional requirement error:", error);
       toast({ 
         title: "Error", 
-        description: "Failed to add test case",
+        description: "Failed to add functional requirement",
         variant: "destructive"
       });
     },
   });
 
-  // Update test case mutation
-  const updateTestCaseMutation = useMutation({
-    mutationFn: async ({ testCaseId, testCase }: { testCaseId: number; testCase: any }) => {
-      const response = await fetch(`/api/brd-documents/test-cases/${testCaseId}`, {
+  // Update functional requirement mutation
+  const updateFunctionalRequirementMutation = useMutation({
+    mutationFn: async ({ requirementId, functionalRequirement }: { requirementId: number; functionalRequirement: any }) => {
+      const response = await fetch(`/api/brd-documents/functional-requirements/${requirementId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(testCase),
+        body: JSON.stringify(functionalRequirement),
       });
-      if (!response.ok) throw new Error("Failed to update test case");
+      if (!response.ok) throw new Error("Failed to update functional requirement");
       return response.json();
     },
-    onSuccess: (updatedTestCase) => {
-      // Update the selected document's test cases immediately
-      if (selectedDocument && selectedDocument.testCases) {
-        const updatedTestCases = selectedDocument.testCases.map((tc: any) => 
-          tc.id === updatedTestCase.id ? updatedTestCase : tc
+    onSuccess: (updatedRequirement) => {
+      // Update the selected document's functional requirements immediately
+      if (selectedDocument && selectedDocument.functionalRequirements) {
+        const updatedRequirements = selectedDocument.functionalRequirements.map((req: any) => 
+          req.id === updatedRequirement.id ? updatedRequirement : req
         );
         const updatedDocument = {
           ...selectedDocument,
-          testCases: updatedTestCases
+          functionalRequirements: updatedRequirements
         };
         setSelectedDocument(updatedDocument);
       }
 
       queryClient.invalidateQueries({ queryKey: ["/api/brd-documents", selectedProjectId] });
-      toast({ title: "Success", description: "Test case updated successfully" });
+      toast({ title: "Success", description: "Functional requirement updated successfully" });
     },
     onError: (error) => {
-      console.error("Update test case error:", error);
+      console.error("Update functional requirement error:", error);
       toast({ 
         title: "Error", 
-        description: "Failed to update test case",
+        description: "Failed to update functional requirement",
         variant: "destructive"
       });
     },
   });
 
-  // Delete test case mutation
-  const deleteTestCaseMutation = useMutation({
-    mutationFn: async (testCaseId: number) => {
-      const response = await fetch(`/api/brd-documents/test-cases/${testCaseId}`, {
+  // Delete functional requirement mutation
+  const deleteFunctionalRequirementMutation = useMutation({
+    mutationFn: async (requirementId: number) => {
+      const response = await fetch(`/api/brd-documents/functional-requirements/${requirementId}`, {
         method: "DELETE",
       });
-      if (!response.ok) throw new Error("Failed to delete test case");
+      if (!response.ok) throw new Error("Failed to delete functional requirement");
       return response.json();
     },
-    onSuccess: (_, testCaseId) => {
-      // Remove the test case from the selected document immediately
-      if (selectedDocument && selectedDocument.testCases) {
-        const updatedTestCases = selectedDocument.testCases.filter((tc: any) => tc.id !== testCaseId);
+    onSuccess: (_, requirementId) => {
+      // Remove the functional requirement from the selected document immediately
+      if (selectedDocument && selectedDocument.functionalRequirements) {
+        const updatedRequirements = selectedDocument.functionalRequirements.filter((req: any) => req.id !== requirementId);
         const updatedDocument = {
           ...selectedDocument,
-          testCases: updatedTestCases
+          functionalRequirements: updatedRequirements
         };
         setSelectedDocument(updatedDocument);
       }
 
       queryClient.invalidateQueries({ queryKey: ["/api/brd-documents", selectedProjectId] });
-      toast({ title: "Success", description: "Test case deleted successfully" });
+      toast({ title: "Success", description: "Functional requirement deleted successfully" });
     },
     onError: (error) => {
-      console.error("Delete test case error:", error);
+      console.error("Delete functional requirement error:", error);
       toast({ 
         title: "Error", 
-        description: "Failed to delete test case",
+        description: "Failed to delete functional requirement",
         variant: "destructive"
       });
     },
@@ -681,7 +681,7 @@ export default function BrdDocumentsPage() {
                       className="flex items-center gap-1"
                     >
                       <CheckCircle2 className="h-4 w-4" />
-                      Test Cases
+                      Functional Requirements
                     </Button>
                   </div>
 
@@ -783,26 +783,26 @@ export default function BrdDocumentsPage() {
             </DialogHeader>
 
             {showTestCases ? (
-              <BrdTestCaseChecklist
+              <BrdFunctionalRequirements
                 brdId={selectedDocument.id}
-                testCases={selectedDocument.testCases || []}
-                onUpdateTestCase={(testCase) => {
-                  if (testCase.id) {
-                    updateTestCaseMutation.mutate({ 
-                      testCaseId: testCase.id, 
-                      testCase 
+                functionalRequirements={selectedDocument.functionalRequirements || []}
+                onUpdateFunctionalRequirement={(functionalRequirement) => {
+                  if (functionalRequirement.id) {
+                    updateFunctionalRequirementMutation.mutate({ 
+                      requirementId: functionalRequirement.id, 
+                      functionalRequirement 
                     });
                   }
                 }}
-                onAddTestCase={(testCase) => {
-                  console.log("Adding test case:", testCase);
-                  addTestCaseMutation.mutate({ 
+                onAddFunctionalRequirement={(functionalRequirement) => {
+                  console.log("Adding functional requirement:", functionalRequirement);
+                  addFunctionalRequirementMutation.mutate({ 
                     brdId: selectedDocument.id, 
-                    testCase 
+                    functionalRequirement 
                   });
                 }}
-                onDeleteTestCase={(testCaseId) => {
-                  deleteTestCaseMutation.mutate(testCaseId);
+                onDeleteFunctionalRequirement={(requirementId) => {
+                  deleteFunctionalRequirementMutation.mutate(requirementId);
                 }}
               />
             ) : showVersionHistory ? (
