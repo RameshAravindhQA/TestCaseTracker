@@ -633,6 +633,9 @@ export interface IStorage {
   createRequirementTestCaseMapping(data: InsertRequirementTestCaseMapping): Promise<RequirementTestCaseMapping>;
   updateRequirementTestCaseMapping(id: number, data: Partial<RequirementTestCaseMapping>): Promise<RequirementTestCaseMapping | null>;
   deleteRequirementTestCaseMapping(id: number): Promise<boolean>;
+
+  // RTM Status Synchronization
+  syncRequirementStatusWithTestCases(functionalRequirementId: number): Promise<void>;
 }
 
 /**
@@ -666,7 +669,7 @@ class MemStorage implements IStorage {
   private traceabilityMatrixes: TraceabilityMatrix[] = [];
 
   // RTM (Requirements Traceability Matrix) storage
-  private brdDocuments: BrdDocument[] = [];
+  private brdDocumentsStore: BrdDocument[] = []; // Renamed to avoid conflict with method name
   private functionalRequirements: FunctionalRequirement[] = [];
   private requirementTestCaseMappings: RequirementTestCaseMapping[] = [];
 
@@ -682,7 +685,7 @@ class MemStorage implements IStorage {
   private employeePermissions: { employeeId: number; permissions: any[] }[] = [];
 
   // BRD Documents storage
-  private brdDocuments: any[] = [];
+  private brdDocuments: any[] = []; // This seems to be a duplicate declaration, ensure consistency
   private brdVersions: any[] = [];
   private brdTestCases: any[] = [];
   private nextBrdId = 1;
@@ -697,7 +700,34 @@ class MemStorage implements IStorage {
     activities: [],
     customMarkers: [],
     bugComments: [], // Initialize bugComments
-    bugCommentReactions: [] // Initialize bugCommentReactions
+    bugCommentReactions: [], // Initialize bugCommentReactions
+    users: [], // Initialize users array
+    projects: [], // Initialize projects array
+    chats: [], // Initialize chats array
+    navadhitiProjects: [], // Initialize navadhitiProjects array
+    employees: [], // Initialize employees array
+    roles: [], // Initialize roles array
+    permissions: [], // Initialize permissions array
+    todosMap: new Map<number, any>(), // Initialize todosMap
+    todoListsMap: new Map<number, any>(), // Initialize todoListsMap
+    statusReviews: new Map<number, any>(), // Initialize statusReviews
+    employeeProjectHistory: [], // Initialize employeeProjectHistory
+    requestFormTypes: [],
+    requestFormOptions: [],
+    resourceRequests: [],
+    requestExtensions: [],
+    requestComments: [],
+    requestAttachments: [],
+    notifications: new Map<number, any>(),
+    flowDiagrams: new Map<string, any>(),
+    trackerProjects: [],
+    trackerFeatures: [],
+    trackerSubFeatures: [],
+    trackerWorkLogs: [],
+    trackerTimelineExtensions: [],
+    trackerDependencies: [],
+    trackerAuditLogs: [],
+    trackerCustomDropdowns: [],
   };
 
   // Employee Management Methods Implementation
@@ -706,7 +736,7 @@ class MemStorage implements IStorage {
   private technologyOptions: any[] = [];
   private departmentOptions: any[] = [];
   private navadhitiProjects: any[] = [];
-  private statusReviews = new Map<number, any>();
+  // private statusReviews = new Map<number, any>(); // Already declared in data
   private employeeProjectHistory: any[] = []; // Added for storing history
   private nextEmployeeId = 1;
 
@@ -1737,7 +1767,7 @@ class MemStorage implements IStorage {
     if (index === -1) return null;
 
     const updatedMarker = {
-      ...this.traceabilityMatrixes[index], // <-- This looks like a typo, should be this.traceabilityMarkers
+      ...this.traceabilityMarkers[index],
       ...data,
       updatedAt: new Date()
     };
@@ -4851,14 +4881,20 @@ class MemStorage implements IStorage {
 
   // BRD Documents Methods
   async getBrdDocuments(projectId?: number): Promise<BrdDocument[]> {
+    console.log(`Storage: getBrdDocuments called with projectId: ${projectId}`);
+    console.log(`Storage: Total BRD documents in storage: ${this.brdDocumentsStore.length}`);
+
     if (projectId) {
-      return this.brdDocuments.filter(doc => doc.projectId === projectId);
+      const filtered = this.brdDocumentsStore.filter(doc => doc.projectId === projectId);
+      console.log(`Storage: Found ${filtered.length} BRD documents for project ${projectId}:`,
+        filtered.map(doc => ({ id: doc.id, title: doc.title, documentId: doc.documentId, projectId: doc.projectId })));
+      return filtered;
     }
-    return this.brdDocuments;
+    return [...this.brdDocumentsStore];
   }
 
   async getBrdDocument(id: number): Promise<BrdDocument | null> {
-    return this.brdDocuments.find(doc => doc.id === id) || null;
+    return this.brdDocumentsStore.find(doc => doc.id === id) || null;
   }
 
   async createBrdDocument(data: InsertBrdDocument): Promise<BrdDocument> {
@@ -4872,7 +4908,7 @@ class MemStorage implements IStorage {
 
     // Generate document ID: BEG-REQ-001
     const projectPrefix = project.prefix || project.name.substring(0, 3).toUpperCase();
-    const existingDocsForProject = this.brdDocuments.filter(doc => doc.projectId === data.projectId);
+    const existingDocsForProject = this.brdDocumentsStore.filter(doc => doc.projectId === data.projectId);
     const nextSequence = existingDocsForProject.length + 1;
     const documentId = `${projectPrefix}-REQ-${nextSequence.toString().padStart(3, '0')}`;
 
@@ -4892,45 +4928,56 @@ class MemStorage implements IStorage {
       updatedAt: new Date()
     };
 
-    this.brdDocuments.push(brdDocument);
+    this.brdDocumentsStore.push(brdDocument);
     return brdDocument;
   }
 
   async updateBrdDocument(id: number, data: Partial<BrdDocument>): Promise<BrdDocument | null> {
-    const index = this.brdDocuments.findIndex(doc => doc.id === id);
+    const index = this.brdDocumentsStore.findIndex(doc => doc.id === id);
     if (index === -1) return null;
 
     const updatedDoc = {
-      ...this.brdDocuments[index],
+      ...this.brdDocumentsStore[index],
       ...data,
       updatedAt: new Date()
     };
-    this.brdDocuments[index] = updatedDoc;
+    this.brdDocumentsStore[index] = updatedDoc;
     return updatedDoc;
   }
 
   async deleteBrdDocument(id: number): Promise<boolean> {
-    const initialLength = this.brdDocuments.length;
-    this.brdDocuments = this.brdDocuments.filter(doc => doc.id !== id);
+    const initialLength = this.brdDocumentsStore.length;
+    this.brdDocumentsStore = this.brdDocumentsStore.filter(doc => doc.id !== id);
 
     // Also delete associated functional requirements
     this.functionalRequirements = this.functionalRequirements.filter(req => req.brdDocumentId !== id);
 
-    return this.brdDocuments.length < initialLength;
+    return this.brdDocumentsStore.length < initialLength;
   }
 
   // Functional Requirements Methods
   async getFunctionalRequirements(brdDocumentId?: number, projectId?: number): Promise<FunctionalRequirement[]> {
-    let requirements = this.functionalRequirements;
+    console.log(`Storage: getFunctionalRequirements called with brdDocumentId: ${brdDocumentId}, projectId: ${projectId}`);
+    console.log(`Storage: Total functional requirements in storage: ${this.functionalRequirements.length}`);
+
+    let results = [...this.functionalRequirements];
 
     if (brdDocumentId) {
-      requirements = requirements.filter(req => req.brdDocumentId === brdDocumentId);
-    }
-    if (projectId) {
-      requirements = requirements.filter(req => req.projectId === projectId);
+      results = results.filter(req => req.brdDocumentId === brdDocumentId);
+      console.log(`Storage: After filtering by brdDocumentId ${brdDocumentId}: ${results.length} requirements`);
     }
 
-    return requirements;
+    if (projectId) {
+      // Filter by project through BRD documents
+      const projectBrds = this.brdDocuments
+        .filter(brd => brd.projectId === projectId)
+        .map(brd => brd.id);
+      console.log(`Storage: BRD IDs for project ${projectId}:`, projectBrds);
+      results = results.filter(req => projectBrds.includes(req.brdDocumentId));
+      console.log(`Storage: After filtering by projectId ${projectId}: ${results.length} requirements`);
+    }
+
+    return results;
   }
 
   async getFunctionalRequirement(id: number): Promise<FunctionalRequirement | null> {
@@ -4938,36 +4985,40 @@ class MemStorage implements IStorage {
   }
 
   async createFunctionalRequirement(data: InsertFunctionalRequirement): Promise<FunctionalRequirement> {
-    const id = this.getNextId();
-
-    // Get BRD Document to generate nested ID
-    const brdDocument = this.brdDocuments.find(doc => doc.id === data.brdDocumentId);
+    // Check if BRD document exists
+    const brdDocument = await this.getBrdDocument(data.brdDocumentId);
     if (!brdDocument) {
       throw new Error(`BRD Document with ID ${data.brdDocumentId} not found`);
     }
 
-    // Generate nested auto ID: BEG-REQ-001-FR-001, BEG-REQ-001-FR-002, etc.
-    const existingReqsForBrd = this.functionalRequirements.filter(req => req.brdDocumentId === data.brdDocumentId);
-    const nextSequence = existingReqsForBrd.length + 1;
-    const requirementId = `${brdDocument.documentId}-FR-${nextSequence.toString().padStart(3, '0')}`;
+    const id = this.getNextId();
+    const now = new Date();
+
+    // Auto-generate requirement ID if not provided
+    let requirementId = data.requirementId;
+    if (!requirementId || requirementId.trim() === '') {
+      // Get existing functional requirements for this BRD document
+      const existingRequirements = this.functionalRequirements
+        .filter(req => req.brdDocumentId === data.brdDocumentId)
+        .map(req => req.requirementId)
+        .filter(id => id && id.match(/^REQ-(\d+)$/))
+        .map(id => parseInt(id.replace('REQ-', ''), 10))
+        .filter(num => !isNaN(num));
+
+      const nextNumber = existingRequirements.length > 0 ? Math.max(...existingRequirements) + 1 : 1;
+      requirementId = `REQ-${String(nextNumber).padStart(3, '0')}`;
+    }
 
     const functionalRequirement: FunctionalRequirement = {
+      ...data,
       id,
       requirementId,
-      brdDocumentId: data.brdDocumentId,
-      title: data.title,
-      description: data.description,
-      acceptanceCriteria: data.acceptanceCriteria,
-      priority: data.priority || "Medium",
-      complexity: data.complexity || "Medium",
-      status: data.status || "Draft",
-      projectId: data.projectId,
-      createdById: data.createdById,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      createdAt: now,
+      updatedAt: now
     };
 
     this.functionalRequirements.push(functionalRequirement);
+    console.log(`Storage: Created functional requirement with ID ${id}:`, functionalRequirement);
     return functionalRequirement;
   }
 
@@ -5097,6 +5148,3 @@ class MemStorage implements IStorage {
 export const storage = new MemStorage();
 
 export { MemStorage };
-
-import { desc, eq } from "drizzle-orm"; // Assuming drizzle-orm is used for schema operations
-

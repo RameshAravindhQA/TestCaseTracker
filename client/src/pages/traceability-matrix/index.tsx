@@ -330,11 +330,15 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {rtmData.brdDocuments.map((brd: any) => (
-                  <SelectItem key={brd.id} value={brd.id.toString()}>
-                    {brd.documentId} - {brd.title}
-                  </SelectItem>
-                ))}
+                {rtmData.brdDocuments && rtmData.brdDocuments.length > 0 ? (
+                  rtmData.brdDocuments.map((brd: any) => (
+                    <SelectItem key={brd.id} value={brd.id.toString()}>
+                      {brd.documentId} - {brd.title}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-documents" disabled>No BRD documents found</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>

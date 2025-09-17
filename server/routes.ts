@@ -6166,17 +6166,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create Functional Requirement
-  apiRouter.post("/brd-documents/:id/functional-requirements", isAuthenticated, async (req, res) => {
+  apiRouter.post("/brd-documents/:brdId/functional-requirements", isAuthenticated, async (req, res) => {
     try {
-      const brdId = parseInt(req.params.id);
-      const requirementData = {
-        ...req.body,
-        brdId,
-        createdById: req.session.userId
-      };
+      const brdId = parseInt(req.params.brdId);
+      console.log(`Creating functional requirement for BRD ID: ${brdId}`, req.body);
 
-      const requirement = await storage.createFunctionalRequirement(requirementData);
-      res.status(201).json(requirement);
+      const functionalRequirement = await storage.createFunctionalRequirement({
+        ...req.body,
+        brdDocumentId: brdId,
+        createdById: req.session.userId
+      });
+      res.json(functionalRequirement);
     } catch (error) {
       console.error("Error creating functional requirement:", error);
       res.status(500).json({ message: "Server error" });
@@ -6223,30 +6223,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================================================
 
   // Get RTM data for a project
-  apiRouter.get("/projects/:id/rtm", isAuthenticated, async (req, res) => {
+  apiRouter.get("/projects/:projectId/rtm", isAuthenticated, async (req, res) => {
     try {
-      const projectId = parseInt(req.params.id);
+      const projectId = parseInt(req.params.projectId);
+      console.log(`Fetching RTM data for project ${projectId}`);
 
-      // Get BRD documents with functional requirements
+      // Get BRD documents for the project
       const brdDocuments = await storage.getBrdDocuments(projectId);
+      console.log(`Found ${brdDocuments.length} BRD documents for project ${projectId}`);
+
+      // Get functional requirements for each BRD document
       const brdDocumentsWithRequirements = await Promise.all(
-        brdDocuments.map(async (doc: any) => {
-          const functionalRequirements = await storage.getFunctionalRequirements(doc.id);
-          
+        brdDocuments.map(async (brd) => {
+          const functionalRequirements = await storage.getFunctionalRequirements(brd.id, projectId);
+          console.log(`Found ${functionalRequirements.length} functional requirements for BRD ${brd.id}`);
+
           // Get mappings for each functional requirement
           const requirementsWithMappings = await Promise.all(
-            functionalRequirements.map(async (req: any) => {
-              const mappings = await storage.getRequirementTestCaseMappings(req.id);
+            functionalRequirements.map(async (req) => {
+              const mappings = await storage.getRequirementTestCaseMappings(req.id, undefined, projectId);
               return { ...req, mappings };
             })
           );
 
-          return { ...doc, functionalRequirements: requirementsWithMappings };
+          return { ...brd, functionalRequirements: requirementsWithMappings };
         })
       );
 
       // Get test cases for the project
       const testCases = await storage.getTestCasesByProject(projectId);
+      console.log(`Found ${testCases.length} test cases for project ${projectId}`);
 
       res.json({
         brdDocuments: brdDocumentsWithRequirements,
