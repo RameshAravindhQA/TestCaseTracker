@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileDown, Calendar, TrendingUp, Clock, Target, Filter, FileText, BarChart3, Eye, Users } from 'lucide-react';
+import { FileDown, Calendar, TrendingUp, Clock, Target, Filter, FileText, BarChart3, Eye, Users, X } from 'lucide-react';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -21,6 +21,7 @@ import { autoTable } from 'jspdf-autotable';
 import { toast } from '@/hooks/use-toast';
 import { StatusBadge } from '@/components/ui/status-badge';
 import _ from 'lodash'; // Import lodash
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   LineChart,
   Line,
@@ -87,7 +88,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
   });
 
   // Fetch employees data for showing assigned names
-  const { data: employeesData } = useQuery({
+  const { data: employeesData = [] } = useQuery({
     queryKey: ['/api/employees'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/employees');
@@ -110,6 +111,8 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
   const [isGeneratingReport, setIsGeneratingReport] = useState(false); // State to show summary report
   const [showSummaryReport, setShowSummaryReport] = useState(false); // State to show summary report
   const [exporting, setExporting] = useState(false); // State for PDF export loading indicator
+  const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
+  const [isEmployeeDropdownOpen, setIsEmployeeDropdownOpen] = useState(false);
 
 
   // Fetch project-specific data when project changes
@@ -151,11 +154,16 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
     enabled: !!selectedProjectId,
   });
 
-  // Fetch work logs for reports
-  const { data: workLogsData } = useQuery({
-    queryKey: [`/api/tracker/work-logs`, selectedProjectId],
+  // Fetch work logs with filters
+  const { data: workLogs = [] } = useQuery({
+    queryKey: ['/api/tracker/work-logs', projectId, selectedFeature, selectedSubFeature],
     queryFn: async () => {
-      const response = await apiRequest('GET', `/api/tracker/work-logs?projectId=${selectedProjectId || ''}`);
+      const params = new URLSearchParams();
+      if (projectId) params.append('projectId', projectId.toString());
+      if (selectedFeature !== 'all') params.append('featureId', selectedFeature);
+      if (selectedSubFeature !== 'all') params.append('subFeatureId', selectedSubFeature);
+
+      const response = await apiRequest('GET', `/api/tracker/work-logs?${params}`);
       if (!response.ok) throw new Error('Failed to fetch work logs');
       return response.json();
     },
@@ -188,10 +196,28 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
     setSelectedStatus('all');
     setSelectedWorkType('all');
     setDateRange('all');
-    setStartDate('');
-    setEndDate('');
     setSearchQuery('');
+    setSelectedEmployees([]);
     setCurrentPage(1);
+  };
+
+  const handleEmployeeToggle = (employeeId: number) => {
+    setSelectedEmployees(prev => 
+      prev.includes(employeeId) 
+        ? prev.filter(id => id !== employeeId)
+        : [...prev, employeeId]
+    );
+  };
+
+  const removeEmployee = (employeeId: number) => {
+    setSelectedEmployees(prev => prev.filter(id => id !== employeeId));
+  };
+
+  const getSelectedEmployeeNames = () => {
+    return employeesData
+      .filter((emp: any) => selectedEmployees.includes(emp.id))
+      .map((emp: any) => `${emp.firstName} ${emp.lastName}`)
+      .join(', ');
   };
 
   const generateSummaryReport = async () => {
@@ -204,6 +230,55 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
     setShowSummaryReport(true);
   };
 
+
+  // Filter data based on selections
+  const filteredData = useMemo(() => {
+    if (!currentSubFeatures) return [];
+
+    return currentSubFeatures.filter(sf => {
+      // Feature filter
+      if (selectedFeature !== 'all' && sf.featureId !== parseInt(selectedFeature)) {
+        return false;
+      }
+
+      // Sub-feature filter
+      if (selectedSubFeature !== 'all' && sf.id !== parseInt(selectedSubFeature)) {
+        return false;
+      }
+
+      // Department filter
+      if (selectedDepartment !== 'all' && sf.department !== selectedDepartment) {
+        return false;
+      }
+
+      // Status filter
+      if (selectedStatus !== 'all' && sf.status !== selectedStatus) {
+        return false;
+      }
+
+      // Work type filter
+      if (selectedWorkType !== 'all' && sf.workType !== selectedWorkType) {
+        return false;
+      }
+
+      // Employee filter
+      if (selectedEmployees.length > 0) {
+        const hasSelectedEmployee = sf.assignedEmployeeIds && 
+          sf.assignedEmployeeIds.some((empId: number) => selectedEmployees.includes(empId));
+        if (!hasSelectedEmployee) {
+          return false;
+        }
+      }
+
+      // Search filter
+      if (searchQuery && !sf.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+          !sf.description?.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [currentSubFeatures, selectedFeature, selectedSubFeature, selectedDepartment, selectedStatus, selectedWorkType, selectedEmployees, searchQuery]);
 
   // Apply all filters to get filtered data
   const getFilteredData = () => {
@@ -244,6 +319,16 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
     if (selectedWorkType !== 'all') {
       filteredSFs = filteredSFs.filter(sf => sf.workType === selectedWorkType);
       filteredWLs = filteredWLs.filter(wl => wl.workType === selectedWorkType);
+    }
+
+    // Employee filter
+    if (selectedEmployees.length > 0) {
+      filteredSFs = filteredSFs.filter(sf => 
+        sf.assignedEmployeeIds && sf.assignedEmployeeIds.some(empId => selectedEmployees.includes(empId))
+      );
+      filteredWLs = filteredWLs.filter(wl => 
+        wl.assignedEmployeeId && selectedEmployees.includes(wl.assignedEmployeeId)
+      );
     }
 
     // Date range filter
@@ -580,17 +665,13 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
           wl.workDate,
           feature?.name || subFeature?.name || 'Unknown Feature',
           subFeature?.name || 'N/A',
-          wl.workType || 'N/A',
-          `${wl.hoursWorked || 0}h`,
-          `${days}d`,
-          wl.status || 'N/A',
           (wl.description || '').substring(0, 30) + '...'
         ];
       });
 
       autoTable(doc, {
         startY: yPos,
-        head: [['Log ID', 'Date', 'Feature', 'Sub-Feature', 'Work Type', 'Hours', 'Days', 'Status', 'Description']],
+        head: [['Log ID', 'Date', 'Feature', 'Sub-Feature', 'Description']],
         body: workLogTableData,
         styles: { fontSize: 8 },
         headStyles: { fillColor: [59, 130, 246] },
@@ -863,6 +944,10 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                   // Reset other filters when project changes
                   setSelectedFeature('all');
                   setSelectedSubFeature('all');
+                  setSelectedDepartment('all');
+                  setSelectedStatus('all');
+                  setSelectedWorkType('all');
+                  setSelectedEmployees([]);
                 }}
               >
                 <SelectTrigger>
@@ -975,7 +1060,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
               <Label className="text-sm font-medium">Date Range:</Label>
               <Select value={dateRange} onValueChange={setDateRange}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="All Time" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Time</SelectItem>
@@ -986,6 +1071,105 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                   <SelectItem value="custom">Custom Range</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Employee Filter */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Employees ({selectedEmployees.length} selected):
+              </Label>
+
+              {/* Selected employees display */}
+              {selectedEmployees.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {employeesData
+                    .filter((emp: any) => selectedEmployees.includes(emp.id))
+                    .map((employee: any) => (
+                      <Badge key={employee.id} variant="secondary" className="text-xs">
+                        {employee.firstName} {employee.lastName}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto p-0 ml-1 hover:bg-transparent"
+                          onClick={() => removeEmployee(employee.id)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </Badge>
+                    ))}
+                </div>
+              )}
+
+              {/* Employee dropdown */}
+              <div className="relative">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEmployeeDropdownOpen(!isEmployeeDropdownOpen)}
+                  className="w-full justify-between"
+                >
+                  {selectedEmployees.length === 0 
+                    ? "Select Employees" 
+                    : `${selectedEmployees.length} employee${selectedEmployees.length === 1 ? '' : 's'} selected`
+                  }
+                  <Users className="h-4 w-4" />
+                </Button>
+
+                {isEmployeeDropdownOpen && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    <div className="p-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">Select Employees</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsEmployeeDropdownOpen(false)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {employeesData.map((employee: any) => (
+                        <div key={employee.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                          <Checkbox
+                            id={`employee-${employee.id}`}
+                            checked={selectedEmployees.includes(employee.id)}
+                            onCheckedChange={() => handleEmployeeToggle(employee.id)}
+                          />
+                          <label 
+                            htmlFor={`employee-${employee.id}`} 
+                            className="text-sm font-medium cursor-pointer flex items-center gap-2 flex-1"
+                          >
+                            {employee.profilePicture ? (
+                              <img
+                                src={employee.profilePicture}
+                                alt={`${employee.firstName} ${employee.lastName}`}
+                                className="h-6 w-6 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">
+                                {employee.firstName?.[0]}{employee.lastName?.[0]}
+                              </div>
+                            )}
+                            <div>
+                              <div className="font-medium">{employee.firstName} {employee.lastName}</div>
+                              {employee.department && (
+                                <div className="text-xs text-gray-500">{employee.department}</div>
+                              )}
+                            </div>
+                          </label>
+                        </div>
+                      ))}
+
+                      {employeesData.length === 0 && (
+                        <div className="p-4 text-center text-sm text-gray-500">
+                          No employees found
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Search Input */}
@@ -1152,7 +1336,8 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                         const assignedEmployeeNames = sf.assignedEmployeeIds ? 
                           employeesData?.filter((emp: any) => sf.assignedEmployeeIds.includes(emp.id))
                             .map((emp: any) => `${emp.firstName} ${emp.lastName}`)
-                            .join(', ') || '-' : '-';
+                            .join(', ') || 
+                          'Unassigned' : 'Unassigned';
 
                         return (
                           <tr key={sf.id}>
@@ -1197,38 +1382,30 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                       </tr>
                     </thead>
                     <tbody>
-                      {(() => {
-                        // Apply pagination to this group's work logs
-                        const groupWorkLogs = group.workLogs;
-                        const startIdx = (currentPage - 1) * logsPerPage;
-                        const endIdx = startIdx + logsPerPage;
-                        const paginatedGroupLogs = groupWorkLogs.slice(startIdx, endIdx);
+                      {filteredWorkLogs.map((wl, index) => {
+                        const subFeature = filteredSubFeatures.find(sf => sf.id === wl.subFeatureId);
+                        const assignedEmployee = employeesData?.find((emp: any) => emp.id === wl.assignedEmployeeId);
+                        const assignedName = assignedEmployee ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}` : 'Unassigned';
 
-                        return paginatedGroupLogs.map((wl) => {
-                          const subFeature = group.subFeatures.find(sf => sf.id === wl.subFeatureId);
-                          const assignedEmployee = employeesData?.find((emp: any) => emp.id === wl.assignedEmployeeId);
-                          const assignedName = assignedEmployee ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}` : 'Unassigned';
-
-                          return (
-                            <tr key={wl.id}>
-                              <td className="border border-gray-200 px-4 py-2">#{wl.id}</td>
-                              <td className="border border-gray-200 px-4 py-2">{subFeature?.name || 'Unknown'}</td>
-                              <td className="border border-gray-200 px-4 py-2 text-sm font-medium">
-                                {assignedName}
-                              </td>
-                              <td className="border border-gray-200 px-4 py-2">{wl.workDate}</td>
-                              <td className="border border-gray-200 px-4 py-2">{wl.hoursWorked}h</td>
-                              <td className="border border-gray-200 px-4 py-2">
-                                <StatusBadge status={wl.workType} />
-                              </td>
-                              <td className="border border-gray-200 px-4 py-2">
-                                <StatusBadge status={wl.status} />
-                              </td>
-                              <td className="border border-gray-200 px-4 py-2">{wl.description}</td>
-                            </tr>
-                          );
-                        });
-                      })()}
+                        return (
+                          <tr key={wl.id}>
+                            <td className="border border-gray-200 px-4 py-2">#{wl.id}</td>
+                            <td className="border border-gray-200 px-4 py-2">{subFeature?.name || 'Unknown'}</td>
+                            <td className="border border-gray-200 px-4 py-2 text-sm font-medium">
+                              {assignedName}
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2">{wl.workDate}</td>
+                            <td className="border border-gray-200 px-4 py-2">{wl.hoursWorked}h</td>
+                            <td className="border border-gray-200 px-4 py-2">
+                              <StatusBadge status={wl.workType} />
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2">
+                              <StatusBadge status={wl.status} />
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2">{wl.description}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
