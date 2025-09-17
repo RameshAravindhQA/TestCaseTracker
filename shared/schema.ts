@@ -1,5 +1,5 @@
 import { pgTable, text, serial, integer, boolean, timestamp, json, uuid, date, varchar, jsonb, decimal } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema, InferInsertModel, InferSelectModel } from "drizzle-zod";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 import { z } from "zod";
 
@@ -293,6 +293,84 @@ export type InsertDocumentFolder = z.infer<typeof insertDocumentFolderSchema>;
 
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+
+// BRD Documents model
+export const brdDocuments = pgTable("brd_documents", {
+  id: serial("id").primaryKey(),
+  documentId: text("document_id").notNull().unique(), // Auto-generated: BEG-REQ-001
+  title: text("title").notNull(),
+  description: text("description"),
+  version: text("version").default("1.0"),
+  status: text("status").$type<"Draft" | "Review" | "Approved" | "Obsolete">().notNull().default("Draft"),
+  priority: text("priority").$type<"High" | "Medium" | "Low">().default("Medium"),
+  projectId: integer("project_id").notNull(),
+  createdById: integer("created_by_id").notNull(),
+  approvedById: integer("approved_by_id"),
+  approvedAt: timestamp("approved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+export const insertBrdDocumentSchema = createInsertSchema(brdDocuments).omit({
+  id: true,
+  documentId: true, // Auto-generated
+  createdAt: true,
+  updatedAt: true,
+  approvedAt: true,
+});
+
+// Functional Requirements model
+export const functionalRequirements = pgTable("functional_requirements", {
+  id: serial("id").primaryKey(),
+  requirementId: text("requirement_id").notNull().unique(), // Auto-generated: BEG-REQ-001-FR-001
+  brdDocumentId: integer("brd_document_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  acceptanceCriteria: text("acceptance_criteria"),
+  priority: text("priority").$type<"High" | "Medium" | "Low">().default("Medium"),
+  complexity: text("complexity").$type<"High" | "Medium" | "Low">().default("Medium"),
+  status: text("status").$type<"Draft" | "Approved" | "In Progress" | "Completed" | "Rejected">().notNull().default("Draft"),
+  projectId: integer("project_id").notNull(),
+  createdById: integer("created_by_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+export const insertFunctionalRequirementSchema = createInsertSchema(functionalRequirements).omit({
+  id: true,
+  requirementId: true, // Auto-generated
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Requirements Test Case Mapping model (for RTM)
+export const requirementTestCaseMappings = pgTable("requirement_test_case_mappings", {
+  id: serial("id").primaryKey(),
+  functionalRequirementId: integer("functional_requirement_id").notNull(),
+  testCaseId: integer("test_case_id").notNull(),
+  status: text("status").$type<"PASS" | "FAIL" | "NOT_EXECUTED">().notNull().default("NOT_EXECUTED"),
+  executionDate: timestamp("execution_date"),
+  notes: text("notes"),
+  createdById: integer("created_by_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+export const insertRequirementTestCaseMappingSchema = createInsertSchema(requirementTestCaseMappings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types based on BRD and RTM schemas
+export type BrdDocument = typeof brdDocuments.$inferSelect;
+export type InsertBrdDocument = z.infer<typeof insertBrdDocumentSchema>;
+
+export type FunctionalRequirement = typeof functionalRequirements.$inferSelect;
+export type InsertFunctionalRequirement = z.infer<typeof insertFunctionalRequirementSchema>;
+
+export type RequirementTestCaseMapping = typeof requirementTestCaseMappings.$inferSelect;
+export type InsertRequirementTestCaseMapping = z.infer<typeof insertRequirementTestCaseMappingSchema>;
 
 // Customers model
 export const customers = pgTable("customers", {

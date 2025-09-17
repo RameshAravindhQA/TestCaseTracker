@@ -269,7 +269,7 @@ export function TrackerDashboard({ projects }: TrackerDashboardProps) {
       </div>
 
 
-      <div className="grid grid-cols-1 lg:grid-grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Project Completion Overview */}
         <Card>
           <CardHeader>
@@ -411,7 +411,6 @@ export function TrackerDashboard({ projects }: TrackerDashboardProps) {
           </div>
         </div>
       )}
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Overdue Projects */}
