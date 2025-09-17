@@ -66,6 +66,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
   const [testCaseViewDialogOpen, setTestCaseViewDialogOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<any>(null);
+  const [selectedModuleFilter, setSelectedModuleFilter] = useState<string>('all');
   // Removed treeViewMode state
 
   const { toast } = useToast();
@@ -148,15 +149,17 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
   });
 
   const handleCreateMapping = (testCaseId: number) => {
-    if (!selectedRequirement) return;
+    if (!selectedRequirement || !selectedProjectId) {
+      toast({ title: "Error", description: "Missing requirement or project information", variant: "destructive" });
+      return;
+    }
     
     console.log(`🔗 Creating mapping: Requirement ${selectedRequirement.id} -> Test Case ${testCaseId}`);
     createMappingMutation.mutate({
       functionalRequirementId: selectedRequirement.id,
       testCaseId,
       projectId: selectedProjectId,
-      status: "Not Executed",
-      createdById: 1 // Replace with actual user ID from session
+      status: "Not Executed"
     });
   };
 
@@ -230,6 +233,12 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
     }
 
     try {
+      console.log('🔄 Starting RTM PDF export...');
+      
+      // Dynamically import jsPDF to avoid SSR issues
+      const { jsPDF } = await import('jspdf');
+      console.log('✅ jsPDF loaded successfully');
+
       // Get current project details
       const currentProject = projects?.find(p => p.id === selectedProjectId);
       
@@ -247,216 +256,191 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
       const passPercentage = totalMappings > 0 ? Math.round((passedMappings / totalMappings) * 100) : 0;
       const failPercentage = totalMappings > 0 ? Math.round((failedMappings / totalMappings) * 100) : 0;
 
-      // Create a hidden div with the RTM content
-      const printDiv = document.createElement('div');
-      printDiv.style.position = 'absolute';
-      printDiv.style.left = '-9999px';
-      printDiv.style.width = '800px';
-      printDiv.style.backgroundColor = 'white';
-      printDiv.style.padding = '20px';
-      printDiv.style.fontFamily = 'Arial, sans-serif';
-      printDiv.style.fontSize = '12px';
+      // Create PDF document
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.width;
+      const pageHeight = doc.internal.pageSize.height;
+      const margin = 20;
+      let yPosition = margin;
 
-      // Build RTM content
-      let htmlContent = `
-        <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #333; margin-bottom: 10px;">Requirements Traceability Matrix</h1>
-          <h2 style="color: #666; font-weight: normal;">${selectedBrd.documentId} - ${selectedBrd.title}</h2>
-          <p style="color: #888; font-size: 14px;">Generated on ${new Date().toLocaleDateString()}</p>
-        </div>
+      // Add header
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text("Requirements Traceability Matrix", pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 10;
 
-        <div style="margin-bottom: 30px;">
-          <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Project Information</h3>
-          <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Project Name:</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${currentProject?.name || 'Unknown Project'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Project Description:</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${currentProject?.description || 'No description'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Project Status:</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${currentProject?.status || 'Active'}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Report Generated:</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${new Date().toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}</td>
-            </tr>
-          </table>
-        </div>
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${selectedBrd.documentId} - ${selectedBrd.title}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 6;
+      
+      doc.setFontSize(10);
+      doc.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 15;
 
-        <div style="margin-bottom: 30px;">
-          <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Document Summary</h3>
-          <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Document ID:</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${selectedBrd.documentId}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Title:</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${selectedBrd.title}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Total Requirements:</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${selectedBrd.functionalRequirements?.length || 0}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f5f5f5;">Total Mappings:</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${totalMappings}</td>
-            </tr>
-          </table>
-        </div>
+      // Project Information
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Project Information", margin, yPosition);
+      yPosition += 8;
 
-        <div style="margin-bottom: 30px;">
-          <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Test Execution Summary</h3>
-          <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #e8f5e8;">Passed:</td>
-              <td style="padding: 8px; border: 1px solid #ddd; color: #28a745; font-weight: bold;">${passedMappings} (${passPercentage}%)</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #fde8e8;">Failed:</td>
-              <td style="padding: 8px; border: 1px solid #ddd; color: #dc3545; font-weight: bold;">${failedMappings} (${failPercentage}%)</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f8f9fa;">Not Executed:</td>
-              <td style="padding: 8px; border: 1px solid #ddd; color: #6c757d; font-weight: bold;">${notExecutedMappings}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f0f8ff;">Overall Coverage:</td>
-              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">${totalMappings > 0 ? Math.round(((passedMappings + failedMappings) / totalMappings) * 100) : 0}%</td>
-            </tr>
-          </table>
-        </div>
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const projectInfo = [
+        `Project Name: ${currentProject?.name || 'Unknown Project'}`,
+        `Project Description: ${currentProject?.description || 'No description'}`,
+        `Project Status: ${currentProject?.status || 'Active'}`,
+        `Report Generated: ${new Date().toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })}`
+      ];
 
-        <div>
-          <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Detailed Traceability Matrix</h3>
-          <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-            <thead>
-              <tr style="background-color: #f8f9fa;">
-                <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Requirement ID</th>
-                <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Requirement Title</th>
-                <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Test Case ID</th>
-                <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Test Case Feature</th>
-                <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
+      projectInfo.forEach(info => {
+        if (yPosition > pageHeight - 20) {
+          doc.addPage();
+          yPosition = margin;
+        }
+        doc.text(info, margin, yPosition);
+        yPosition += 6;
+      });
+      yPosition += 10;
 
+      // Summary Statistics
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Test Execution Summary", margin, yPosition);
+      yPosition += 8;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const summaryStats = [
+        `Total Requirements: ${functionalReqs.length}`,
+        `Total Mappings: ${totalMappings}`,
+        `Passed: ${passedMappings} (${passPercentage}%)`,
+        `Failed: ${failedMappings} (${failPercentage}%)`,
+        `Not Executed: ${notExecutedMappings}`,
+        `Overall Coverage: ${totalMappings > 0 ? Math.round(((passedMappings + failedMappings) / totalMappings) * 100) : 0}%`
+      ];
+
+      summaryStats.forEach(stat => {
+        if (yPosition > pageHeight - 20) {
+          doc.addPage();
+          yPosition = margin;
+        }
+        doc.text(stat, margin, yPosition);
+        yPosition += 6;
+      });
+      yPosition += 10;
+
+      // Detailed Matrix Table
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Detailed Traceability Matrix", margin, yPosition);
+      yPosition += 10;
+
+      // Table headers
+      const headers = ['Req ID', 'Requirement Title', 'Test Case ID', 'Test Case Feature', 'Status'];
+      const columnWidths = [25, 50, 30, 45, 20];
+      let xPosition = margin;
+
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      
+      // Draw header row
+      headers.forEach((header, index) => {
+        doc.rect(xPosition, yPosition, columnWidths[index], 8);
+        doc.text(header, xPosition + 2, yPosition + 6);
+        xPosition += columnWidths[index];
+      });
+      yPosition += 8;
+
+      // Table data
+      doc.setFont("helvetica", "normal");
+      
       functionalReqs.forEach((req: any) => {
         if (req.mappings && req.mappings.length > 0) {
           req.mappings.forEach((mapping: any) => {
+            if (yPosition > pageHeight - 20) {
+              doc.addPage();
+              yPosition = margin;
+              
+              // Redraw headers on new page
+              xPosition = margin;
+              doc.setFont("helvetica", "bold");
+              headers.forEach((header, index) => {
+                doc.rect(xPosition, yPosition, columnWidths[index], 8);
+                doc.text(header, xPosition + 2, yPosition + 6);
+                xPosition += columnWidths[index];
+              });
+              yPosition += 8;
+              doc.setFont("helvetica", "normal");
+            }
+
             const testCase = rtmData.testCases?.find((tc: any) => tc.id === mapping.testCaseId);
-            const statusColor = mapping.status === 'Pass' ? '#28a745' : mapping.status === 'Fail' ? '#dc3545' : '#6c757d';
-            const statusBg = mapping.status === 'Pass' ? '#e8f5e8' : mapping.status === 'Fail' ? '#fde8e8' : '#f8f9fa';
-            htmlContent += `
-              <tr>
-                <td style="padding: 8px; border: 1px solid #ddd;">${req.requirementId || 'N/A'}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${req.title || 'N/A'}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${testCase?.testCaseId || 'Unknown'}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${testCase?.feature || testCase?.title || 'N/A'}</td>
-                <td style="padding: 8px; border: 1px solid #ddd; color: ${statusColor}; font-weight: bold; background-color: ${statusBg};">${mapping.status}</td>
-              </tr>
-            `;
+            const rowData = [
+              req.requirementId || 'N/A',
+              (req.title || 'N/A').substring(0, 25) + (req.title?.length > 25 ? '...' : ''),
+              testCase?.testCaseId || 'Unknown',
+              (testCase?.feature || testCase?.title || 'N/A').substring(0, 22) + ((testCase?.feature || testCase?.title)?.length > 22 ? '...' : ''),
+              mapping.status
+            ];
+
+            xPosition = margin;
+            rowData.forEach((data, index) => {
+              doc.rect(xPosition, yPosition, columnWidths[index], 8);
+              doc.text(data, xPosition + 2, yPosition + 6);
+              xPosition += columnWidths[index];
+            });
+            yPosition += 8;
           });
         } else {
-          htmlContent += `
-            <tr>
-              <td style="padding: 8px; border: 1px solid #ddd;">${req.requirementId || 'N/A'}</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">${req.title || 'N/A'}</td>
-              <td style="padding: 8px; border: 1px solid #ddd; color: #dc3545; background-color: #fde8e8;">No mappings</td>
-              <td style="padding: 8px; border: 1px solid #ddd;">-</td>
-              <td style="padding: 8px; border: 1px solid #ddd; color: #6c757d; background-color: #f8f9fa;">Not Mapped</td>
-            </tr>
-          `;
-        }
-      });
-
-      htmlContent += `
-            </tbody>
-          </table>
-        </div>
-
-        <div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
-          <h4 style="color: #333; margin-bottom: 10px;">Report Footer</h4>
-          <p style="font-size: 12px; color: #666; margin: 0;">
-            This Requirements Traceability Matrix was generated automatically from the Test Case Tracker system.<br>
-            Project: ${currentProject?.name || 'Unknown'} | Generated: ${new Date().toLocaleString()}<br>
-            Total Requirements: ${functionalReqs.length} | 
-            Total Test Mappings: ${totalMappings} | 
-            Pass Rate: ${passPercentage}%
-          </p>
-        </div>
-      `;
-
-      printDiv.innerHTML = htmlContent;
-      document.body.appendChild(printDiv);
-
-      // Wait for content to render
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Use html2canvas to capture the content with better error handling
-      const canvas = await html2canvas(printDiv, {
-        backgroundColor: '#ffffff',
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-        width: 800,
-        height: printDiv.scrollHeight
-      });
-
-      // Remove the temporary div
-      document.body.removeChild(printDiv);
-
-      // Create PDF
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgData = canvas.toDataURL('image/png', 0.8);
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pdfWidth - 20;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-      let yPosition = 10;
-      
-      // Add image to PDF (handle multi-page if needed)
-      if (imgHeight <= pdfHeight - 20) {
-        pdf.addImage(imgData, 'PNG', 10, yPosition, imgWidth, imgHeight);
-      } else {
-        // Multi-page handling
-        let remainingHeight = imgHeight;
-        let pagePosition = 0;
-        
-        while (remainingHeight > 0) {
-          const pageHeight = Math.min(remainingHeight, pdfHeight - 20);
-          
-          if (pagePosition > 0) {
-            pdf.addPage();
+          if (yPosition > pageHeight - 20) {
+            doc.addPage();
+            yPosition = margin;
+            
+            // Redraw headers on new page
+            xPosition = margin;
+            doc.setFont("helvetica", "bold");
+            headers.forEach((header, index) => {
+              doc.rect(xPosition, yPosition, columnWidths[index], 8);
+              doc.text(header, xPosition + 2, yPosition + 6);
+              xPosition += columnWidths[index];
+            });
+            yPosition += 8;
+            doc.setFont("helvetica", "normal");
           }
-          
-          pdf.addImage(imgData, 'PNG', 10, 10 - pagePosition, imgWidth, imgHeight);
-          pagePosition += pdfHeight - 20;
-          remainingHeight -= pdfHeight - 20;
+
+          const rowData = [
+            req.requirementId || 'N/A',
+            (req.title || 'N/A').substring(0, 25) + (req.title?.length > 25 ? '...' : ''),
+            'No mappings',
+            '-',
+            'Not Mapped'
+          ];
+
+          xPosition = margin;
+          rowData.forEach((data, index) => {
+            doc.rect(xPosition, yPosition, columnWidths[index], 8);
+            doc.text(data, xPosition + 2, yPosition + 6);
+            xPosition += columnWidths[index];
+          });
+          yPosition += 8;
         }
-      }
+      });
 
       // Save the PDF
       const fileName = `RTM_${currentProject?.name?.replace(/[^a-zA-Z0-9]/g, '_') || 'Project'}_${selectedBrd.documentId}_${new Date().toISOString().split('T')[0]}.pdf`;
-      pdf.save(fileName);
+      doc.save(fileName);
       
+      console.log('✅ RTM PDF export successful');
       toast({ title: "Success", description: "RTM exported to PDF successfully" });
+      
     } catch (error: any) {
-      console.error('PDF export error:', error);
+      console.error('❌ PDF export error:', error);
       toast({ 
         title: "Export Failed", 
         description: error.message || "Failed to export RTM to PDF. Please try again.", 
@@ -821,7 +805,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
 
       {/* Test Case Mapping Dialog */}
       <Dialog open={mappingDialogOpen} onOpenChange={setMappingDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Map Test Case to Requirement</DialogTitle>
             <DialogDescription>
@@ -830,59 +814,113 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
               )}
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-96 overflow-y-auto">
-            <div className="space-y-2">
-              {rtmData?.testCases && rtmData.testCases.length > 0 ? (
-                rtmData.testCases.map((testCase: any) => {
-                  const isAlreadyMapped = selectedRequirement?.mappings?.some((m: any) => m.testCaseId === testCase.id);
-                  return (
-                    <div
-                      key={testCase.id}
-                      className={`flex items-center justify-between p-3 border rounded-lg ${
-                        isAlreadyMapped ? 'bg-gray-100 opacity-50' : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex-1">
-                        <div className="font-medium">{testCase.testCaseId}</div>
-                        <div className="text-sm text-gray-600">{testCase.feature || testCase.title}</div>
-                        <div className="text-xs text-gray-500">
-                          Status: {testCase.status} | Priority: {testCase.priority}
-                        </div>
-                        {testCase.description && (
-                          <div className="text-xs text-gray-400 mt-1 line-clamp-2">
-                            {testCase.description}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewTestCase(testCase)}
-                          title="View test case details"
-                        >
-                          View
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={isAlreadyMapped}
-                          onClick={() => handleCreateMapping(testCase.id)}
-                        >
-                          {isAlreadyMapped ? 'Already Mapped' : 'Map'}
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <p>No test cases found for this project.</p>
-                  <p className="text-sm mt-2">Create test cases first to map them to requirements.</p>
-                </div>
-              )}
+          
+          {/* Module Filter */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <Label>Filter by Module:</Label>
+              <Select
+                value={selectedModuleFilter}
+                onValueChange={setSelectedModuleFilter}
+              >
+                <SelectTrigger className="w-64">
+                  <SelectValue placeholder="All Modules" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Modules</SelectItem>
+                  {modules.map((module) => (
+                    <SelectItem key={module.id} value={module.id.toString()}>
+                      {module.name} ({module.moduleId})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
+
+          <div className="max-h-96 overflow-y-auto">
+            <div className="space-y-2">
+              {(() => {
+                // Filter test cases by selected module
+                let filteredTestCases = rtmData?.testCases || [];
+                if (selectedModuleFilter && selectedModuleFilter !== 'all') {
+                  filteredTestCases = filteredTestCases.filter((tc: any) => 
+                    tc.moduleId === parseInt(selectedModuleFilter)
+                  );
+                }
+
+                if (filteredTestCases.length > 0) {
+                  return filteredTestCases.map((testCase: any) => {
+                    const isAlreadyMapped = selectedRequirement?.mappings?.some((m: any) => m.testCaseId === testCase.id);
+                    const module = modules.find(m => m.id === testCase.moduleId);
+                    
+                    return (
+                      <div
+                        key={testCase.id}
+                        className={`flex items-center justify-between p-3 border rounded-lg ${
+                          isAlreadyMapped ? 'bg-gray-100 opacity-50' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium">{testCase.testCaseId}</div>
+                            <Badge variant="outline" className="text-xs">
+                              {module?.name || 'Unknown Module'}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-gray-600">{testCase.feature || testCase.title}</div>
+                          <div className="text-xs text-gray-500">
+                            Status: {testCase.status} | Priority: {testCase.priority}
+                          </div>
+                          {testCase.description && (
+                            <div className="text-xs text-gray-400 mt-1 line-clamp-2">
+                              {testCase.description}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewTestCase(testCase)}
+                            title="View test case details"
+                          >
+                            View
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isAlreadyMapped || createMappingMutation.isPending}
+                            onClick={() => handleCreateMapping(testCase.id)}
+                          >
+                            {createMappingMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : isAlreadyMapped ? (
+                              'Already Mapped'
+                            ) : (
+                              'Map'
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  });
+                } else {
+                  return (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No test cases found{selectedModuleFilter !== 'all' ? ' for selected module' : ' for this project'}.</p>
+                      <p className="text-sm mt-2">Create test cases first to map them to requirements.</p>
+                    </div>
+                  );
+                }
+              })()}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMappingDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -5424,7 +5424,7 @@ export async function registerRoutes(app: Express): Server {
       console.log(`[API] Test case ${testCaseId} restored successfully`);
       res.json({ message: "Test case restored successfully", testCase: restoredTestCase });
     } catch (error) {
-      console.error("[API] Restore test case error:", error);
+      console.error("[API] Restore test caseerror:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
@@ -6275,16 +6275,15 @@ if (moduleId) {
   // Create requirement-test case mapping
   apiRouter.post("/rtm/mappings", isAuthenticated, async (req, res) => {
     try {
-      console.log(`🔗 Creating RTM mapping:`, req.body);
+      console.log(`🔗 Creating RTM mapping: ${JSON.stringify(req.body)}`);
+
       const mappingData = {
         ...req.body,
-        createdById: req.session.userId,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdById: req.session.userId!
       };
 
       const mapping = await storage.createRequirementTestCaseMapping(mappingData);
-      console.log(`✅ RTM mapping created:`, mapping);
+      console.log(`✅ RTM mapping created: ${JSON.stringify(mapping)}`);
 
       // Sync requirement status after creating mapping
       await storage.syncRequirementStatusWithTestCases(mappingData.functionalRequirementId);
@@ -6292,7 +6291,7 @@ if (moduleId) {
       res.status(201).json(mapping);
     } catch (error) {
       console.error("Create RTM mapping error:", error);
-      res.status(500).json({ error: "Failed to create mapping" });
+      res.status(500).json({ error: "Failed to create mapping", details: error.message });
     }
   });
 
@@ -7183,6 +7182,7 @@ if (moduleId) {
         }
       }
 
+      // Update the folder's parent
       const updatedFolder = await storage.updateDocumentFolder(folderId, req.body);
 
       // Create activity record

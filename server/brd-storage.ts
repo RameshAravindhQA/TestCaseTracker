@@ -163,7 +163,11 @@ async getFunctionalRequirements(brdId?: number, projectId?: number): Promise<any
   let results = [...this.data.functionalRequirements];
 
   if (brdId) {
-    results = results.filter(req => req.brdId === brdId || req.brdDocumentId === brdId);
+    // Use both brdId and brdDocumentId for compatibility
+    results = results.filter(req => 
+      req.brdId === brdId || 
+      req.brdDocumentId === brdId
+    );
   }
 
   // Get BRD document IDs for the project if projectId is provided
@@ -173,12 +177,27 @@ async getFunctionalRequirements(brdId?: number, projectId?: number): Promise<any
     console.log(`Storage: BRD IDs for project ${projectId}:`, brdIds);
 
     // Filter by project's BRD documents
-    results = results.filter(req => brdIds.includes(req.brdDocumentId || req.brdId));
+    results = results.filter(req => 
+      brdIds.includes(req.brdDocumentId || req.brdId)
+    );
     console.log(`Storage: After filtering by projectId ${projectId}: ${results.length} requirements`);
   }
 
-  console.log(`Storage: getFunctionalRequirements(${brdId}, ${projectId}) returning ${results.length} requirements:`, results.map(r => ({ id: r.id, requirementId: r.requirementId, brdId: r.brdId || r.brdDocumentId })));
-  return results.sort((a, b) => (a.requirementId || '').localeCompare(b.requirementId || ''));
+  console.log(`Storage: getFunctionalRequirements(${brdId}, ${projectId}) returning ${results.length} requirements:`, 
+    results.map(r => ({ 
+      id: r.id, 
+      requirementId: r.requirementId, 
+      brdId: r.brdId || r.brdDocumentId,
+      title: r.title 
+    })));
+    
+  return results.sort((a, b) => {
+    // Sort by requirement ID if available, otherwise by title
+    if (a.requirementId && b.requirementId) {
+      return a.requirementId.localeCompare(b.requirementId);
+    }
+    return (a.title || '').localeCompare(b.title || '');
+  });
 }
 
 async getFunctionalRequirement(id: number): Promise<any | null> {
@@ -197,13 +216,34 @@ async createFunctionalRequirement(data: any): Promise<any> {
 
   // Generate requirement ID: BEG-REQ-001-FR-001
   const existingRequirements = await this.getFunctionalRequirements(data.brdId);
+  console.log(`📊 Existing requirements for BRD ${data.brdId}:`, existingRequirements.map(r => ({ id: r.id, requirementId: r.requirementId })));
   
-  // Filter out any requirements that don't have proper IDs to avoid counting issues
+  // Filter requirements for this specific BRD and extract FR numbers
   const validRequirements = existingRequirements.filter(req => 
-    req.requirementId && req.requirementId.includes('-FR-')
+    req.requirementId && req.requirementId.startsWith(brdDocument.documentId + '-FR-')
   );
   
-  const nextNumber = validRequirements.length + 1;
+  // Extract existing FR numbers and find the next available number
+  const existingNumbers = validRequirements
+    .map(req => {
+      const match = req.requirementId.match(/-FR-(\d+)$/);
+      return match ? parseInt(match[1]) : 0;
+    })
+    .filter(num => num > 0)
+    .sort((a, b) => a - b);
+  
+  console.log(`📊 Existing FR numbers for BRD ${brdDocument.documentId}:`, existingNumbers);
+  
+  // Find the next number (handle gaps in sequence)
+  let nextNumber = 1;
+  for (const num of existingNumbers) {
+    if (num === nextNumber) {
+      nextNumber++;
+    } else {
+      break;
+    }
+  }
+  
   const requirementId = `${brdDocument.documentId}-FR-${String(nextNumber).padStart(3, '0')}`;
 
   console.log(`Creating functional requirement with ID: ${requirementId} for BRD: ${brdDocument.documentId}`);
