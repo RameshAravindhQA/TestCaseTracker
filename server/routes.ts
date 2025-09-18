@@ -6323,36 +6323,6 @@ if (moduleId) {
 
   // Delete mapping
   apiRouter.delete("/rtm/mappings/:id", isAuthenticated, async (req, res) => {
-    try {</old_str>
-      const mappingId = parseInt(req.params.id);
-      console.log(`🔄 Updating RTM mapping ${mappingId}:`, req.body);
-
-      const updateData = {
-        ...req.body,
-        updatedAt: new Date()
-      };
-
-      const mapping = await storage.updateRequirementTestCaseMapping(mappingId, updateData);
-      if (!mapping) {
-        return res.status(404).json({ error: "Mapping not found" });
-      }
-
-      console.log(`✅ RTM mapping updated:`, mapping);
-
-      // Sync requirement status after updating mapping
-      if (mapping.functionalRequirementId) {
-        await storage.syncRequirementStatusWithTestCases(mapping.functionalRequirementId);
-      }
-
-      res.json(mapping);
-    } catch (error) {
-      console.error("Update RTM mapping error:", error);
-      res.status(500).json({ error: "Failed to update RTM mapping" });
-    }
-  });
-
-  // Delete mapping
-  apiRouter.delete("/rtm/mappings/:id", isAuthenticated, async (req, res) => {
     try {
       const mappingId = parseInt(req.params.id);
       console.log(`🗑️ Deleting RTM mapping ${mappingId}`);
