@@ -6299,6 +6299,32 @@ if (moduleId) {
   apiRouter.put("/rtm/mappings/:id", isAuthenticated, async (req, res) => {
     try {
       const mappingId = parseInt(req.params.id);
+      const updateData = req.body;
+      
+      console.log(`🔄 Updating RTM mapping ${mappingId} with:`, updateData);
+
+      const updatedMapping = await storage.updateRequirementTestCaseMapping(mappingId, updateData);
+      
+      if (!updatedMapping) {
+        return res.status(404).json({ error: "Mapping not found" });
+      }
+
+      console.log(`✅ RTM mapping updated:`, updatedMapping);
+
+      // Sync requirement status after updating mapping
+      await storage.syncRequirementStatusWithTestCases(updatedMapping.functionalRequirementId);
+
+      res.json(updatedMapping);
+    } catch (error) {
+      console.error("Update RTM mapping error:", error);
+      res.status(500).json({ error: "Failed to update mapping", details: error.message });
+    }
+  });
+
+  // Delete mapping
+  apiRouter.delete("/rtm/mappings/:id", isAuthenticated, async (req, res) => {
+    try {</old_str>
+      const mappingId = parseInt(req.params.id);
       console.log(`🔄 Updating RTM mapping ${mappingId}:`, req.body);
 
       const updateData = {

@@ -214,7 +214,7 @@ async createFunctionalRequirement(data: any): Promise<any> {
     throw new Error(`BRD Document with ID ${data.brdId} not found`);
   }
 
-  // Generate requirement ID: BEG-REQ-001-FR-001
+  // Generate requirement ID using the exact BRD document ID: BEG-REQ-001-FR-001
   const existingRequirements = await this.getFunctionalRequirements(data.brdId);
   console.log(`📊 Existing requirements for BRD ${data.brdId}:`, existingRequirements.map(r => ({ id: r.id, requirementId: r.requirementId })));
   
@@ -244,6 +244,7 @@ async createFunctionalRequirement(data: any): Promise<any> {
     }
   }
   
+  // Use the actual BRD document ID from the database
   const requirementId = `${brdDocument.documentId}-FR-${String(nextNumber).padStart(3, '0')}`;
 
   console.log(`Creating functional requirement with ID: ${requirementId} for BRD: ${brdDocument.documentId}`);

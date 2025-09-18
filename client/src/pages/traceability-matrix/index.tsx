@@ -165,7 +165,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
       toast({ title: "Error", description: "Missing requirement or project information", variant: "destructive" });
       return;
     }
-    
+
     console.log(`🔗 Creating mapping: Requirement ${selectedRequirement.id} -> Test Case ${testCaseId}`);
     createMappingMutation.mutate({
       functionalRequirementId: selectedRequirement.id,
@@ -246,14 +246,14 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
 
     try {
       console.log('🔄 Starting RTM PDF export...');
-      
+
       // Dynamically import jsPDF to avoid SSR issues
       const { jsPDF } = await import('jspdf');
       console.log('✅ jsPDF loaded successfully');
 
       // Get current project details
       const currentProject = projects?.find(p => p.id === selectedProjectId);
-      
+
       // Calculate statistics - handle missing data gracefully
       const functionalReqs = selectedBrd.functionalRequirements || [];
       const totalMappings = functionalReqs.reduce((sum: number, req: any) => 
@@ -264,7 +264,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
         sum + (req.mappings?.filter((m: any) => m.status === "Fail").length || 0), 0);
       const notExecutedMappings = functionalReqs.reduce((sum: number, req: any) => 
         sum + (req.mappings?.filter((m: any) => m.status === "Not Executed").length || 0), 0);
-      
+
       const passPercentage = totalMappings > 0 ? Math.round((passedMappings / totalMappings) * 100) : 0;
       const failPercentage = totalMappings > 0 ? Math.round((failedMappings / totalMappings) * 100) : 0;
 
@@ -285,7 +285,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
       doc.setFont("helvetica", "normal");
       doc.text(`${selectedBrd.documentId} - ${selectedBrd.title}`, pageWidth / 2, yPosition, { align: 'center' });
       yPosition += 6;
-      
+
       doc.setFontSize(10);
       doc.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, yPosition, { align: 'center' });
       yPosition += 15;
@@ -361,7 +361,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
 
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
-      
+
       // Draw header row
       headers.forEach((header, index) => {
         doc.rect(xPosition, yPosition, columnWidths[index], 8);
@@ -372,14 +372,14 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
 
       // Table data
       doc.setFont("helvetica", "normal");
-      
+
       functionalReqs.forEach((req: any) => {
         if (req.mappings && req.mappings.length > 0) {
           req.mappings.forEach((mapping: any) => {
             if (yPosition > pageHeight - 20) {
               doc.addPage();
               yPosition = margin;
-              
+
               // Redraw headers on new page
               xPosition = margin;
               doc.setFont("helvetica", "bold");
@@ -392,7 +392,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
               doc.setFont("helvetica", "normal");
             }
 
-            const testCase = rtmData.testCases?.find((tc: any) => tc.id === mapping.testCaseId);
+            const testCase = rtmData?.testCases?.find((tc: any) => tc.id === mapping.testCaseId);
             const rowData = [
               req.requirementId || 'N/A',
               (req.title || 'N/A').substring(0, 25) + (req.title?.length > 25 ? '...' : ''),
@@ -413,7 +413,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
           if (yPosition > pageHeight - 20) {
             doc.addPage();
             yPosition = margin;
-            
+
             // Redraw headers on new page
             xPosition = margin;
             doc.setFont("helvetica", "bold");
@@ -447,10 +447,10 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
       // Save the PDF
       const fileName = `RTM_${currentProject?.name?.replace(/[^a-zA-Z0-9]/g, '_') || 'Project'}_${selectedBrd.documentId}_${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(fileName);
-      
+
       console.log('✅ RTM PDF export successful');
       toast({ title: "Success", description: "RTM exported to PDF successfully" });
-      
+
     } catch (error: any) {
       console.error('❌ PDF export error:', error);
       toast({ 
@@ -461,22 +461,22 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
     }
   };
 
-  
+
 
   const renderChartView = () => {
-    const selectedBrd = rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
+    const selectedBrd = rtmData?.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
     if (!selectedBrd) return null;
 
     const stats = selectedBrd.functionalRequirements.reduce((acc: any, req: any) => {
       const passCount = req.mappings.filter((m: any) => m.status === "Pass").length;
       const failCount = req.mappings.filter((m: any) => m.status === "Fail").length;
       const notExecutedCount = req.mappings.filter((m: any) => m.status === "Not Executed").length;
-      
+
       acc.pass += passCount;
       acc.fail += failCount;
       acc.notExecuted += notExecutedCount;
       acc.total += req.mappings.length;
-      
+
       return acc;
     }, { pass: 0, fail: 0, notExecuted: 0, total: 0 });
 
@@ -588,7 +588,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
               <SelectTrigger>
                 <SelectValue placeholder="Select BRD Document">
                   {selectedBrdId && (() => {
-                    const selectedBrd = rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
+                    const selectedBrd = rtmData?.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
                     return selectedBrd ? `${selectedBrd.documentId} (${selectedBrd.functionalRequirements?.length || 0} Requirements)` : '';
                   })()}
                 </SelectValue>
@@ -617,7 +617,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
           {selectedBrdId && (
             <div className="grid grid-cols-4 gap-4 mb-6">
               {(() => {
-                const selectedBrd = rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
+                const selectedBrd = rtmData?.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
                 if (!selectedBrd) return null;
 
                 const totalRequirements = selectedBrd.functionalRequirements.length;
@@ -674,12 +674,12 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
                 >
                   Chart View
                 </Button>
-                
+
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    const selectedBrd = rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
+                    const selectedBrd = rtmData?.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
                     if (selectedBrd) {
                       const csvData = generateRTMCSV(selectedBrd, rtmData.testCases);
                       downloadCSV(csvData, `RTM_${selectedBrd.documentId}.csv`);
@@ -718,7 +718,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
                 </TableHeader>
                 <TableBody>
                   {(() => {
-                    const selectedBrd = rtmData.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
+                    const selectedBrd = rtmData?.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
                     if (!selectedBrd || selectedBrd.functionalRequirements.length === 0) {
                       return (
                         <TableRow>
@@ -742,7 +742,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
                           <div className="space-y-1">
                             {requirement.mappings && requirement.mappings.length > 0 ? (
                               requirement.mappings.map((mapping: any) => {
-                                const testCase = rtmData.testCases?.find((tc: any) => tc.id === mapping.testCaseId);
+                                const testCase = rtmData?.testCases?.find((tc: any) => tc.id === mapping.testCaseId);
                                 console.log(`🔍 Mapping ${mapping.id}: testCaseId=${mapping.testCaseId}, found testCase:`, testCase);
                                 return (
                                   <div key={mapping.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
@@ -826,7 +826,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
               )}
             </DialogDescription>
           </DialogHeader>
-          
+
           {/* Module Filter */}
           <div className="space-y-4">
             <div className="flex items-center gap-4">
@@ -865,7 +865,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
                   return filteredTestCases.map((testCase: any) => {
                     const isAlreadyMapped = selectedRequirement?.mappings?.some((m: any) => m.testCaseId === testCase.id);
                     const module = modules.find(m => m.id === testCase.moduleId);
-                    
+
                     return (
                       <div
                         key={testCase.id}
@@ -962,7 +962,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
                   <p className="text-sm bg-gray-50 p-2 rounded">{selectedTestCase.type || 'Functional'}</p>
                 </div>
               </div>
-              
+
               <div>
                 <Label className="text-sm font-medium">Feature/Title</Label>
                 <p className="text-sm bg-gray-50 p-2 rounded">{selectedTestCase.feature || selectedTestCase.title}</p>
