@@ -5019,11 +5019,13 @@ class MemStorage implements IStorage {
       throw new Error(`Project with ID ${data.projectId} not found`);
     }
 
-    // Generate document ID: BEG-REQ-001
-    const projectPrefix = project.prefix || project.name.substring(0, 3).toUpperCase();
+    // Generate stable BRD sequence number for this project
     const existingDocsForProject = this.brdDocumentsStore.filter(doc => doc.projectId === data.projectId);
-    const nextSequence = existingDocsForProject.length + 1;
-    const documentId = `${projectPrefix}-REQ-${nextSequence.toString().padStart(3, '0')}`;
+    const brdSequence = existingDocsForProject.length + 1;
+
+    // Generate document ID using stable sequence: BEG-REQ-001
+    const projectPrefix = project.prefix || project.name.substring(0, 3).toUpperCase();
+    const documentId = `${projectPrefix}-REQ-${brdSequence.toString().padStart(3, '0')}`;
 
     const brdDocument: BrdDocument = {
       id,
@@ -5034,6 +5036,7 @@ class MemStorage implements IStorage {
       status: data.status || "Draft",
       priority: data.priority || "Medium",
       projectId: data.projectId,
+      brdSequence, // Store the stable sequence number
       createdById: data.createdById,
       approvedById: data.approvedById,
       approvedAt: data.approvedAt,
@@ -5120,8 +5123,8 @@ class MemStorage implements IStorage {
         project.name.split(' ').map(word => word.charAt(0).toUpperCase()).join('').substring(0, 3) :
         'DEF'; // Default fallback
       
-      // Get the BRD document ID with proper formatting
-      const brdNumber = String(brdDocument.id).padStart(3, '0');
+      // Use the stable BRD sequence number stored in the document
+      const brdNumber = String(brdDocument.brdSequence).padStart(3, '0');
       
       // Get existing functional requirements for this BRD document
       const existingRequirements = this.functionalRequirements

@@ -304,6 +304,7 @@ export const brdDocuments = pgTable("brd_documents", {
   status: text("status").$type<"Draft" | "Review" | "Approved" | "Obsolete">().notNull().default("Draft"),
   priority: text("priority").$type<"High" | "Medium" | "Low">().default("Medium"),
   projectId: integer("project_id").notNull(),
+  brdSequence: integer("brd_sequence").notNull(), // Stable sequence number for FR ID generation
   createdById: integer("created_by_id").notNull(),
   approvedById: integer("approved_by_id"),
   approvedAt: timestamp("approved_at"),
@@ -314,6 +315,7 @@ export const brdDocuments = pgTable("brd_documents", {
 export const insertBrdDocumentSchema = createInsertSchema(brdDocuments).omit({
   id: true,
   documentId: true, // Auto-generated
+  brdSequence: true, // Auto-generated stable sequence
   createdAt: true,
   updatedAt: true,
   approvedAt: true,
