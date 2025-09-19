@@ -2965,7 +2965,7 @@ class MemStorage implements IStorage {
     if (index === -1) return null;
 
     const updatedMarker = {
-      ...this.traceabilityMatrixes[index],
+      ...this.traceabilityTraceabilityMatrixes[index],
       ...marker,
       updatedAt: new Date()
     };
@@ -5113,8 +5113,7 @@ class MemStorage implements IStorage {
 
     // Only filter by projectId if brdDocumentId is not specified
     if (projectId && !brdDocumentId) {
-      // Get BRD documents for the project and filter by those
-      const brdDocuments = await this.getBrdDocuments(projectId);
+      // Get BRD documents for the      project
       const brdIds = brdDocuments.map(doc => doc.id);
       console.log(`Storage: BRD IDs for project ${projectId}:`, brdIds);
       results = results.filter(req => brdIds.includes(req.brdId || req.brdDocumentId));
@@ -5217,20 +5216,22 @@ class MemStorage implements IStorage {
       results = results.filter(mapping => mapping.testCaseId === testCaseId);
     }
 
-    if (projectId) {
-      // Filter by project through BRD documents and functional requirements
-      // First get all BRD document IDs for this project
-      const projectBrdIds = this.brdDocuments
-        .filter(brd => brd.projectId === projectId)
-        .map(brd => brd.id);
-      
-      // Then get all functional requirement IDs for those BRD documents
-      const projectFRIds = this.functionalRequirements
-        .filter(req => projectBrdIds.includes(req.brdId || req.brdDocumentId))
-        .map(req => req.id);
-      
-      results = results.filter(mapping => projectFRIds.includes(mapping.functionalRequirementId));
-      console.log(`Storage: Filtering mappings by projectId ${projectId}: found ${projectBrdIds.length} BRDs, ${projectFRIds.length} functional requirements, ${results.length} mappings`);
+    if (projectId && !functionalRequirementId && !testCaseId) {
+      // Get all BRD documents for the project first
+      const brdDocuments = await this.getBrdDocuments(projectId);
+      const functionalRequirements = [];
+
+      for (const brd of brdDocuments) {
+        const reqs = await this.getFunctionalRequirements(brd.id);
+        functionalRequirements.push(...reqs);
+      }
+
+      const functionalRequirementIds = functionalRequirements.map(req => req.id);
+      results = results.filter(mapping => functionalRequirementIds.includes(mapping.functionalRequirementId));
+
+      console.log(`Storage: Filtering mappings by projectId ${projectId}: found ${brdDocuments.length} BRDs, ${functionalRequirements.length} functional requirements, ${results.length} mappings`);
+      console.log(`Storage: All mappings in storage:`, this.requirementTestCaseMappings.map(m => ({ id: m.id, functionalRequirementId: m.functionalRequirementId, testCaseId: m.testCaseId })));
+      console.log(`Storage: Functional requirement IDs for project:`, functionalRequirementIds);
     }
 
     console.log(`Storage: getRequirementTestCaseMappings(${functionalRequirementId}, ${testCaseId}, ${projectId}) returning ${results.length} mappings`);
