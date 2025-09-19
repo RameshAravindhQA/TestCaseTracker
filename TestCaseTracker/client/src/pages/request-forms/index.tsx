@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { MainLayout } from "@/components/layout/main-layout";
@@ -52,10 +52,8 @@ function RequestFormsPageContent() {
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isReopenDialogOpen, setIsReopenDialogOpen] = useState(false);
-  const [isEditReopenDialogOpen, setIsEditReopenDialogOpen] = useState(false); // State for edit reopen dialog
   const [editingRequest, setEditingRequest] = useState<any>(null);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
-  const [selectedReopenRecord, setSelectedReopenRecord] = useState<any>(null); // State for selected reopen record
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
@@ -127,21 +125,6 @@ function RequestFormsPageContent() {
       if (!selectedRequest?.id) return [];
       const res = await apiRequest("GET", `/api/resource-requests/${selectedRequest.id}/audit-logs`);
       if (!res.ok) throw new Error("Failed to fetch audit logs");
-      return res.json();
-    },
-    enabled: !!selectedRequest?.id,
-    suspense: false,
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
-
-  // Fetch reopen records for a specific request
-  const { data: reopenRecordsData = [] } = useQuery({
-    queryKey: ["/api/resource-requests/reopen-records", selectedRequest?.id],
-    queryFn: async () => {
-      if (!selectedRequest?.id) return [];
-      const res = await apiRequest("GET", `/api/resource-requests/${selectedRequest.id}/reopen-records`);
-      if (!res.ok) throw new Error("Failed to fetch reopen records");
       return res.json();
     },
     enabled: !!selectedRequest?.id,
@@ -222,7 +205,6 @@ function RequestFormsPageContent() {
         description: "Request has been reopened successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/resource-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/resource-requests/reopen-records", selectedRequest?.id] });
       setIsReopenDialogOpen(false);
       setReopenReason('');
       setNewStartDate('');
@@ -237,62 +219,6 @@ function RequestFormsPageContent() {
       });
     },
   });
-
-  // Update reopen record mutation
-  const updateReopenMutation = useMutation({
-    mutationFn: async ({ id, reason, newStartDate, newEndDate }: { id: number; reason?: string; newStartDate?: string; newEndDate?: string }) => {
-      const payload: any = {};
-      if (reason) payload.reason = reason;
-      if (newStartDate) payload.newStartDate = newStartDate;
-      if (newEndDate) payload.newEndDate = newEndDate;
-      const res = await apiRequest("PUT", `/api/resource-requests/reopen-records/${id}`, payload);
-      if (!res.ok) throw new Error("Failed to update reopen record");
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Reopen record updated",
-        description: "Reopen record has been updated successfully.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/resource-requests/reopen-records", selectedRequest?.id] });
-      setIsEditReopenDialogOpen(false);
-      setSelectedReopenRecord(null);
-      setReopenReason('');
-      setNewStartDate('');
-      setNewEndDate('');
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to update reopen record",
-        description: error.message || "An unexpected error occurred.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Delete reopen record mutation
-  const deleteReopenMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest("DELETE", `/api/resource-requests/reopen-records/${id}`);
-      if (!res.ok) throw new Error("Failed to delete reopen record");
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Reopen record deleted",
-        description: "Reopen record has been deleted successfully.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/resource-requests/reopen-records", selectedRequest?.id] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to delete reopen record",
-        description: error.message || "An unexpected error occurred.",
-        variant: "destructive",
-      });
-    },
-  });
-
 
   // Filter requests
   const filteredRequests = requests.filter((request: any) => {
@@ -343,7 +269,7 @@ function RequestFormsPageContent() {
     });
   };
 
-  const formatDate = (dateString: string | null | undefined) => {
+  const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     try {
       return format(new Date(dateString), 'MMM dd, yyyy');
@@ -353,7 +279,7 @@ function RequestFormsPageContent() {
     }
   };
 
-  const calculateDuration = (startDate: string | null | undefined, endDate: string | null | undefined) => {
+  const calculateDuration = (startDate: string, endDate: string) => {
     if (!startDate || !endDate) return 'N/A';
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -854,7 +780,7 @@ function RequestFormsPageContent() {
                                         // Import jsPDF dynamically with proper error handling
                                         const { jsPDF } = await import('jspdf');
                                         const jsPDFInstance = new jsPDF();
-
+                                        
                                         // Try to import jspdf-autotable
                                         try {
                                           await import('jspdf-autotable');
@@ -991,10 +917,10 @@ function RequestFormsPageContent() {
                                         toast({ title: "PDF Export", description: "Request report downloaded successfully." });
                                       } catch (error: any) {
                                         console.error("PDF Export Error:", error);
-                                        toast({
-                                          title: "PDF Export Failed",
-                                          description: error.message || "Failed to generate PDF report",
-                                          variant: "destructive"
+                                        toast({ 
+                                          title: "PDF Export Failed", 
+                                          description: error.message || "Failed to generate PDF report", 
+                                          variant: "destructive" 
                                         });
                                       }
                                     }}
@@ -1389,11 +1315,11 @@ function RequestFormsPageContent() {
 
             {/* Reopen Request Dialog */}
             <Dialog open={isReopenDialogOpen} onOpenChange={setIsReopenDialogOpen}>
-              <DialogContent>
+              <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Reopen Request</DialogTitle>
                   <DialogDescription>
-                    Provide a reason for reopening this request and optionally update the timeline.
+                    Provide a reason for reopening this request and optionally update the timeline
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -1401,83 +1327,40 @@ function RequestFormsPageContent() {
                     <Label htmlFor="reopenReason">Reason for Reopening *</Label>
                     <Textarea
                       id="reopenReason"
-                      placeholder="Explain why this request needs to be reopened..."
+                      placeholder="Please provide a detailed reason for reopening this request..."
                       value={reopenReason}
                       onChange={(e) => setReopenReason(e.target.value)}
-                      rows={3}
-                      required
+                      rows={4}
                     />
                   </div>
-
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="newStartDate">New Start Date</Label>
+                      <Label htmlFor="newStartDate">New Start Date (Optional)</Label>
                       <Input
                         id="newStartDate"
                         type="date"
                         value={newStartDate}
                         onChange={(e) => setNewStartDate(e.target.value)}
-                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="newEndDate">New End Date</Label>
+                      <Label htmlFor="newEndDate">New End Date (Optional)</Label>
                       <Input
                         id="newEndDate"
                         type="date"
                         value={newEndDate}
                         onChange={(e) => setNewEndDate(e.target.value)}
-                        required
                       />
                     </div>
                   </div>
-
-                  {/* Show existing reopen records */}
-                  {reopenRecordsData.length > 0 && (
-                    <div className="mt-6">
-                      <h4 className="text-sm font-medium mb-3">Previous Reopen Records</h4>
-                      <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {reopenRecordsData.map((record: any) => (
-                          <div key={record.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div className="flex-1">
-                              <p className="text-sm font-medium">{record.reason}</p>
-                              <p className="text-xs text-gray-500">
-                                {formatDate(record.reopenedDate)}
-                                {record.newStartDate && record.newEndDate &&
-                                  ` • ${formatDate(record.newStartDate)} - ${formatDate(record.newEndDate)}`
-                                }
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setSelectedReopenRecord(record);
-                                  setIsEditReopenDialogOpen(true);
-                                }}
-                              >
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => {
-                                  if (confirm('Are you sure you want to delete this reopen record?')) {
-                                    deleteReopenMutation.mutate(record.id);
-                                  }
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                  {selectedRequest && (
+                    <div className="bg-gray-50 p-3 rounded text-sm">
+                      <p><strong>Current Start Date:</strong> {formatDate(selectedRequest.startDate)}</p>
+                      <p><strong>Current End Date:</strong> {formatDate(selectedRequest.endDate)}</p>
                     </div>
                   )}
                 </div>
-                <DialogFooter>
+                <div className="flex justify-end gap-2 mt-6">
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -1491,101 +1374,20 @@ function RequestFormsPageContent() {
                   </Button>
                   <Button
                     onClick={() => {
-                      if (selectedRequest && reopenReason.trim() && newStartDate && newEndDate) {
+                      if (selectedRequest && reopenReason.trim()) {
                         reopenMutation.mutate({
                           id: selectedRequest.id,
                           reason: reopenReason,
-                          newStartDate,
-                          newEndDate
+                          newStartDate: newStartDate || undefined,
+                          newEndDate: newEndDate || undefined
                         });
                       }
                     }}
-                    disabled={!reopenReason.trim() || !newStartDate || !newEndDate || reopenMutation.isPending}
+                    disabled={!reopenReason.trim() || reopenMutation.isPending}
                   >
-                    {reopenMutation.isPending ? "Reopening..." : "Reopen Request"}
+                    {reopenMutation.isPending ? 'Reopening...' : 'Reopen Request'}
                   </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            {/* Edit Reopen Record Dialog */}
-            <Dialog open={isEditReopenDialogOpen} onOpenChange={setIsEditReopenDialogOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Edit Reopen Record</DialogTitle>
-                  <DialogDescription>
-                    Update the reopen reason and timeline information.
-                  </DialogDescription>
-                </DialogHeader>
-                {selectedReopenRecord && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="editReopenReason">Reason for Reopening *</Label>
-                      <Textarea
-                        id="editReopenReason"
-                        placeholder="Explain why this request was reopened..."
-                        defaultValue={selectedReopenRecord.reason}
-                        rows={3}
-                        onChange={(e) => setReopenReason(e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="editNewStartDate">New Start Date</Label>
-                        <Input
-                          id="editNewStartDate"
-                          type="date"
-                          defaultValue={selectedReopenRecord.newStartDate ?
-                            new Date(selectedReopenRecord.newStartDate).toISOString().split('T')[0] : ''
-                          }
-                          onChange={(e) => setNewStartDate(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="editNewEndDate">New End Date</Label>
-                        <Input
-                          id="editNewEndDate"
-                          type="date"
-                          defaultValue={selectedReopenRecord.newEndDate ?
-                            new Date(selectedReopenRecord.newEndDate).toISOString().split('T')[0] : ''
-                          }
-                          onChange={(e) => setNewEndDate(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsEditReopenDialogOpen(false);
-                      setSelectedReopenRecord(null);
-                      setReopenReason('');
-                      setNewStartDate('');
-                      setNewEndDate('');
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      if (selectedReopenRecord) {
-                        updateReopenMutation.mutate({
-                          id: selectedReopenRecord.id,
-                          reason: reopenReason || selectedReopenRecord.reason,
-                          newStartDate: newStartDate || selectedReopenRecord.newStartDate,
-                          newEndDate: newEndDate || selectedReopenRecord.newEndDate
-                        });
-                      }
-                    }}
-                    disabled={updateReopenMutation.isPending}
-                  >
-                    {updateReopenMutation.isPending ? "Updating..." : "Update Record"}
-                  </Button>
-                </DialogFooter>
+                </div>
               </DialogContent>
             </Dialog>
           </>
