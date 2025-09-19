@@ -1593,15 +1593,32 @@ export async function registerRoutes(app: Express): Server {
   apiRouter.post("/resource-requests/:id/reopen", isAuthenticated, async (req, res) => {
     try {
       const requestId = parseInt(req.params.id);
-      const { reason, newStartDate, newEndDate } = req.body;
+      const { reason, newStartDate, newEndDate, newAssignedEmployee } = req.body;
       const userId = req.session.userId!;
 
       if (!reason || reason.trim() === '') {
         return res.status(400).json({ message: "Reason for reopening is required" });
       }
 
-      // Use the new reopen method
-      const updatedRequest = await storage.reopenResourceRequest(requestId, reason, userId, newStartDate, newEndDate);
+      // Validate dates if provided
+      if (newStartDate && newEndDate) {
+        const startDate = new Date(newStartDate);
+        const endDate = new Date(newEndDate);
+        
+        if (endDate <= startDate) {
+          return res.status(400).json({ message: "End date must be after start date" });
+        }
+      }
+
+      // Use the updated reopen method
+      const updatedRequest = await storage.reopenResourceRequest(
+        requestId, 
+        reason, 
+        userId, 
+        newStartDate, 
+        newEndDate, 
+        newAssignedEmployee
+      );
 
       if (!updatedRequest) {
         return res.status(404).json({ message: "Request not found" });

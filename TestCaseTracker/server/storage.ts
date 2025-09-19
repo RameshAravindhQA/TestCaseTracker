@@ -356,7 +356,7 @@ export interface IStorage {
   createResourceRequest(data: any): Promise<any>;
   updateResourceRequest(id: number, data: any): Promise<any | null>;
   deleteResourceRequest(id: number): Promise<boolean>;
-  reopenResourceRequest(id: number, reason: string, newStartDate?: string, newEndDate?: string): Promise<any>;
+  reopenResourceRequest(id: number, reason: string, userId: number, newStartDate?: string, newEndDate?: string, newAssignedEmployee?: number): Promise<any>;
 
   getResourceRequestExtensions(): Promise<any[]>;
   getResourceRequestExtension(id: number): Promise<any | undefined>;
@@ -3527,7 +3527,7 @@ class MemStorage implements IStorage {
     return todoList;
   }
 
-  // Employee Management Implementation
+  // Employee Management
   async getEmployees(): Promise<any[]> {
     return [...this.employees];
   }
@@ -4158,28 +4158,87 @@ class MemStorage implements IStorage {
     return this.resourceRequests.length < initialLength;
   }
 
-  async reopenResourceRequest(id: number, reason: string, newStartDate?: string, newEndDate?: string): Promise<any> {
-    const index = this.resourceRequests.findIndex(req => req.id === id);
-    if (index === -1) return null;
+  async reopenResourceRequest(id: number, reason: string, userId: number, newStartDate?: string, newEndDate?: string, newAssignedEmployee?: number): Promise<any> {
+    const request = this.resourceRequests.find(r => r.id === id);
+    if (!request) return null;
 
-    const request = this.resourceRequests[index];
-    const updatedRequest = {
-      ...request,
-      status: 'Reopened' as any,
+    const now = new Date().toISOString();
+
+    // Create reopen history entry
+    if (!request.reopenHistory) {
+      request.reopenHistory = [];
+    }
+
+    const reopenEntry = {
+      id: this.getNextId(),
+      reason,
+      reopenedBy: userId,
+      reopenedAt: now,
+      originalStartDate: request.startDate,
+      originalEndDate: request.endDate,
+      originalAssignedEmployee: request.leadId,
+      newStartDate: newStartDate || request.startDate,
+      newEndDate: newEndDate || request.endDate,
+      newAssignedEmployee: newAssignedEmployee !== undefined ? newAssignedEmployee : request.leadId,
+      createdAt: now
+    };
+
+    request.reopenHistory.push(reopenEntry);
+
+    // Update request status and dates
+    const updatedData: any = {
+      status: 'Open',
+      reopenedDate: now,
       reopenReason: reason,
-      reopenedDate: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: now
     };
 
     if (newStartDate) {
-      updatedRequest.startDate = newStartDate;
+      updatedData.startDate = newStartDate;
     }
     if (newEndDate) {
-      updatedRequest.endDate = newEndDate;
+      updatedData.endDate = newEndDate;
+    }
+    if (newAssignedEmployee !== undefined) {
+      updatedData.leadId = newAssignedEmployee === 0 ? null : newAssignedEmployee;
     }
 
-    this.resourceRequests[index] = updatedRequest;
-    return updatedRequest;
+    Object.assign(request, updatedData);
+
+    // Create activity log
+    const timelineUpdate = newStartDate || newEndDate ? ' with updated timeline' : '';
+    const employeeUpdate = newAssignedEmployee !== undefined ? 
+      (newAssignedEmployee === 0 ? ' and unassigned employee' : ' and reassigned employee') : '';
+
+    await this.createActivity({
+      userId,
+      entityType: "resource_request",
+      entityId: id,
+      action: 'reopened',
+      details: `Request reopened: ${reason}${timelineUpdate}${employeeUpdate}`
+    });
+
+    // Create audit log
+    let auditDetails = `Request reopened: ${reason}`;
+    if (newStartDate) auditDetails += ` | New start: ${newStartDate}`;
+    if (newEndDate) auditDetails += ` | New end: ${newEndDate}`;
+    if (newAssignedEmployee !== undefined) {
+      if (newAssignedEmployee === 0) {
+        auditDetails += ` | Employee unassigned`;
+      } else {
+        auditDetails += ` | Reassigned to employee ID: ${newAssignedEmployee}`;
+      }
+    }
+
+    await this.createRequestAuditLog({
+      requestId: id,
+      userId,
+      action: 'REOPENED',
+      details: auditDetails,
+      timestamp: now
+    });
+
+    return request;
   }
 
   async getResourceRequestExtensions(): Promise<any[]> {
@@ -4469,7 +4528,16 @@ class MemStorage implements IStorage {
 
   // BRD Document operations
   async getBrdDocuments(projectId?: number): Promise<any[]> {
-    return this.brdDocuments.filter(doc => projectId ? doc.projectId === projectId : true);
+    console.log(`Storage: getBrdDocuments called with projectId: ${projectId}`);
+    console.log(`Storage: Total BRD documents in storage: ${this.brdDocumentsStore.length}`);
+
+    if (projectId) {
+      const filtered = this.brdDocumentsStore.filter(doc => doc.projectId === projectId);
+      console.log(`Storage: Found ${filtered.length} BRD documents for project ${projectId}:`,
+        filtered.map(doc => ({ id: doc.id, title: doc.title, documentId: doc.documentId, projectId: doc.projectId })));
+      return filtered;
+    }
+    return [...this.brdDocumentsStore];
   }
 
   async getBrdDocument(id: number): Promise<any | null> {
@@ -5106,7 +5174,7 @@ class MemStorage implements IStorage {
     let results = [...this.functionalRequirements];
 
     if (brdDocumentId) {
-      results = results.filter(req => (req.brdId || req.brdDocumentId) === brdDocumentId);
+      results = results.filter(req => req.brdId === brdDocumentId || req.brdDocumentId === brdDocumentId);
       console.log(`Storage: After filtering by brdDocumentId ${brdDocumentId}: ${results.length} requirements`);
     }
 
@@ -5228,7 +5296,7 @@ class MemStorage implements IStorage {
     }
 
     if (projectId && !functionalRequirementId && !testCaseId) {
-      // Get all BRD documents for the project first
+      // Get all BRD documents for the project
       const brdDocuments = await this.getBrdDocuments(projectId);
       const functionalRequirements = [];
 
@@ -5251,7 +5319,7 @@ class MemStorage implements IStorage {
 
   async getRequirementTestCaseMapping(id: number): Promise<RequirementTestCaseMapping | null> {
     if (!this.requirementTestCaseMappings) {
-      this.requirementTestCasemappings = [];
+      this.requirementTestCaseMappings = [];
     }
     return this.requirementTestCaseMappings.find(mapping => mapping.id === id) || null;
   }

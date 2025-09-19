@@ -106,9 +106,14 @@ export function RequestExtensionDialog({
   const calculateExtradays = (originalDate: string, newDate: string) => {
     const original = new Date(originalDate);
     const extended = new Date(newDate);
+    
+    // Reset time to avoid timezone issues
+    original.setHours(0, 0, 0, 0);
+    extended.setHours(0, 0, 0, 0);
+    
     const diffTime = extended.getTime() - original.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    return Math.max(0, diffDays); // Ensure non-negative
   };
 
   const getStatusColor = (status: string) => {
@@ -168,6 +173,10 @@ export function RequestExtensionDialog({
               <div>
                 <Label className="text-sm font-medium text-gray-600">Priority</Label>
                 <Badge variant="outline">{request.priority}</Badge>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Assigned Employee</Label>
+                <p className="font-semibold">{request.assignedEmployee ? `${request.assignedEmployee.firstName} ${request.assignedEmployee.lastName}` : 'Not Assigned'}</p>
               </div>
             </CardContent>
           </Card>

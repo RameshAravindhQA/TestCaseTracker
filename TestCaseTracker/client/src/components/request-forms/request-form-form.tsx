@@ -375,15 +375,15 @@ export function RequestFormForm({ request, projects, requestTypes, employees = [
                 name="leadId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Project Lead</FormLabel>
+                    <FormLabel>Assigned Employee</FormLabel>
                     <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select project lead" />
+                          <SelectValue placeholder="Select employee" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="0">No Lead Assigned</SelectItem>
+                        <SelectItem value="0">No Employee Assigned</SelectItem>
                         {employees.map((employee) => (
                           <SelectItem key={employee.id} value={employee.id.toString()}>
                             <div className="flex items-center gap-2">
@@ -398,7 +398,7 @@ export function RequestFormForm({ request, projects, requestTypes, employees = [
                                   {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
                                 </div>
                               )}
-                              {employee.firstName} {employee.lastName}
+                              {employee.firstName} {employee.lastName} - {employee.department || 'No Dept'}
                             </div>
                           </SelectItem>
                         ))}

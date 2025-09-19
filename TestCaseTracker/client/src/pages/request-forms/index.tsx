@@ -22,6 +22,9 @@ import { Label } from "@/components/ui/label";
 import { ErrorBoundary } from "react-error-boundary";
 import { format } from 'date-fns';
 
+// Import the new Reopen Request Dialog component
+import { RequestReopenDialog } from "@/components/request-forms/request-reopen-dialog";
+
 // Fallback components for Suspense and Error Boundaries
 const LoadingFallback = () => (
   <div className="flex items-center justify-center h-screen">
@@ -780,7 +783,7 @@ function RequestFormsPageContent() {
                                         // Import jsPDF dynamically with proper error handling
                                         const { jsPDF } = await import('jspdf');
                                         const jsPDFInstance = new jsPDF();
-                                        
+
                                         // Try to import jspdf-autotable
                                         try {
                                           await import('jspdf-autotable');
@@ -917,10 +920,10 @@ function RequestFormsPageContent() {
                                         toast({ title: "PDF Export", description: "Request report downloaded successfully." });
                                       } catch (error: any) {
                                         console.error("PDF Export Error:", error);
-                                        toast({ 
-                                          title: "PDF Export Failed", 
-                                          description: error.message || "Failed to generate PDF report", 
-                                          variant: "destructive" 
+                                        toast({
+                                          title: "PDF Export Failed",
+                                          description: error.message || "Failed to generate PDF report",
+                                          variant: "destructive"
                                         });
                                       }
                                     }}
@@ -1314,82 +1317,17 @@ function RequestFormsPageContent() {
 
 
             {/* Reopen Request Dialog */}
-            <Dialog open={isReopenDialogOpen} onOpenChange={setIsReopenDialogOpen}>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Reopen Request</DialogTitle>
-                  <DialogDescription>
-                    Provide a reason for reopening this request and optionally update the timeline
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="reopenReason">Reason for Reopening *</Label>
-                    <Textarea
-                      id="reopenReason"
-                      placeholder="Please provide a detailed reason for reopening this request..."
-                      value={reopenReason}
-                      onChange={(e) => setReopenReason(e.target.value)}
-                      rows={4}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="newStartDate">New Start Date (Optional)</Label>
-                      <Input
-                        id="newStartDate"
-                        type="date"
-                        value={newStartDate}
-                        onChange={(e) => setNewStartDate(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="newEndDate">New End Date (Optional)</Label>
-                      <Input
-                        id="newEndDate"
-                        type="date"
-                        value={newEndDate}
-                        onChange={(e) => setNewEndDate(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  {selectedRequest && (
-                    <div className="bg-gray-50 p-3 rounded text-sm">
-                      <p><strong>Current Start Date:</strong> {formatDate(selectedRequest.startDate)}</p>
-                      <p><strong>Current End Date:</strong> {formatDate(selectedRequest.endDate)}</p>
-                    </div>
-                  )}
-                </div>
-                <div className="flex justify-end gap-2 mt-6">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsReopenDialogOpen(false);
-                      setReopenReason('');
-                      setNewStartDate('');
-                      setNewEndDate('');
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      if (selectedRequest && reopenReason.trim()) {
-                        reopenMutation.mutate({
-                          id: selectedRequest.id,
-                          reason: reopenReason,
-                          newStartDate: newStartDate || undefined,
-                          newEndDate: newEndDate || undefined
-                        });
-                      }
-                    }}
-                    disabled={!reopenReason.trim() || reopenMutation.isPending}
-                  >
-                    {reopenMutation.isPending ? 'Reopening...' : 'Reopen Request'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <RequestReopenDialog
+              open={isReopenDialogOpen}
+              onOpenChange={setIsReopenDialogOpen}
+              request={selectedRequest}
+              employees={employees}
+              onSuccess={() => {
+                refetchRequests();
+                setIsReopenDialogOpen(false);
+                setSelectedRequest(null);
+              }}
+            />
           </>
         )}
 
