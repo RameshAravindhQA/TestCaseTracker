@@ -1,0 +1,51 @@
+torage: Total mappings in storage: 1
+✅ RTM mapping created: {"id":10,"functionalRequirementId":9,"testCaseId":7,"projectId":4,"status":"Not Executed","createdById":3,"createdAt":"2025-09-19T10:20:40.318Z","updatedAt":"2025-09-19T10:20:40.318Z"}
+Storage: getRequirementTestCaseMappings(9, undefined, undefined) returning 1 mappings
+10:20:40 AM [express] POST /api/rtm/mappings 201 in 2ms :: {"id":10,"functionalRequirementId":9,"test…
+Fetching RTM data for project 4
+Storage: getBrdDocuments called with projectId: 4
+Storage: Total BRD documents in storage: 1
+Storage: Found 1 BRD documents for project 4: [
+  {
+    id: 8,
+    title: 'Test BRD 001',
+    documentId: 'BEG-REQ-001',
+    projectId: 4
+  }
+]
+Found 1 BRD documents for project 4
+Storage: getFunctionalRequirements called with brdDocumentId: 8, projectId: 4
+Storage: Total functional requirements in storage: 1
+Storage: After filtering by brdDocumentId 8: 1 requirements
+Found 1 functional requirements for BRD 8
+Storage: Filtering mappings by projectId 4: found 0 BRDs, 0 functional requirements, 0 mappings
+Storage: getRequirementTestCaseMappings(undefined, undefined, 4) returning 0 mappings
+Storage: getTestCasesByProject called for projectId: 4
+Storage: Checking test case 7 (BEG-REG-TC-001) - projectId: 4 vs requested: 4, isDeleted: undefined
+Storage: getTestCasesByProject(4) returning 1 active test cases: [ { id: 7, testCaseId: 'BEG-REG-TC-001', projectId: 4 } ]
+Found 1 test cases for project 4
+10:20:40 AM [express] GET /api/projects/4/rtm 200 in 2ms :: {"brdDocuments":[{"id":8,"documentId":"BE…
+🔗 Creating RTM mapping: {"functionalRequirementId":9,"testCaseId":7,"projectId":4,"status":"Not Executed"}
+Create RTM mapping error: Error: Mapping between Functional Requirement 9 and Test Case 7 already exists
+    at MemStorage.createRequirementTestCaseMapping (/home/runner/workspace/TestCaseTracker/server/storage.ts:5258:13)
+    at <anonymous> (/home/runner/workspace/TestCaseTracker/server/routes.ts:6285:37)
+    at Layer.handle [as handle_request] (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/route.js:149:13)
+    at isAuthenticated (/home/runner/workspace/TestCaseTracker/server/routes.ts:119:12)
+    at Layer.handle [as handle_request] (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/layer.js:95:5)
+    at /home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:284:15
+    at Function.process_params (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:346:12)
+    at next (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:280:10)
+    at Function.handle (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:175:3)
+    at router (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:47:12)
+    at Layer.handle [as handle_request] (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/layer.js:95:5)
+    at trim_prefix (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:328:13)
+    at /home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:286:9
+    at Function.process_params (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:346:12)
+    at next (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:280:10)
+    at Immediate.<anonymous> (/home/runner/workspace/TestCaseTracker/node_modules/express-session/index.js:514:7)
+    at process.processImmediate (node:internal/timers:485:21)
+10:20:50 AM [express] POST /api/rtm/mappings 500 in 48ms :: {"error":"Failed to create mapping","deta…
