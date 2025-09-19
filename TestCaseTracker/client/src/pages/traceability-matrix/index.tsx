@@ -72,6 +72,16 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
 
   const { toast } = useToast();
 
+  // Fetch projects for RTM component
+  const { data: projects = [] } = useQuery({
+    queryKey: ["/api/projects"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/projects");
+      if (!response.ok) throw new Error("Failed to fetch projects");
+      return response.json();
+    },
+  });
+
   // Fetch modules for the project
   const { data: modules = [] } = useQuery({
     queryKey: ["/api/modules", selectedProjectId],
@@ -252,8 +262,22 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
       const { jsPDF } = await import('jspdf');
       console.log('✅ jsPDF loaded successfully');
 
-      // Get current project details
-      const currentProject = projects?.find(p => p.id === selectedProjectId);
+      // Get current project details - fetch projects if not available
+      let currentProject;
+      if (projects && projects.length > 0) {
+        currentProject = projects.find(p => p.id === selectedProjectId);
+      } else {
+        // Fetch project details if projects array is not available
+        try {
+          const response = await apiRequest("GET", `/api/projects/${selectedProjectId}`);
+          if (response.ok) {
+            currentProject = await response.json();
+          }
+        } catch (error) {
+          console.warn('Could not fetch project details:', error);
+          currentProject = { name: `Project ${selectedProjectId}`, description: 'No description', status: 'Unknown' };
+        }
+      }
 
       // Calculate statistics - handle missing data gracefully
       const functionalReqs = selectedBrd.functionalRequirements || [];

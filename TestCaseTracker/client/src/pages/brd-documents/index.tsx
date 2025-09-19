@@ -1027,7 +1027,22 @@ export default function BrdDocumentsPage() {
                 {selectedDocument.functionalRequirements && (
                   <div>
                     <h4 className="font-medium mb-2">Functional Requirements</h4>
-                    <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.functionalRequirements}</p>
+                    {typeof selectedDocument.functionalRequirements === 'string' ? (
+                      <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.functionalRequirements}</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {Array.isArray(selectedDocument.functionalRequirements) ? (
+                          selectedDocument.functionalRequirements.map((req: any, index: number) => (
+                            <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                              <p className="font-medium text-sm">{req.requirementId || `REQ-${index + 1}`}</p>
+                              <p className="text-gray-600 text-sm">{req.title || req.description || 'No description'}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-gray-600">Invalid functional requirements format</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
