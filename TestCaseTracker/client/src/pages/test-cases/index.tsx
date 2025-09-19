@@ -26,7 +26,7 @@ import { Project, Module, TestCase, Bug, Tag } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, Loader2, TestTube, FileDown, FileUp, FileText, GitBranch, ChevronUp, ChevronDown } from "lucide-react";
+import { Search, Plus, Loader2, TestTube, FileDown, FileUp, FileText, GitBranch, ChevronUp, ChevronDown, RotateCcw } from "lucide-react";
 import { 
   Dialog,
   DialogContent,
@@ -319,52 +319,64 @@ export default function TestCasesPage() {
                 </div>
               </div>
 
-              {selectedProjectId && (
-                <div className="flex gap-2">
-                  <ImportExport
-                    projectId={Number(selectedProjectId)}
-                    moduleId={selectedModuleId ? Number(selectedModuleId) : undefined}
-                    testCases={filteredTestCases}
-                    projectName={projects?.find(p => p.id === Number(selectedProjectId))?.name}
-                    moduleName={selectedModuleId && selectedModuleId !== "all" ? 
-                      modules?.find(m => m.id === Number(selectedModuleId))?.name : undefined}
-                  />
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Hard Refresh
+                </Button>
 
-                  <Button
-                    variant="outline"
-                    onClick={handleGenerateFlowDiagram}
-                    className="flex items-center gap-2"
-                    disabled={!selectedProjectId || isGeneratingFlow}
-                    title="Generate Flow Diagram from Test Cases"
-                  >
-                    {isGeneratingFlow ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <GitBranch className="h-4 w-4" />
-                    )}
-                    {isGeneratingFlow ? 'Generating...' : 'Generate Flow'}
-                  </Button>
+                {selectedProjectId && (
+                  <>
+                    <ImportExport
+                      projectId={Number(selectedProjectId)}
+                      moduleId={selectedModuleId ? Number(selectedModuleId) : undefined}
+                      testCases={filteredTestCases}
+                      projectName={projects?.find(p => p.id === Number(selectedProjectId))?.name}
+                      moduleName={selectedModuleId && selectedModuleId !== "all" ? 
+                        modules?.find(m => m.id === Number(selectedModuleId))?.name : undefined}
+                    />
 
-                  <Button 
-                    onClick={() => {
-                      if (!selectedProjectId) {
-                        toast({
-                          title: "No project selected",
-                          description: "Please select a project before creating a test case",
-                          variant: "destructive",
-                        });
-                        return;
-                      }
-                      setSelectedTestCase(null);
-                      setFormOpen(true);
-                    }} 
-                    className="flex items-center gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    New Test Case
-                  </Button>
-                </div>
-              )}
+                    <Button
+                      variant="outline"
+                      onClick={handleGenerateFlowDiagram}
+                      className="flex items-center gap-2"
+                      disabled={!selectedProjectId || isGeneratingFlow}
+                      title="Generate Flow Diagram from Test Cases"
+                    >
+                      {isGeneratingFlow ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <GitBranch className="h-4 w-4" />
+                      )}
+                      {isGeneratingFlow ? 'Generating...' : 'Generate Flow'}
+                    </Button>
+
+                    <Button 
+                      onClick={() => {
+                        if (!selectedProjectId) {
+                          toast({
+                            title: "No project selected",
+                            description: "Please select a project before creating a test case",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        setSelectedTestCase(null);
+                        setFormOpen(true);
+                      }} 
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      New Test Case
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Filter Controls */}

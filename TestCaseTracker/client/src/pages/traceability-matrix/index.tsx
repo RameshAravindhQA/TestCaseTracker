@@ -34,7 +34,8 @@ import {
   Trash,
   X,
   Tag,
-  Loader2
+  Loader2,
+  RotateCcw // Import RotateCcw for the refresh icon
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -69,7 +70,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
   const [selectedModuleFilter, setSelectedModuleFilter] = useState<string>('all');
   // Removed treeViewMode state
 
-  const { toast } = useToast();
+  const { toast } = useUseToast();
 
   // Fetch modules for the project
   const { data: modules = [] } = useQuery({
@@ -1082,7 +1083,7 @@ export default function TraceabilityMatrixPage() {
   });
   const matrixRef = useRef<HTMLDivElement>(null);
 
-  const { toast } = useToast();
+  const { toast } = useUseToast();
   const queryClient = useQueryClient();
 
   // Fetch projects
@@ -1591,7 +1592,7 @@ export default function TraceabilityMatrixPage() {
   return (
     <MainLayout>
       <div className="container mx-auto py-6 px-4 min-h-screen overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <div className="p-2 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl shadow-lg">
               <FileText className="h-8 w-8 text-white" />
@@ -1778,7 +1779,18 @@ export default function TraceabilityMatrixPage() {
               {modules.length > 0 ? (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Module-to-Module Traceability Matrix</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Module-to-Module Traceability Matrix</CardTitle>
+                      <Button
+                        onClick={() => window.location.reload()}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        Hard Refresh
+                      </Button>
+                    </div>
                     <p className="text-sm text-muted-foreground">
                       Select a marker above, then click on matrix cells to assign relationships. All changes are saved to database.
                     </p>

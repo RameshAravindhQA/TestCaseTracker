@@ -75,7 +75,8 @@ import {
   InsertTrackerTimelineExtension,
   InsertTrackerDependency,
   InsertTrackerAuditLog,
-  InsertTrackerCustomDropdown
+  InsertTrackerCustomDropdown,
+  GitHubConfig
 } from "@shared/schema";
 
 import { desc, eq } from "drizzle-orm"; // Assuming drizzle-orm is used for schema operations
@@ -132,7 +133,7 @@ export interface IStorage {
 
   // Document operations
   getDocuments(): Promise<Document[]>;
-  getDocumentsByProject(projectId: number): Promise<Document[]>;
+  getDocumentsByProject(projectId: number, folderId?: number): Promise<Document[]>;
   getDocument(id: number): Promise<Document | undefined>;
   getDocumentById(id: number): Promise<Document | null>;
   createDocument(document: InsertDocument): Promise<Document>;
@@ -141,7 +142,6 @@ export interface IStorage {
 
   // Document folder operations
   getDocumentFolders(projectId: number): Promise<DocumentFolder[]>;
-  getDocumentFoldersByProject(projectId: number): Promise<DocumentFolder[]>;
   getDocumentFolder(id: number): Promise<DocumentFolder | undefined>;
   getDocumentFolderById(id: number): Promise<DocumentFolder | null>;
   createDocumentFolder(folder: InsertDocumentFolder): Promise<DocumentFolder>;
@@ -167,15 +167,14 @@ export interface IStorage {
   deleteTag(id: number): Promise<boolean>;
 
   // Kanban operations
-  getKanbanColumns(): Promise<KanbanColumn[]>;
-  getKanbanColumnsByProject(projectId: number): Promise<KanbanColumn[]>;
+  getKanbanColumns(projectId?: number, sprintId?: number): Promise<KanbanColumn[]>;
   getKanbanColumn(id: number): Promise<KanbanColumn | undefined>;
   createKanbanColumn(column: InsertKanbanColumn): Promise<KanbanColumn>;
   updateKanbanColumn(id: number, columnData: Partial<KanbanColumn>): Promise<KanbanColumn | undefined>;
   deleteKanbanColumn(id: number): Promise<boolean>;
 
-  getKanbanCards(): Promise<KanbanCard[]>;
-  getKanbanCardsByColumn(columnId: number): Promise<KanbanCard[]>;
+  getKanbanCards(columnId?: number, sprintId?: number, projectId?: number): Promise<KanbanCard[]>;
+  getKanbanSubCards(parentId: number): Promise<KanbanCard[]>;
   getKanbanCard(id: number): Promise<KanbanCard | undefined>;
   createKanbanCard(card: InsertKanbanCard): Promise<KanbanCard>;
   updateKanbanCard(id: number, cardData: Partial<KanbanCard>): Promise<KanbanCard | undefined>;
@@ -484,7 +483,7 @@ export interface IStorage {
   }>;
 
   // Test Case Status operations
-  updateTestCaseStatus(id: number, status: any): Promise<TestCase | null>;
+  updateTestCaseStatus(id: number, status: string): Promise<TestCase | null>;
 
   // Bug Status operations
   updateBugStatus(id: number, status: any): Promise<Bug | null>;
@@ -3402,7 +3401,7 @@ class MemStorage implements IStorage {
     });
   }
 
-  async updateTestCaseStatus(id: number, status: any): Promise<TestCase | null> {
+  async updateTestCaseStatus(id: number, status: string): Promise<TestCase | null> {
     console.log(`Storage: updateTestCaseStatus(${id}, ${status})`);
     return this.updateTestCase(id, { status });
   }
@@ -5114,10 +5113,20 @@ class MemStorage implements IStorage {
     // Only filter by projectId if brdDocumentId is not specified
     if (projectId && !brdDocumentId) {
       // Get BRD documents for the      project
-      const brdIds = brdDocuments.map(doc => doc.id);
-      console.log(`Storage: BRD IDs for project ${projectId}:`, brdIds);
-      results = results.filter(req => brdIds.includes(req.brdId || req.brdDocumentId));
-      console.log(`Storage: After filtering by projectId ${projectId}: ${results.length} requirements`);
+      const brdDocuments = await this.getBrdDocuments(projectId);
+      const functionalRequirements = [];
+
+      for (const brd of brdDocuments) {
+        const reqs = await this.getFunctionalRequirements(brd.id);
+        functionalRequirements.push(...reqs);
+      }
+
+      const functionalRequirementIds = functionalRequirements.map(req => req.id);
+      results = results.filter(req => functionalRequirementIds.includes(req.brdId || req.brdDocumentId));
+
+      console.log(`Storage: Filtering mappings by projectId ${projectId}: found ${brdDocuments.length} BRDs, ${functionalRequirements.length} functional requirements, ${results.length} mappings`);
+      console.log(`Storage: All mappings in storage:`, this.requirementTestCaseMappings.map(m => ({ id: m.id, functionalRequirementId: m.functionalRequirementId, testCaseId: m.testCaseId })));
+      console.log(`Storage: Functional requirement IDs for project:`, functionalRequirementIds);
     }
 
     return results.sort((a, b) => a.requirementId.localeCompare(b.requirementId));
@@ -5181,13 +5190,15 @@ class MemStorage implements IStorage {
     const index = this.functionalRequirements.findIndex(req => req.id === id);
     if (index === -1) return null;
 
-    const updatedReq = {
-      ...this.functionalRequirements[index],
-      ...data,
-      updatedAt: new Date()
+    const updatedRequirement = { 
+      ...this.functionalRequirements[index], 
+      ...data, 
+      updatedAt: new Date() 
     };
-    this.functionalRequirements[index] = updatedReq;
-    return updatedReq;
+    this.functionalRequirements[index] = updatedRequirement;
+
+    console.log(`✅ Updated functional requirement ${id} status to: ${data.status}`);
+    return updatedRequirement;
   }
 
   async deleteFunctionalRequirement(id: number): Promise<boolean> {
@@ -5240,7 +5251,7 @@ class MemStorage implements IStorage {
 
   async getRequirementTestCaseMapping(id: number): Promise<RequirementTestCaseMapping | null> {
     if (!this.requirementTestCaseMappings) {
-      this.requirementTestCaseMappings = [];
+      this.requirementTestCasemappings = [];
     }
     return this.requirementTestCaseMappings.find(mapping => mapping.id === id) || null;
   }
@@ -5280,14 +5291,24 @@ class MemStorage implements IStorage {
     const index = this.requirementTestCaseMappings.findIndex(mapping => mapping.id === id);
     if (index === -1) return null;
 
-    const updatedMapping = {
-      ...this.requirementTestCaseMappings[index],
-      ...data,
-      updatedAt: new Date()
+    const updatedMapping = { 
+      ...this.requirementTestCaseMappings[index], 
+      ...data, 
+      updatedAt: new Date() 
     };
-
     this.requirementTestCaseMappings[index] = updatedMapping;
+
     console.log(`Storage: Updated RTM mapping ${id}:`, updatedMapping);
+
+    // If mapping status changed to Pass, update the corresponding test case status
+    if (data.status === 'Pass' && updatedMapping.testCaseId) {
+      console.log(`🔄 Updating test case ${updatedMapping.testCaseId} status to Pass due to RTM mapping`);
+      await this.updateTestCaseStatus(updatedMapping.testCaseId, 'Pass');
+    }
+
+    // Sync requirement status after updating mapping
+    await this.syncRequirementStatusWithTestCases(updatedMapping.functionalRequirementId);
+
     return updatedMapping;
   }
 
@@ -5319,8 +5340,10 @@ class MemStorage implements IStorage {
     } else if (passCount === totalCount) {
       overallStatus = "Pass";
     } else if (passCount > 0) {
-      overallStatus = "Pass"; // Partial pass
+      overallStatus = "Partial";
     }
+
+    console.log(`🔄 Syncing functional requirement ${functionalRequirementId} status to: ${overallStatus} (${passCount}/${totalCount} passed)`);
 
     // Update functional requirement status
     await this.updateFunctionalRequirement(functionalRequirementId, { status: overallStatus });

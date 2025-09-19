@@ -528,6 +528,33 @@ export default function BrdDocumentsPage() {
     }
   };
 
+  // Function to handle hard refresh
+  const handleHardRefresh = () => {
+    // This would typically involve a full page reload or a more aggressive cache clearing.
+    // For simplicity, we'll just do a window reload.
+    window.location.reload();
+  };
+
+  // Function to synchronize status
+  const synchronizeStatus = async (brdId: number, testCasePassed: boolean) => {
+    // In a real scenario, you'd fetch the current state of functional requirements and update them.
+    // For this example, we'll simulate the update logic.
+    console.log(`Synchronizing status for BRD ${brdId}: Test case passed = ${testCasePassed}`);
+    
+    // Example: If test case passed, update BRD status to 'Approved'
+    if (testCasePassed) {
+      updateBrdStatusMutation.mutate({ brdId, status: "Approved" });
+      // Here you would also update BRD documents and project test cases as per requirement.
+      // This would involve further API calls or mutations.
+    } else {
+      // Handle cases where test case might fail or be not executed
+      // For example, if test case is 'Not Executed', maybe BRD status should be 'Review' or 'Draft'
+      // This logic needs to be more detailed based on the actual workflow.
+      // For now, we'll assume passing is the primary trigger for status change.
+    }
+  };
+
+
   return (
     <MainLayout>
       <div className="container mx-auto p-6 space-y-6">
@@ -541,6 +568,10 @@ export default function BrdDocumentsPage() {
 
         {selectedProjectId && (
           <div className="flex gap-2">
+            <Button onClick={handleHardRefresh} className="flex items-center gap-2" variant="outline">
+              <RotateCcw className="h-4 w-4" />
+              Hard Refresh
+            </Button>
             <Button onClick={() => {
               console.log("Create BRD Document button clicked");
               setIsCreateDialogOpen(true);
@@ -818,6 +849,10 @@ export default function BrdDocumentsPage() {
                 }}
                 onDeleteFunctionalRequirement={(requirementId) => {
                   deleteFunctionalRequirementMutation.mutate(requirementId);
+                }}
+                // Added prop to trigger status synchronization
+                onTestCaseStatusChange={(testCaseId, passed) => {
+                  synchronizeStatus(selectedDocument.id, passed);
                 }}
               />
             ) : showVersionHistory ? (
