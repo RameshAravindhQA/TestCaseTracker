@@ -635,6 +635,12 @@ export interface IStorage {
 
   // RTM Status Synchronization
   syncRequirementStatusWithTestCases(functionalRequirementId: number): Promise<void>;
+
+  // Reopen Records Methods
+  getReopenRecords(requestId: number): Promise<any[]>;
+  createReopenRecord(data: any): Promise<any>;
+  updateReopenRecord(id: number, data: any): Promise<any | null>;
+  deleteReopenRecord(id: number): Promise<boolean>;
 }
 
 /**
@@ -3546,7 +3552,7 @@ class MemStorage implements IStorage {
       const existingNumbers = existingEmployees
         .map(emp => emp.employeeId)
         .filter(id => id && id.match(/^EMP-(\d+)$/))
-        .map(id => parseInt(id.replace('EMP-', ''), 10))
+        .map(id => parseInt(id.replace('EMP-', ''),10))
         .filter(num => !isNaN(num));
 
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
@@ -4162,23 +4168,34 @@ class MemStorage implements IStorage {
     const index = this.resourceRequests.findIndex(req => req.id === id);
     if (index === -1) return null;
 
-    const request = this.resourceRequests[index];
-    const updatedRequest = {
-      ...request,
-      status: 'Reopened' as any,
+    const updates: any = {
+      status: 'Open',
       reopenReason: reason,
-      reopenedDate: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      reopenedDate: new Date(),
+      updatedAt: new Date()
     };
 
     if (newStartDate) {
-      updatedRequest.startDate = newStartDate;
-    }
-    if (newEndDate) {
-      updatedRequest.endDate = newEndDate;
+      updates.startDate = newStartDate;
     }
 
+    if (newEndDate) {
+      updates.endDate = newEndDate;
+    }
+
+    const updatedRequest = { ...this.resourceRequests[index], ...updates };
     this.resourceRequests[index] = updatedRequest;
+
+    // Create a reopen record
+    await this.createReopenRecord({
+      requestId: id,
+      reason,
+      newStartDate,
+      newEndDate,
+      reopenedDate: new Date(),
+      reopenedById: updatedRequest.requestedById // You might want to pass this as a parameter
+    });
+
     return updatedRequest;
   }
 
@@ -4281,9 +4298,49 @@ class MemStorage implements IStorage {
   }
 
   async deleteRequestAttachment(attachmentId: number): Promise<boolean> {
-    const initialLength = this.requestAttachments.length;
-    this.requestAttachments = this.requestAttachments.filter(att => att.id !== attachmentId);
-    return this.requestAttachments.length < initialLength;
+    const index = this.requestAttachments.findIndex(att => att.id === attachmentId);
+    if (index === -1) return false;
+
+    this.requestAttachments.splice(index, 1);
+    return true;
+  }
+
+  // Reopen Records Methods
+  async getReopenRecords(requestId: number): Promise<any[]> {
+    return this.reopenRecords.filter(record => record.requestId === requestId);
+  }
+
+  async createReopenRecord(data: any): Promise<any> {
+    const id = this.getNextId();
+    const reopenRecord = {
+      id,
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.reopenRecords.push(reopenRecord);
+    return reopenRecord;
+  }
+
+  async updateReopenRecord(id: number, data: any): Promise<any | null> {
+    const index = this.reopenRecords.findIndex(record => record.id === id);
+    if (index === -1) return null;
+
+    const updatedRecord = { 
+      ...this.reopenRecords[index], 
+      ...data, 
+      updatedAt: new Date() 
+    };
+    this.reopenRecords[index] = updatedRecord;
+    return updatedRecord;
+  }
+
+  async deleteReopenRecord(id: number): Promise<boolean> {
+    const index = this.reopenRecords.findIndex(record => record.id === id);
+    if (index === -1) return false;
+
+    this.reopenRecords.splice(index, 1);
+    return true;
   }
 
   async getRequestAuditLogs(requestId: number): Promise<any[]> {
@@ -5228,7 +5285,7 @@ class MemStorage implements IStorage {
     }
 
     if (projectId && !functionalRequirementId && !testCaseId) {
-      // Get all BRD documents for the project first
+      // Get all BRD documents for the project
       const brdDocuments = await this.getBrdDocuments(projectId);
       const functionalRequirements = [];
 
@@ -5251,7 +5308,7 @@ class MemStorage implements IStorage {
 
   async getRequirementTestCaseMapping(id: number): Promise<RequirementTestCaseMapping | null> {
     if (!this.requirementTestCaseMappings) {
-      this.requirementTestCasemappings = [];
+      this.requirementTestCaseMappings = [];
     }
     return this.requirementTestCaseMappings.find(mapping => mapping.id === id) || null;
   }

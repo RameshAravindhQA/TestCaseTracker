@@ -56,6 +56,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format } from 'date-fns'; // Import format function
 
 
 const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null }) => {
@@ -71,6 +72,11 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
   // Removed treeViewMode state
 
   const { toast } = useToast();
+
+  // Fetch projects for project info
+  const { data: projects = [] } = useQuery({
+    queryKey: ["/api/projects"],
+  });
 
   // Fetch modules for the project
   const { data: modules = [] } = useQuery({
@@ -238,226 +244,97 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
     URL.revokeObjectURL(url);
   };
 
-  const exportRTMToPDF = async () => {
-    const selectedBrd = rtmData?.brdDocuments.find((brd: any) => brd.id === selectedBrdId);
-    if (!selectedBrd) {
-      toast({ title: "Error", description: "Please select a BRD document first", variant: "destructive" });
+  // Export to PDF
+  const exportToPDF = async () => {
+    if (!selectedProjectId || !rtmData) {
+      toast({
+        title: "Export Error",
+        description: "Please select a project and ensure data is loaded.",
+        variant: "destructive",
+      });
       return;
     }
 
     try {
-      console.log('🔄 Starting RTM PDF export...');
+      const project = projects.find(p => p.id === selectedProjectId);
+      const doc = new jsPDF();
 
-      // Dynamically import jsPDF to avoid SSR issues
-      const { jsPDF } = await import('jspdf');
-      console.log('✅ jsPDF loaded successfully');
+      // Title
+      doc.setFontSize(20);
+      doc.text("Requirements Traceability Matrix", 14, 20);
 
-      // Get current project details
-      const currentProject = projects?.find(p => p.id === selectedProjectId);
-
-      // Calculate statistics - handle missing data gracefully
-      const functionalReqs = selectedBrd.functionalRequirements || [];
-      const totalMappings = functionalReqs.reduce((sum: number, req: any) => 
-        sum + (req.mappings?.length || 0), 0);
-      const passedMappings = functionalReqs.reduce((sum: number, req: any) => 
-        sum + (req.mappings?.filter((m: any) => m.status === "Pass").length || 0), 0);
-      const failedMappings = functionalReqs.reduce((sum: number, req: any) => 
-        sum + (req.mappings?.filter((m: any) => m.status === "Fail").length || 0), 0);
-      const notExecutedMappings = functionalReqs.reduce((sum: number, req: any) => 
-        sum + (req.mappings?.filter((m: any) => m.status === "Not Executed").length || 0), 0);
-
-      const passPercentage = totalMappings > 0 ? Math.round((passedMappings / totalMappings) * 100) : 0;
-      const failPercentage = totalMappings > 0 ? Math.round((failedMappings / totalMappings) * 100) : 0;
-
-      // Create PDF document
-      const doc = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = doc.internal.pageSize.width;
-      const pageHeight = doc.internal.pageSize.height;
-      const margin = 20;
-      let yPosition = margin;
-
-      // Add header
-      doc.setFontSize(18);
-      doc.setFont("helvetica", "bold");
-      doc.text("Requirements Traceability Matrix", pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 10;
+      if (project) {
+        doc.setFontSize(16);
+        doc.text(`Project: ${project.name}`, 14, 30);
+      }
 
       doc.setFontSize(12);
-      doc.setFont("helvetica", "normal");
-      doc.text(`${selectedBrd.documentId} - ${selectedBrd.title}`, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 6;
+      doc.text(`Generated: ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, 14, 40);
 
-      doc.setFontSize(10);
-      doc.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 15;
+      let yPosition = 50;
 
-      // Project Information
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("Project Information", margin, yPosition);
-      yPosition += 8;
+      // Summary stats
+      if (rtmData.stats) {
+        doc.setFontSize(14);
+        doc.text("Summary", 14, yPosition);
+        yPosition += 10;
 
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      const projectInfo = [
-        `Project Name: ${currentProject?.name || 'Unknown Project'}`,
-        `Project Description: ${currentProject?.description || 'No description'}`,
-        `Project Status: ${currentProject?.status || 'Active'}`,
-        `Report Generated: ${new Date().toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        })}`
-      ];
-
-      projectInfo.forEach(info => {
-        if (yPosition > pageHeight - 20) {
-          doc.addPage();
-          yPosition = margin;
-        }
-        doc.text(info, margin, yPosition);
+        doc.setFontSize(10);
+        doc.text(`Total Requirements: ${rtmData.stats.totalRequirements}`, 14, yPosition);
         yPosition += 6;
-      });
-      yPosition += 10;
-
-      // Summary Statistics
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("Test Execution Summary", margin, yPosition);
-      yPosition += 8;
-
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      const summaryStats = [
-        `Total Requirements: ${functionalReqs.length}`,
-        `Total Mappings: ${totalMappings}`,
-        `Passed: ${passedMappings} (${passPercentage}%)`,
-        `Failed: ${failedMappings} (${failPercentage}%)`,
-        `Not Executed: ${notExecutedMappings}`,
-        `Overall Coverage: ${totalMappings > 0 ? Math.round(((passedMappings + failedMappings) / totalMappings) * 100) : 0}%`
-      ];
-
-      summaryStats.forEach(stat => {
-        if (yPosition > pageHeight - 20) {
-          doc.addPage();
-          yPosition = margin;
-        }
-        doc.text(stat, margin, yPosition);
+        doc.text(`Total Mappings: ${rtmData.stats.totalMappings}`, 14, yPosition);
         yPosition += 6;
-      });
-      yPosition += 10;
+        doc.text(`Passed: ${rtmData.stats.passed}`, 14, yPosition);
+        yPosition += 6;
+        doc.text(`Failed: ${rtmData.stats.failed}`, 14, yPosition);
+        yPosition += 15;
+      }
 
-      // Detailed Matrix Table
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("Detailed Traceability Matrix", margin, yPosition);
-      yPosition += 10;
+      // Requirements table
+      if (rtmData.brdDocuments && rtmData.brdDocuments.length > 0) {
+        const tableData = [];
 
-      // Table headers
-      const headers = ['Req ID', 'Requirement Title', 'Test Case ID', 'Test Case Feature', 'Status'];
-      const columnWidths = [25, 50, 30, 45, 20];
-      let xPosition = margin;
+        rtmData.brdDocuments.forEach(brd => {
+          if (brd.functionalRequirements) {
+            brd.functionalRequirements.forEach(req => {
+              const mappedTestCases = req.mappings ? req.mappings.map(mapping => {
+                const testCase = rtmData.testCases.find(tc => tc.id === mapping.testCaseId);
+                return testCase ? testCase.testCaseId : 'Unknown';
+              }).join(', ') : 'None';
 
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
-
-      // Draw header row
-      headers.forEach((header, index) => {
-        doc.rect(xPosition, yPosition, columnWidths[index], 8);
-        doc.text(header, xPosition + 2, yPosition + 6);
-        xPosition += columnWidths[index];
-      });
-      yPosition += 8;
-
-      // Table data
-      doc.setFont("helvetica", "normal");
-
-      functionalReqs.forEach((req: any) => {
-        if (req.mappings && req.mappings.length > 0) {
-          req.mappings.forEach((mapping: any) => {
-            if (yPosition > pageHeight - 20) {
-              doc.addPage();
-              yPosition = margin;
-
-              // Redraw headers on new page
-              xPosition = margin;
-              doc.setFont("helvetica", "bold");
-              headers.forEach((header, index) => {
-                doc.rect(xPosition, yPosition, columnWidths[index], 8);
-                doc.text(header, xPosition + 2, yPosition + 6);
-                xPosition += columnWidths[index];
-              });
-              yPosition += 8;
-              doc.setFont("helvetica", "normal");
-            }
-
-            const testCase = rtmData?.testCases?.find((tc: any) => tc.id === mapping.testCaseId);
-            const rowData = [
-              req.requirementId || 'N/A',
-              (req.title || 'N/A').substring(0, 25) + (req.title?.length > 25 ? '...' : ''),
-              testCase?.testCaseId || 'Unknown',
-              (testCase?.feature || testCase?.title || 'N/A').substring(0, 22) + ((testCase?.feature || testCase?.title)?.length > 22 ? '...' : ''),
-              mapping.status
-            ];
-
-            xPosition = margin;
-            rowData.forEach((data, index) => {
-              doc.rect(xPosition, yPosition, columnWidths[index], 8);
-              doc.text(data, xPosition + 2, yPosition + 6);
-              xPosition += columnWidths[index];
+              tableData.push([
+                req.requirementId || req.id,
+                req.title || req.name || 'Untitled',
+                req.status || 'Not Executed',
+                mappedTestCases
+              ]);
             });
-            yPosition += 8;
-          });
-        } else {
-          if (yPosition > pageHeight - 20) {
-            doc.addPage();
-            yPosition = margin;
-
-            // Redraw headers on new page
-            xPosition = margin;
-            doc.setFont("helvetica", "bold");
-            headers.forEach((header, index) => {
-              doc.rect(xPosition, yPosition, columnWidths[index], 8);
-              doc.text(header, xPosition + 2, yPosition + 6);
-              xPosition += columnWidths[index];
-            });
-            yPosition += 8;
-            doc.setFont("helvetica", "normal");
           }
+        });
 
-          const rowData = [
-            req.requirementId || 'N/A',
-            (req.title || 'N/A').substring(0, 25) + (req.title?.length > 25 ? '...' : ''),
-            'No mappings',
-            '-',
-            'Not Mapped'
-          ];
-
-          xPosition = margin;
-          rowData.forEach((data, index) => {
-            doc.rect(xPosition, yPosition, columnWidths[index], 8);
-            doc.text(data, xPosition + 2, yPosition + 6);
-            xPosition += columnWidths[index];
-          });
-          yPosition += 8;
-        }
-      });
+        autoTable(doc, {
+          head: [['Requirement ID', 'Title', 'Status', 'Mapped Test Cases']],
+          body: tableData,
+          startY: yPosition,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [59, 130, 246] },
+        });
+      }
 
       // Save the PDF
-      const fileName = `RTM_${currentProject?.name?.replace(/[^a-zA-Z0-9]/g, '_') || 'Project'}_${selectedBrd.documentId}_${new Date().toISOString().split('T')[0]}.pdf`;
+      const fileName = `RTM_${project?.name || 'Project'}_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
       doc.save(fileName);
 
-      console.log('✅ RTM PDF export successful');
-      toast({ title: "Success", description: "RTM exported to PDF successfully" });
-
-    } catch (error: any) {
-      console.error('❌ PDF export error:', error);
-      toast({ 
-        title: "Export Failed", 
-        description: error.message || "Failed to export RTM to PDF. Please try again.", 
-        variant: "destructive" 
+      toast({
+        title: "Export Successful",
+        description: "RTM has been exported to PDF successfully.",
+      });
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export PDF. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -693,7 +570,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => exportRTMToPDF()}
+                  onClick={() => exportToPDF()}
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   Export PDF

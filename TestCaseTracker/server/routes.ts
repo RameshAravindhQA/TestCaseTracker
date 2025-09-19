@@ -1592,7 +1592,7 @@ export async function registerRoutes(app: Express): Server {
   // Reopen request endpoint
   apiRouter.post("/resource-requests/:id/reopen", isAuthenticated, async (req, res) => {
     try {
-      const requestId = parseInt(req.params.id);
+      const id = parseInt(req.params.id);
       const { reason, newStartDate, newEndDate } = req.body;
       const userId = req.session.userId!;
 
@@ -1601,7 +1601,7 @@ export async function registerRoutes(app: Express): Server {
       }
 
       // Use the new reopen method
-      const updatedRequest = await storage.reopenResourceRequest(requestId, reason, userId, newStartDate, newEndDate);
+      const updatedRequest = await storage.reopenResourceRequest(id, reason, userId, newStartDate, newEndDate);
 
       if (!updatedRequest) {
         return res.status(404).json({ message: "Request not found" });
@@ -1611,6 +1611,55 @@ export async function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Reopen request error:', error);
       res.status(500).json({ message: "Failed to reopen request" });
+    }
+  });
+
+  // Get reopen records for a request
+  apiRouter.get("/resource-requests/:id/reopen-records", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const reopenRecords = await storage.getReopenRecords(requestId);
+      res.json(reopenRecords);
+    } catch (error) {
+      console.error("Get reopen records error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Update reopen record
+  apiRouter.put("/resource-requests/reopen-records/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { reason, newStartDate, newEndDate } = req.body;
+      const updatedRecord = await storage.updateReopenRecord(id, {
+        reason,
+        newStartDate,
+        newEndDate,
+        updatedById: req.session.userId,
+        updatedAt: new Date()
+      });
+      if (!updatedRecord) {
+        return res.status(404).json({ message: "Reopen record not found" });
+      }
+      res.json(updatedRecord);
+    } catch (error) {
+      console.error("Update reopen record error:", error);
+      res.status(400).json({ message: "Invalid update data" });
+    }
+  });
+
+  // Delete reopen record
+  apiRouter.delete("/resource-requests/reopen-records/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteReopenRecord(id);
+      if (!success) {
+        return res.status(404).json({ message: "Reopen record not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete reopen record error:", error);
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -3637,7 +3686,7 @@ export async function registerRoutes(app: Express): Server {
   });
 
   // Get execution status
-  apiRouter.get("/automation/execution/:executionId", isAuthenticated, async (req, res) => {
+  apiRouter.get("/automation/execution/:executionId", isAuthenticated, async (req, res    ) => {
     try {
       const { executionId } = req.params;
       const execution = automationService.getExecution(executionId);
@@ -6254,7 +6303,7 @@ if (moduleId) {
             mappings: mappingsByRequirement[req.id] || []
           }));
 
-          return { ...brd, functionalRequirements: functionalRequirementsWithMappings };
+          return { ...brd, functionalRequirements: functionalRequirementsWithRequirements };
         })
       );
 
@@ -8827,7 +8876,7 @@ if (moduleId) {
         headers: {
           'Authorization': `Bearer ${githubConfig.personalAccessToken}`,
           'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'TestCaseTracker/1.0.0'
+          'User-Agent': ''TestCaseTracker/1.0.0'
         }
       });
 
