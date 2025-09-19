@@ -8874,15 +8874,6 @@ if (moduleId) {
     }
   });
 
-
-  // Register the main API router
-  app.use("/api", apiRouter);
-
-  // Create HTTP server
-  const httpServer = createServer(app);
-
-  return httpServer;
-}
   // Enhanced AI Chatbot endpoint for intelligent queries
   apiRouter.post("/chat/intelligent", isAuthenticated, async (req, res) => {
     try {
@@ -8975,3 +8966,12 @@ if (moduleId) {
       });
     }
   });
+
+  // Register the main API router
+  app.use("/api", apiRouter);
+
+  // Create HTTP server
+  const httpServer = createServer(app);
+
+  return httpServer;
+}
