@@ -211,16 +211,30 @@ async createFunctionalRequirement(data: any): Promise<any> {
   const now = new Date();
 
   // Get BRD document to generate requirement ID
+  console.log(`📋 Fetching BRD document with ID: ${data.brdId}`);
   const brdDocument = await this.getBrdDocument(data.brdId);
   if (!brdDocument) {
     throw new Error(`BRD Document with ID ${data.brdId} not found`);
   }
+  
+  console.log(`📋 Retrieved BRD document:`, {
+    id: brdDocument.id,
+    documentId: brdDocument.documentId,
+    title: brdDocument.title,
+    projectId: brdDocument.projectId
+  });
 
   // Get project to ensure we use the correct project prefix
   const project = await this.getProject(brdDocument.projectId);
   if (!project) {
     throw new Error(`Project with ID ${brdDocument.projectId} not found`);
   }
+  
+  console.log(`📋 Retrieved project:`, {
+    id: project.id,
+    name: project.name,
+    prefix: project.prefix
+  });
 
   // Generate requirement ID using the project prefix from the BRD document ID: BEG-REQ-001-FR-001
   const existingRequirements = await this.getFunctionalRequirements(data.brdId);
@@ -255,7 +269,8 @@ async createFunctionalRequirement(data: any): Promise<any> {
   // Use the actual BRD document ID from the database (which should already have the correct project prefix)
   const requirementId = `${brdDocument.documentId}-FR-${String(nextNumber).padStart(3, '0')}`;
 
-  console.log(`Creating functional requirement with ID: ${requirementId} for BRD: ${brdDocument.documentId} (Project: ${project.name}, Prefix: ${project.prefix || project.name.substring(0, 3).toUpperCase()})`);
+  console.log(`📋 Creating functional requirement with ID: ${requirementId} for BRD: ${brdDocument.documentId} (Project: ${project.name}, Prefix: ${project.prefix || project.name.substring(0, 3).toUpperCase()})`);
+  console.log(`📋 BRD document details: ID=${brdDocument.id}, documentId=${brdDocument.documentId}`);
 
   const requirement = {
     id,
