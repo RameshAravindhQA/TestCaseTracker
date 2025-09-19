@@ -8883,3 +8883,95 @@ if (moduleId) {
 
   return httpServer;
 }
+  // Enhanced AI Chatbot endpoint for intelligent queries
+  apiRouter.post("/chat/intelligent", isAuthenticated, async (req, res) => {
+    try {
+      const { query, context } = req.body;
+      
+      if (!query || query.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          error: 'Query is required'
+        });
+      }
+
+      // Enhanced response with contextual intelligence
+      let response = "I understand you need help with that. Let me assist you with your test management tasks.";
+      let suggestions = [];
+
+      const queryLower = query.toLowerCase();
+
+      // Project-related queries
+      if (queryLower.includes('project')) {
+        if (queryLower.includes('create') || queryLower.includes('add') || queryLower.includes('new')) {
+          response = "I can help you create a new project! You'll need:\n\n1. Project Name\n2. Description\n3. Project Prefix (like 'PROJ' for project codes)\n4. Initial team members\n\nWould you like me to guide you through the project creation process?";
+          suggestions = ["Guide me through project creation", "Show project creation form", "List existing projects first"];
+        } else if (queryLower.includes('status') || queryLower.includes('active') || queryLower.includes('inactive')) {
+          response = "I can show you project statuses! Here's what I can help with:\n\n📊 Show all active projects\n📋 List inactive/archived projects\n🔄 Change project status\n📈 Project status summary\n\nWhat specific project information do you need?";
+          suggestions = ["Show all active projects", "Show project status summary", "List all projects"];
+        }
+      }
+
+      // Bug-related queries
+      else if (queryLower.includes('bug')) {
+        if (queryLower.includes('report') || queryLower.includes('create') || queryLower.includes('new')) {
+          response = "I can help you report a new bug! A good bug report should include:\n\n🔍 Clear title and description\n📝 Steps to reproduce\n✅ Expected behavior\n❌ Actual behavior\n🖼️ Screenshots (if applicable)\n🏷️ Severity and priority\n\nShall I open the bug reporting form for you?";
+          suggestions = ["Open bug report form", "Show bug reporting guidelines", "View existing bugs"];
+        } else if (queryLower.includes('critical') || queryLower.includes('high priority')) {
+          response = "Critical bugs need immediate attention! I can help you:\n\n🚨 List all critical severity bugs\n⚡ Show high priority bugs\n📊 Bug severity breakdown\n🔔 Set up bug notifications\n\nWhat critical bug information do you need?";
+          suggestions = ["Show critical bugs", "Bug severity summary", "Recent high priority bugs"];
+        }
+      }
+
+      // Test case queries
+      else if (queryLower.includes('test case') || queryLower.includes('testing')) {
+        if (queryLower.includes('create') || queryLower.includes('generate') || queryLower.includes('ai')) {
+          response = "I can help you create test cases! I have AI-powered test case generation that can:\n\n🤖 Generate comprehensive test cases from requirements\n📋 Create test cases for different scenarios\n🎯 Generate edge cases and negative tests\n✅ Build regression test suites\n\nWould you like to use the AI test case generator?";
+          suggestions = ["Open AI test case generator", "Show test case templates", "View existing test cases"];
+        } else if (queryLower.includes('status') || queryLower.includes('execution')) {
+          response = "I can show you test execution status! Here's what's available:\n\n✅ Passed test cases\n❌ Failed test cases\n⏸️ Not executed test cases\n📊 Test execution reports\n📈 Test progress tracking\n\nWhat test status information do you need?";
+          suggestions = ["Show test execution summary", "List failed test cases", "Test progress report"];
+        }
+      }
+
+      // Export/Report queries
+      else if (queryLower.includes('export') || queryLower.includes('report') || queryLower.includes('download')) {
+        response = "I can help you export data in various formats:\n\n📄 PDF Reports (Test cases, Bug reports, Project summaries)\n📊 CSV/Excel exports (Data tables, Analytics)\n📋 Custom reports\n🔗 Traceability matrices\n\nWhat would you like to export?";
+        suggestions = ["Export test cases to PDF", "Download bug report CSV", "Generate project summary"];
+      }
+
+      // Dashboard/Overview queries
+      else if (queryLower.includes('dashboard') || queryLower.includes('overview') || queryLower.includes('summary')) {
+        response = "I can show you comprehensive overviews:\n\n📊 Project dashboard with key metrics\n🐛 Bug summary and trends\n✅ Test case execution status\n👥 Team productivity insights\n📈 Progress tracking\n\nWhich overview would you like to see?";
+        suggestions = ["Show main dashboard", "Bug trends analysis", "Test execution overview"];
+      }
+
+      // Time tracking queries
+      else if (queryLower.includes('time') || queryLower.includes('worklog') || queryLower.includes('hours')) {
+        response = "I can assist with time tracking:\n\n⏰ Log work hours for projects\n📅 View timesheets\n📊 Time tracking reports\n👤 Team time allocation\n🎯 Project time estimates vs actual\n\nWhat time tracking help do you need?";
+        suggestions = ["Log time for current project", "Show my timesheet", "Team time tracking report"];
+      }
+
+      res.json({
+        success: true,
+        response,
+        suggestions,
+        context: {
+          queryType: queryLower.includes('project') ? 'project' : 
+                     queryLower.includes('bug') ? 'bug' :
+                     queryLower.includes('test') ? 'test_case' :
+                     queryLower.includes('export') ? 'export' : 'general',
+          canExecute: true,
+          requiresData: true
+        }
+      });
+
+    } catch (error) {
+      console.error('Intelligent chat error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process intelligent query',
+        response: "I'm sorry, I encountered an error processing your request. Please try again or contact support if the issue persists."
+      });
+    }
+  });

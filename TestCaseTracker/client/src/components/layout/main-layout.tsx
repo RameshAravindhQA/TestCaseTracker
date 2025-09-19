@@ -38,6 +38,10 @@ import {
   Briefcase,
   UserCheck,
 } from "lucide-react";
+import { ProjectChat } from "@/components/chat/project-chat";
+import { GlobalChatbot } from "@/components/chat/global-chatbot";
+import { IntelligentHelperBot } from "@/components/chat/intelligent-helper-bot";
+import { useAuth } from "@/hooks/use-auth";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -228,6 +232,10 @@ function MainLayout({ children }: MainLayoutProps) {
     );
   }
 
+  // Logic to determine if project chat should be shown (example: on project-related pages)
+  const shouldShowProjectChat = location.startsWith('/projects') || location.startsWith('/kanban');
+  const currentProjectId = location.split('/').pop(); // Simple extraction, might need refinement
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
       {/* Sidebar for desktop - kept simple with no special key */}
@@ -334,6 +342,20 @@ function MainLayout({ children }: MainLayoutProps) {
 
         {/* Global Scroll Indicators */}
         <ScrollIndicators />
+
+        {/* Intelligent Helper Bot */}
+      <IntelligentHelperBot />
+
+      {/* Global Chat */}
+      <GlobalChatbot />
+
+      {/* Project Chat - Only show on specific pages */}
+      {shouldShowProjectChat && currentProjectId && (
+        <ProjectChat 
+          projectId={currentProjectId} 
+          currentUser={user}
+        />
+      )}
       </main>
 
       {/* This div contains the TodoToggleButton and was not part of the original issue regarding the floating icon. */}
