@@ -70,7 +70,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
   const [selectedModuleFilter, setSelectedModuleFilter] = useState<string>('all');
   // Removed treeViewMode state
 
-  const { toast } = useUseToast();
+  const { toast } = useToast();
 
   // Fetch modules for the project
   const { data: modules = [] } = useQuery({
@@ -1083,7 +1083,7 @@ export default function TraceabilityMatrixPage() {
   });
   const matrixRef = useRef<HTMLDivElement>(null);
 
-  const { toast } = useUseToast();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Fetch projects
@@ -1556,7 +1556,7 @@ export default function TraceabilityMatrixPage() {
   if (projectsLoading) {
     return (
       <MainLayout>
-        <div className="container mx-auto p-6 space-y-6">
+        <div className="container mx-auto p-6 space-6">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>

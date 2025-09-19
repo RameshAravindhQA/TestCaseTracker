@@ -1279,7 +1279,7 @@ class MemStorage implements IStorage {
 
       // Find the highest existing test case number for this specific module
       // Use the exact format: PROJECT-MODULE-TC-###
-      const prefixPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-\\d{3}$`);
+      const prefixPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-(\\d{3})$`);
       const existingTestCases = this.testCases
         .filter(tc => tc.moduleId === insertTestCase.moduleId && tc.projectId === insertTestCase.projectId && !tc.isDeleted)
         .map(tc => tc.testCaseId)
