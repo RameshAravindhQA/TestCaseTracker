@@ -266,15 +266,27 @@ async createFunctionalRequirement(data: any): Promise<any> {
     }
   }
   
-  // Use the actual BRD document ID from the database (which should already have the correct project prefix)
-  const requirementId = `${brdDocument.documentId}-FR-${String(nextNumber).padStart(3, '0')}`;
+  // CRITICAL FIX: Ensure we use the BRD document ID exactly as it is stored
+  // The BRD document should already have the correct prefix (BEG-REQ-001)
+  // Double-check that the BRD document ID is correct
+  let finalRequirementId;
+  if (brdDocument.documentId && brdDocument.documentId.startsWith(project.prefix || 'BEG')) {
+    // Use the existing BRD document ID as base
+    finalRequirementId = `${brdDocument.documentId}-FR-${String(nextNumber).padStart(3, '0')}`;
+  } else {
+    // Fallback: reconstruct with correct project prefix
+    const correctPrefix = project.prefix || 'BEG';
+    const brdNumber = brdDocument.documentId.match(/-REQ-(\d+)$/)?.[1] || '001';
+    finalRequirementId = `${correctPrefix}-REQ-${brdNumber}-FR-${String(nextNumber).padStart(3, '0')}`;
+  }
 
-  console.log(`📋 Creating functional requirement with ID: ${requirementId} for BRD: ${brdDocument.documentId} (Project: ${project.name}, Prefix: ${project.prefix || project.name.substring(0, 3).toUpperCase()})`);
-  console.log(`📋 BRD document details: ID=${brdDocument.id}, documentId=${brdDocument.documentId}`);
+  console.log(`🔧 FINAL requirement ID: ${finalRequirementId}`);
+  console.log(`📋 BRD document ID used: ${brdDocument.documentId}`);
+  console.log(`📋 Project prefix: ${project.prefix || 'BEG'}`);
 
   const requirement = {
     id,
-    requirementId,
+    requirementId: finalRequirementId,
     brdId: data.brdId,
     brdDocumentId: data.brdId, // Keep both for compatibility
     title: data.title,
