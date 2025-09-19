@@ -266,27 +266,27 @@ async createFunctionalRequirement(data: any): Promise<any> {
     }
   }
   
-  // CRITICAL FIX: Ensure we use the BRD document ID exactly as it is stored
-  // The BRD document should already have the correct prefix (BEG-REQ-001)
-  // Double-check that the BRD document ID is correct
-  let finalRequirementId;
-  if (brdDocument.documentId && brdDocument.documentId.startsWith(project.prefix || 'BEG')) {
-    // Use the existing BRD document ID as base
-    finalRequirementId = `${brdDocument.documentId}-FR-${String(nextNumber).padStart(3, '0')}`;
-  } else {
-    // Fallback: reconstruct with correct project prefix
-    const correctPrefix = project.prefix || 'BEG';
-    const brdNumber = brdDocument.documentId.match(/-REQ-(\d+)$/)?.[1] || '001';
-    finalRequirementId = `${correctPrefix}-REQ-${brdNumber}-FR-${String(nextNumber).padStart(3, '0')}`;
-  }
+  // FINAL FIX: Always use the BRD document ID directly - it should already be correct
+  const requirementId = `${brdDocument.documentId}-FR-${String(nextNumber).padStart(3, '0')}`;
 
-  console.log(`🔧 FINAL requirement ID: ${finalRequirementId}`);
+  console.log(`🔧 FINAL requirement ID: ${requirementId}`);
   console.log(`📋 BRD document ID used: ${brdDocument.documentId}`);
-  console.log(`📋 Project prefix: ${project.prefix || 'BEG'}`);
+  console.log(`📋 Project details:`, {
+    id: project.id,
+    name: project.name,
+    prefix: project.prefix,
+    nameFirst3: project.name.substring(0, 3).toUpperCase()
+  });
+  console.log(`📋 BRD document details:`, {
+    id: brdDocument.id,
+    documentId: brdDocument.documentId,
+    title: brdDocument.title,
+    projectId: brdDocument.projectId
+  });
 
   const requirement = {
     id,
-    requirementId: finalRequirementId,
+    requirementId,
     brdId: data.brdId,
     brdDocumentId: data.brdId, // Keep both for compatibility
     title: data.title,
