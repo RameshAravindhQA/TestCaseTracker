@@ -8,7 +8,7 @@ import { queryClient } from "@/lib/queryClient";
 import { logout } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@/types";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { ThemeToggle } from "@/components/theme/theme-provider";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -44,6 +44,7 @@ import {
   Trash2,
   Building2,
   Bell,
+  Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -234,7 +235,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     {
       name: "AI Generator",
       href: "/ai-generator",
-      icon: Bot,
+      icon: Sparkles,
     },
     {
       name: "Bug Reports",
@@ -321,6 +322,11 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       name: "Request Forms",
       href: "/request-forms",
       icon: FileText,
+    },
+    {
+      name: "Chatbot Management",
+      href: "/chatbot-management",
+      icon: Bot,
     },
   ], []);
 

@@ -37,6 +37,7 @@ import {
   Terminal,
   Briefcase,
   UserCheck,
+  Bot,
 } from "lucide-react";
 import { ProjectChat } from "@/components/chat/project-chat";
 import { GlobalChatbot } from "@/components/chat/global-chatbot";
