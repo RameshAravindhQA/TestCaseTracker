@@ -57,7 +57,7 @@ export function IntelligentHelperBot() {
     {
       id: 'welcome',
       type: 'bot',
-      content: `Hi ${user?.firstName || 'there'}! 👋 I'm your intelligent assistant. I can help you with:\n\n🏗️ Projects & Modules\n🐛 Bug Management\n✅ Test Cases\n💬 Messaging\n📊 Reports\n📝 Documentation\n⏰ Time Tracking\n🤖 Chatbot Management\n\nJust ask me naturally! For example:\n"Show all projects"\n"How many bugs are open?"\n"How do I create a test case?"\n"Export test cases to PDF"\n\n💡 Administrators can configure my responses in the Chatbot Management section!`,
+      content: `Hi ${user?.firstName || 'there'}! 👋 I'm your intelligent assistant. I can help you with:\n\n🏗️ Projects & Modules\n🐛 Bug Management\n✅ Test Cases\n💬 Messaging\n📊 Reports\n📝 Documentation\n⏰ Time Tracking\n\nJust ask me naturally! For example:\n"Show all projects"\n"How many bugs are open?"\n"Export test cases to PDF"`,
       timestamp: new Date()
     }
   ]);
@@ -278,36 +278,6 @@ export function IntelligentHelperBot() {
     setIsProcessing(true);
 
     try {
-      // First try the enhanced intelligent chatbot with knowledge base
-      const chatResponse = await apiRequest('POST', '/api/chat/intelligent', {
-        message: message.trim(),
-        context: 'test_management'
-      });
-      
-      const chatResult = await chatResponse.json();
-      
-      if (chatResult.source === 'knowledge_base') {
-        // Use knowledge base response
-        setMessages(prev => {
-          const filtered = prev.filter(m => m.id !== loadingMessage.id);
-          const botResponse: ChatMessage = {
-            id: (Date.now() + 2).toString(),
-            type: 'bot',
-            content: chatResult.response,
-            timestamp: new Date(),
-            actionType: 'knowledge_base'
-          };
-          return [...filtered, botResponse];
-        });
-        
-        toast({
-          title: "💡 Knowledge Base",
-          description: "Response from configured chatbot knowledge base",
-        });
-        return;
-      }
-      
-      // If no knowledge base match, fall back to command parsing
       const { action, params } = parseCommand(message.trim());
       const result = await executeCommand(action, params);
 
@@ -337,7 +307,7 @@ export function IntelligentHelperBot() {
         const errorMessage: ChatMessage = {
           id: (Date.now() + 2).toString(),
           type: 'bot',
-          content: 'Sorry, I encountered an error processing your request. Please try again. You can also check the Chatbot Management section to add more questions to my knowledge base.',
+          content: 'Sorry, I encountered an error processing your request. Please try again.',
           timestamp: new Date(),
           actionType: 'error'
         };
