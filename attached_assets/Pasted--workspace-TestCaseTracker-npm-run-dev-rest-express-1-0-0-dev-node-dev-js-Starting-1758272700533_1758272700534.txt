@@ -1,0 +1,66 @@
+
+~/workspace/TestCaseTracker$ npm run dev
+
+> rest-express@1.0.0 dev
+> node dev.js
+
+🚀 Starting TestCaseTracker Application...
+📂 Working directory: /home/runner/workspace/TestCaseTracker
+✅ Initialized clean storage with admin user only: { users: 2, projects: 0, modules: 0, testCases: 0, bugs: 0 }
+🔧 Gemini initialization check: { hasKey: false, keyLength: 0, startsWithAIza: false, preview: 'NONE' }
+❌ Gemini API key not configured
+🔧 OpenAI initialization check: { hasKey: false, keyLength: 0, startsWithSk: false, preview: 'NONE' }
+❌ OpenAI API key not configured
+🔧 GitHub Copilot initialization check: { hasKey: false, keyLength: 0, startsWithGhp: false, preview: 'NONE' }
+❌ GitHub Copilot token not configured
+🔍 AI Providers Status: {
+  gemini: {
+    ready: false,
+    error: 'Google Gemini API key is not properly configured'
+  },
+  openai: { ready: false, error: 'OpenAI API key is not properly configured' },
+  githubCopilot: {
+    ready: false,
+    error: 'GitHub Copilot token is not properly configured'
+  }
+}
+✅ Database connection established for matrix operations with SSL enabled
+🔧 Starting to fix existing test case IDs...
+🔧 Finished fixing existing test case IDs
+✅ Test case ID migration completed
+[2025-09-19T09:03:51.614Z] INFO: Recordings directory ensured: /home/runner/workspace/TestCaseTracker/recordings
+🚀 Starting Test Case Management System...
+📡 Registering API routes...
+Profile pictures directory exists: /home/runner/workspace/TestCaseTracker/uploads/profile-pictures
+Documents directory exists: /home/runner/workspace/TestCaseTracker/uploads/documents
+Bug attachments directory exists: /home/runner/workspace/TestCaseTracker/uploads/bug-attachment
+Request attachments directory exists: /home/runner/workspace/TestCaseTracker/uploads/request-attachments
+Test file created successfully: /home/runner/workspace/TestCaseTracker/uploads/profile-pictures/test.txt
+Test file removed successfully
+✅ API routes registered successfully
+✅ Database tables initialized successfully
+✅ Database initialized successfully
+[2025-09-19T09:03:51.846Z] INFO: Chat WebSocket server initialized on /ws/chat
+[2025-09-19T09:03:51.847Z] INFO: Chat WebSocket server initialized with session store
+node:events:502
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5000
+    at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+    at listenInCluster (node:net:1965:12)
+    at doListen (node:net:2139:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+Emitted 'error' event on WebSocketServer instance at:
+    at Server.emit (node:events:524:28)
+    at emitErrorNT (node:net:1944:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21) {
+  code: 'EADDRINUSE',
+  errno: -98,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5000
+}
+
+Node.js v20.19.3
+Server exited with code 1

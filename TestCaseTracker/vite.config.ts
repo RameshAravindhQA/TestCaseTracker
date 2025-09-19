@@ -30,10 +30,6 @@ export default defineConfig({
   },
   root: path.resolve(__dirname, "client"),
   publicDir: path.resolve(__dirname, "client", "public"),
-  build: {
-    outDir: path.resolve(__dirname, "dist/public"),
-    emptyOutDir: true,
-  },
   server: {
     hmr: {
       overlay: false,
@@ -45,6 +41,8 @@ export default defineConfig({
     exclude: ['@replit/vite-plugin-cartographer']
   },
   build: {
+    outDir: path.resolve(__dirname, "dist/public"),
+    emptyOutDir: true,
     target: 'esnext',
     minify: 'esbuild',
     rollupOptions: {
