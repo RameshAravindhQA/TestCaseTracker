@@ -37,5 +37,9 @@ args = "cd TestCaseTracker && npm run dev"
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 42219
+externalPort = 3000
+
 [nix]
 channel = "stable-25_05"
