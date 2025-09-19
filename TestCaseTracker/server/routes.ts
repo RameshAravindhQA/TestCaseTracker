@@ -6300,11 +6300,11 @@ if (moduleId) {
     try {
       const mappingId = parseInt(req.params.id);
       const updateData = req.body;
-      
+
       console.log(`🔄 Updating RTM mapping ${mappingId} with:`, updateData);
 
       const updatedMapping = await storage.updateRequirementTestCaseMapping(mappingId, updateData);
-      
+
       if (!updatedMapping) {
         return res.status(404).json({ error: "Mapping not found" });
       }

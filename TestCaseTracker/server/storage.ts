@@ -403,7 +403,7 @@ export interface IStorage {
   getEmployeePermissions(employeeId: number): Promise<any[]>;
 
   // BRD Document operations (added methods)
-  getBrdDocuments(projectId?: number): Promise<any[]>;
+  getBrdDocuments(): Promise<any[]>;
   getBrdDocument(id: number): Promise<any | null>;
   createBrdDocument(data: any): Promise<any>;
   updateBrdDocument(id: number, updateData: any): Promise<any | null>;
@@ -695,10 +695,34 @@ class MemStorage implements IStorage {
       results = results.filter(doc => doc.projectId === projectId);
     }
 
+    // Attach functional requirements with their mappings
+    for (const doc of results) {
+      const functionalReqs = await this.getFunctionalRequirements(doc.id);
+
+      // For each functional requirement, get its mappings
+      for (const req of functionalReqs) {
+        const mappings = this.requirementTestCaseMappings.filter(mapping => 
+          mapping.functionalRequirementId === req.id
+        );
+        req.mappings = mappings;
+        console.log(`Storage: Functional requirement ${req.id} (${req.requirementId}) has ${mappings.length} mappings:`, 
+          mappings.map(m => ({ id: m.id, testCaseId: m.testCaseId, status: m.status })));
+      }
+
+      doc.functionalRequirements = functionalReqs;
+    }
+
     console.log(`Storage: getBrdDocuments called with projectId: ${projectId}`);
     console.log(`Storage: Total BRD documents in storage: ${this.brdDocumentsStore.length}`);
     console.log(`Storage: Found ${results.length} BRD documents for project ${projectId}:`,
-      results.map(doc => ({ id: doc.id, title: doc.title, documentId: doc.documentId, projectId: doc.projectId })));
+      results.map(doc => ({ 
+        id: doc.id, 
+        title: doc.title, 
+        documentId: doc.documentId, 
+        projectId: doc.projectId,
+        functionalRequirementsCount: doc.functionalRequirements?.length || 0,
+        totalMappings: doc.functionalRequirements?.reduce((sum: number, req: any) => sum + (req.mappings?.length || 0), 0) || 0
+      })));
 
     return results.sort((a, b) => a.documentId.localeCompare(b.documentId));
   }
@@ -2945,7 +2969,7 @@ class MemStorage implements IStorage {
       ...marker,
       updatedAt: new Date()
     };
-    this.traceabilityMatrixes[index] = updatedMarker;
+    this.traceabilityMarkers[index] = updatedMarker;
     console.log(`Storage: Updated traceability marker with ID ${id}:`, updatedMarker);
     return updatedMarker;
   }
@@ -5122,10 +5146,10 @@ class MemStorage implements IStorage {
       const projectPrefix = project ? 
         (project.prefix || project.name.split(' ').map(word => word.charAt(0).toUpperCase()).join('').substring(0, 3)) :
         'DEF'; // Default fallback
-      
+
       // Use the stable BRD sequence number stored in the document
       const brdNumber = String(brdDocument.brdSequence).padStart(3, '0');
-      
+
       // Get existing functional requirements for this BRD document
       const existingRequirements = this.functionalRequirements
         .filter(req => req.brdDocumentId === data.brdDocumentId)
@@ -5179,23 +5203,30 @@ class MemStorage implements IStorage {
 
   // Requirement Test Case Mapping Methods
   async getRequirementTestCaseMappings(functionalRequirementId?: number, testCaseId?: number, projectId?: number): Promise<RequirementTestCaseMapping[]> {
-    let mappings = this.requirementTestCaseMappings;
+    if (!this.requirementTestCaseMappings) {
+      this.requirementTestCaseMappings = [];
+    }
+
+    let results = [...this.requirementTestCaseMappings];
 
     if (functionalRequirementId) {
-      mappings = mappings.filter(mapping => mapping.functionalRequirementId === functionalRequirementId);
+      results = results.filter(mapping => mapping.functionalRequirementId === functionalRequirementId);
     }
+
     if (testCaseId) {
-      mappings = mappings.filter(mapping => mapping.testCaseId === testCaseId);
+      results = results.filter(mapping => mapping.testCaseId === testCaseId);
     }
+
     if (projectId) {
       // Filter by project through functional requirements
       const projectFRIds = this.functionalRequirements
         .filter(req => req.projectId === projectId)
         .map(req => req.id);
-      mappings = mappings.filter(mapping => projectFRIds.includes(mapping.functionalRequirementId));
+      results = results.filter(mapping => projectFRIds.includes(mapping.functionalRequirementId));
    }
 
-    return mappings;
+    console.log(`Storage: getRequirementTestCaseMappings(${functionalRequirementId}, ${testCaseId}, ${projectId}) returning ${results.length} mappings`);
+    return results;
   }
 
   async getRequirementTestCaseMapping(id: number): Promise<RequirementTestCaseMapping | null> {
@@ -5205,38 +5236,34 @@ class MemStorage implements IStorage {
     return this.requirementTestCaseMappings.find(mapping => mapping.id === id) || null;
   }
 
-  async createRequirementTestCaseMapping(data: InsertRequirementTestCaseMapping): Promise<RequirementTestCaseMapping> {
+  async createRequirementTestCaseMapping(data: any): Promise<any> {
     const id = this.getNextId();
+    const now = new Date();
 
-    // Check for existing mapping
-    if (!this.requirementTestCaseMappings) {
-      this.requirementTestCaseMappings = [];
-    }
-
-    const existingMapping = this.requirementTestCaseMappings.find(
-      mapping => mapping.functionalRequirementId === data.functionalRequirementId &&
-                 mapping.testCaseId === data.testCaseId
+    // Check for existing mapping to prevent duplicates
+    const existingMapping = this.requirementTestCaseMappings.find(mapping => 
+      mapping.functionalRequirementId === data.functionalRequirementId && 
+      mapping.testCaseId === data.testCaseId
     );
 
     if (existingMapping) {
       throw new Error(`Mapping between Functional Requirement ${data.functionalRequirementId} and Test Case ${data.testCaseId} already exists`);
     }
 
-    const mapping: RequirementTestCaseMapping = {
+    const mapping = {
       id,
-      functionalRequirementId: data.functionalRequirementId,
-      testCaseId: data.testCaseId,
-      projectId: data.projectId,
-      status: data.status || "NOT_EXECUTED",
-      executionDate: data.executionDate,
-      notes: data.notes,
-      createdById: data.createdById || 1,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      ...data,
+      createdAt: now,
+      updatedAt: now
     };
 
+    if (!this.requirementTestCaseMappings) {
+      this.requirementTestCaseMappings = [];
+    }
     this.requirementTestCaseMappings.push(mapping);
+
     console.log(`Storage: Created RTM mapping with ID ${id}:`, mapping);
+    console.log(`Storage: Total mappings in storage: ${this.requirementTestCaseMappings.length}`);
     return mapping;
   }
 
@@ -5249,14 +5276,20 @@ class MemStorage implements IStorage {
       ...data,
       updatedAt: new Date()
     };
+
     this.requirementTestCaseMappings[index] = updatedMapping;
+    console.log(`Storage: Updated RTM mapping ${id}:`, updatedMapping);
     return updatedMapping;
   }
 
   async deleteRequirementTestCaseMapping(id: number): Promise<boolean> {
     const initialLength = this.requirementTestCaseMappings.length;
     this.requirementTestCaseMappings = this.requirementTestCaseMappings.filter(mapping => mapping.id !== id);
-    return this.requirementTestCaseMappings.length < initialLength;
+    const deleted = this.requirementTestCaseMappings.length < initialLength;
+    if (deleted) {
+      console.log(`Storage: Deleted RTM mapping ${id}`);
+    }
+    return deleted;
   }
 
   // RTM Status Synchronization
