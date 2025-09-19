@@ -1,0 +1,181 @@
+User authenticated successfully: ramesh@navadhiti.com
+11:46:29 AM [express] GET /api/auth/user 200 in 3ms :: {"id":3,"firstName":"Ramesh","lastName":"Aravi…
+11:46:29 AM [express] GET /api/messages/unread-count 304 in 1ms :: {"count":0}
+11:46:29 AM [express] GET /api/notifications/3 304 in 1ms :: []
+Received sub-feature creation request: {
+  name: 'API Logic',
+  description: 'API Logic',
+  featureId: 1,
+  projectId: 1,
+  status: 'Development',
+  priority: 'Medium',
+  workType: 'Development',
+  department: 'Backend',
+  startDate: '2025-09-17',
+  endDate: '2025-09-19',
+  assignedEmployeeIds: [ 4, 5 ],
+  estimatedHours: 24,
+  tags: []
+}
+Assigned employee IDs in request: [ 4, 5 ]
+Parsed sub-feature data before storage: {
+  name: 'API Logic',
+  description: 'API Logic',
+  featureId: 1,
+  projectId: 1,
+  status: 'Development',
+  priority: 'Medium',
+  workType: 'Development',
+  department: 'Backend',
+  startDate: '2025-09-17',
+  endDate: '2025-09-19',
+  assignedEmployeeIds: [ 4, 5 ],
+  estimatedHours: 24,
+  tags: [],
+  createdById: 3
+}
+Creating tracker sub-feature with data: {
+  name: 'API Logic',
+  description: 'API Logic',
+  featureId: 1,
+  projectId: 1,
+  status: 'Development',
+  priority: 'Medium',
+  workType: 'Development',
+  department: 'Backend',
+  startDate: '2025-09-17',
+  endDate: '2025-09-19',
+  assignedEmployeeIds: [ 4, 5 ],
+  estimatedHours: 24,
+  tags: [],
+  createdById: 3
+}
+Assigned employee IDs: [ 4, 5 ]
+Created sub-feature with assigned employees: [ 4, 5 ]
+Created sub-feature with tags: []
+Created sub-feature: {
+  id: 104,
+  name: 'API Logic',
+  description: 'API Logic',
+  featureId: 1,
+  projectId: 1,
+  parentSubFeatureId: undefined,
+  status: 'Development',
+  startDate: '2025-09-17',
+  endDate: '2025-09-19',
+  actualStartDate: undefined,
+  actualEndDate: undefined,
+  priority: 'Medium',
+  assignedToId: undefined,
+  estimatedHours: 24,
+  actualHours: undefined,
+  progressPercentage: 0,
+  workType: 'Development',
+  department: 'Backend',
+  tags: [],
+  customFields: {},
+  assignedEmployeeIds: [ 4, 5 ],
+  createdById: 3,
+  createdAt: 2025-09-17T11:46:46.276Z,
+  updatedAt: 2025-09-17T11:46:46.276Z
+}
+11:46:46 AM [express] POST /api/tracker/sub-features 201 in 9ms :: {"id":104,"name":"API Logic","desc…
+11:46:46 AM [express] GET /api/tracker/sub-features 200 in 1ms :: [{"id":104,"name":"API Logic","desc…
+11:46:57 AM [express] PUT /api/tracker/sub-features/104 200 in 2ms :: {"id":104,"name":"API Logic","d…
+11:46:57 AM [express] GET /api/tracker/sub-features 200 in 0ms :: [{"id":104,"name":"API Logic","desc…
+11:46:59 AM [express] GET /api/messages/unread-count 304 in 2ms :: {"count":0}
+11:46:59 AM [express] GET /api/notifications/3 304 in 1ms :: []
+GET /api/auth/user - Session data: {
+  sessionId: 'HObFzpwvQk36WHhnvT2sHl-TJKQGx9Ii',
+  userId: 3,
+  userRole: 'Admin',
+  userEmail: 'ramesh@navadhiti.com',
+  hasSession: true,
+  sessionKeys: [ 'cookie', 'userId', 'userRole', 'userName', 'userEmail' ]
+}
+User authenticated successfully: ramesh@navadhiti.com
+11:46:59 AM [express] GET /api/auth/user 200 in 3ms :: {"id":3,"firstName":"Ramesh","lastName":"Aravi…
+Creating work log with data: {
+  workDate: '2025-09-17',
+  hoursWorked: 8,
+  description: 'Test',
+  workType: 'Development',
+  status: 'Completed',
+  assignedEmployeeId: 4,
+  projectId: 1,
+  subFeatureId: 104,
+  featureId: 1
+}
+Raw assignedEmployeeId from request: 4 type: number
+Final work log data being sent to storage: {
+  "projectId": 1,
+  "featureId": 1,
+  "subFeatureId": 104,
+  "userId": 3,
+  "assignedEmployeeId": 4,
+  "workDate": "2025-09-17",
+  "hoursWorked": 8,
+  "description": "Test",
+  "workType": "Development",
+  "status": "Completed"
+}
+Created work log with final assignedEmployeeId: undefined
+11:47:08 AM [express] POST /api/tracker/work-logs 201 in 2ms :: {"id":105,"projectId":1,"featureId":1…
+[API] Getting work logs with filters: {
+  projectId: 1,
+  featureId: undefined,
+  subFeatureId: undefined,
+  userId: undefined,
+  startDate: undefined,
+  endDate: undefined
+}
+[API] Returning 1 work logs for user 3: [ { id: 105, projectId: 1, subFeatureId: 104, description: 'Test' } ]
+11:47:10 AM [express] GET /api/tracker/work-logs 200 in 2ms :: [{"id":105,"projectId":1,"featureId":1…
+Updating work log 105 with data: {
+  workDate: '2025-09-17',
+  hoursWorked: 8,
+  description: 'Test',
+  workType: 'Development',
+  status: 'Completed',
+  assignedEmployeeId: 4,
+  projectId: 1,
+  subFeatureId: 104,
+  featureId: 1
+}
+Final work log data for update: {
+  workDate: '2025-09-17',
+  hoursWorked: 8,
+  description: 'Test',
+  workType: 'Development',
+  status: 'Completed',
+  assignedEmployeeId: 4,
+  projectId: 1,
+  subFeatureId: 104,
+  featureId: 1,
+  userId: 3
+}
+assignedEmployeeId type and value: number 4
+Work log updated successfully: {
+  id: 105,
+  projectId: 1,
+  featureId: 1,
+  subFeatureId: 104,
+  userId: 3,
+  workDate: '2025-09-17',
+  hoursWorked: 8,
+  description: 'Test',
+  workType: 'Development',
+  status: 'Completed',
+  createdAt: 2025-09-17T11:47:08.887Z,
+  updatedAt: 2025-09-17T11:47:40.728Z,
+  assignedEmployeeId: 4
+}
+11:47:40 AM [express] PUT /api/tracker/work-logs/105 200 in 2ms :: {"id":105,"projectId":1,"featureId…
+[API] Getting work logs with filters: {
+  projectId: 1,
+  featureId: undefined,
+  subFeatureId: undefined,
+  userId: undefined,
+  startDate: undefined,
+  endDate: undefined
+}

@@ -1,0 +1,14 @@
+
+import type { Config } from "drizzle-kit";
+
+export default {
+  schema: "./shared/schema.ts",
+  out: "./drizzle",
+  dialect: "postgresql",
+  driver: "pg",
+  dbCredentials: {
+    connectionString: process.env.DATABASE_URL || "postgresql://username:password@localhost:5432/testcasetracker",
+  },
+  verbose: true,
+  strict: true,
+} satisfies Config;

@@ -1,0 +1,90 @@
+rest-express@1.0.0 dev
+> node dev.js
+
+🚀 Starting TestCaseTracker Application...
+✅ Initialized clean storage with admin user only: { users: 2, projects: 0, modules: 0, testCases: 0, bugs: 0 }
+🔧 Gemini initialization check: { hasKey: false, keyLength: 0, startsWithAIza: false, preview: 'NONE' }
+❌ Gemini API key not configured
+🔧 OpenAI initialization check: { hasKey: false, keyLength: 0, startsWithSk: false, preview: 'NONE' }
+❌ OpenAI API key not configured
+🔧 GitHub Copilot initialization check: { hasKey: false, keyLength: 0, startsWithGhp: false, preview: 'NONE' }
+❌ GitHub Copilot token not configured
+🔍 AI Providers Status: {
+  gemini: {
+    ready: false,
+    error: 'Google Gemini API key is not properly configured'
+  },
+  openai: { ready: false, error: 'OpenAI API key is not properly configured' },
+  githubCopilot: {
+    ready: false,
+    error: 'GitHub Copilot token is not properly configured'
+  }
+}
+✅ Database connection established for matrix operations with SSL enabled
+🔧 Starting to fix existing test case IDs...
+🔧 Finished fixing existing test case IDs
+✅ Test case ID migration completed
+[2025-09-17T18:22:14.360Z] INFO: Recordings directory ensured: /home/runner/workspace/recordings
+🚀 Starting Test Case Management System...
+📡 Registering API routes...
+Profile pictures directory exists: /home/runner/workspace/uploads/profile-pictures
+Documents directory exists: /home/runner/workspace/uploads/documents
+Bug attachments directory exists: /home/runner/workspace/uploads/bug-attachment
+Request attachments directory exists: /home/runner/workspace/uploads/request-attachments
+Test file created successfully: /home/runner/workspace/uploads/profile-pictures/test.txt
+Test file removed successfully
+✅ API routes registered successfully
+✅ Database tables initialized successfully
+✅ Database initialized successfully
+[2025-09-17T18:22:15.545Z] INFO: Chat WebSocket server initialized on /ws/chat
+[2025-09-17T18:22:15.545Z] INFO: Chat WebSocket server initialized with session store
+Server running on http://0.0.0.0:5000
+WebSocket server initialized for real-time chat
+[2025-09-17T18:22:15.687Z] INFO: Server started on port 5000 with WebSocket support
+6:22:15 PM [express] serving on port 5000
+6:22:16 PM [vite] Loading client template from: /home/runner/workspace/client/index.html
+6:22:22 PM [vite] Loading client template from: /home/runner/workspace/client/index.html
+GET /api/auth/user - Session data: {
+  sessionId: 'ZPsMv7LdumGRft3uSe987e6goGCA343j',
+  userId: undefined,
+  userRole: undefined,
+  userEmail: undefined,
+  hasSession: true,
+  sessionKeys: [ 'cookie' ]
+}
+No userId in session
+6:22:34 PM [express] GET /api/auth/user 401 in 6ms :: {"message":"Not authenticated"}
+6:22:34 PM [vite] Loading client template from: /home/runner/workspace/client/index.html
+GET /api/auth/user - Session data: {
+  sessionId: 'mlOvsstG4Yq_6SSdXRDPWQHUWXeCXppd',
+  userId: undefined,
+  userRole: undefined,
+  userEmail: undefined,
+  hasSession: true,
+  sessionKeys: [ 'cookie' ]
+}
+No userId in session
+6:22:37 PM [express] GET /api/auth/user 401 in 2ms :: {"message":"Not authenticated"}
+6:22:37 PM [vite] Loading client template from: /home/runner/workspace/client/index.html
+Registration error: ReferenceError: insertUserSchema is not defined
+    at <anonymous> (/home/runner/workspace/server/routes.ts:2429:24)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/home/runner/workspace/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at /home/runner/workspace/node_modules/express/lib/router/index.js:284:15
+    at Function.process_params (/home/runner/workspace/node_modules/express/lib/router/index.js:346:12)
+    at next (/home/runner/workspace/node_modules/express/lib/router/index.js:280:10)
+    at Function.handle (/home/runner/workspace/node_modules/express/lib/router/index.js:175:3)
+    at router (/home/runner/workspace/node_modules/express/lib/router/index.js:47:12)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at trim_prefix (/home/runner/workspace/node_modules/express/lib/router/index.js:328:13)
+    at /home/runner/workspace/node_modules/express/lib/router/index.js:286:9
+    at Function.process_params (/home/runner/workspace/node_modules/express/lib/router/index.js:346:12)
+    at next (/home/runner/workspace/node_modules/express/lib/router/index.js:280:10)
+    at /home/runner/workspace/node_modules/express-session/index.js:514:7
+    at MemoryStore.get (/home/runner/workspace/node_modules/memorystore/lib/memorystore.js:104:23)
+    at session (/home/runner/workspace/node_modules/express-session/index.js:493:11)
+    at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+    at trim_prefix (/home/runner/workspace/node_modules/express/lib/router/index.js:328:13)
+    at /home/runner/workspace/node_modules/express/
