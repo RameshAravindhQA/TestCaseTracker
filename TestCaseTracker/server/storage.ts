@@ -5117,10 +5117,10 @@ class MemStorage implements IStorage {
     // Auto-generate requirement ID if not provided
     let requirementId = data.requirementId;
     if (!requirementId || requirementId.trim() === '') {
-      // Get project to extract prefix from project name
+      // Get project to use the actual project prefix
       const project = await this.getProject(brdDocument.projectId);
       const projectPrefix = project ? 
-        project.name.split(' ').map(word => word.charAt(0).toUpperCase()).join('').substring(0, 3) :
+        (project.prefix || project.name.split(' ').map(word => word.charAt(0).toUpperCase()).join('').substring(0, 3)) :
         'DEF'; // Default fallback
       
       // Use the stable BRD sequence number stored in the document
