@@ -5218,12 +5218,20 @@ class MemStorage implements IStorage {
     }
 
     if (projectId) {
-      // Filter by project through functional requirements
+      // Filter by project through BRD documents and functional requirements
+      // First get all BRD document IDs for this project
+      const projectBrdIds = this.brdDocuments
+        .filter(brd => brd.projectId === projectId)
+        .map(brd => brd.id);
+      
+      // Then get all functional requirement IDs for those BRD documents
       const projectFRIds = this.functionalRequirements
-        .filter(req => req.projectId === projectId)
+        .filter(req => projectBrdIds.includes(req.brdId || req.brdDocumentId))
         .map(req => req.id);
+      
       results = results.filter(mapping => projectFRIds.includes(mapping.functionalRequirementId));
-   }
+      console.log(`Storage: Filtering mappings by projectId ${projectId}: found ${projectBrdIds.length} BRDs, ${projectFRIds.length} functional requirements, ${results.length} mappings`);
+    }
 
     console.log(`Storage: getRequirementTestCaseMappings(${functionalRequirementId}, ${testCaseId}, ${projectId}) returning ${results.length} mappings`);
     return results;
