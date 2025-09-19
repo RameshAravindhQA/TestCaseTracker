@@ -29,11 +29,13 @@ async createBrdDocument(data: any): Promise<any> {
     throw new Error(`Project with ID ${data.projectId} not found`);
   }
 
-  // Generate document ID: BEG-REQ-001
+  // Generate document ID: BEG-REQ-001 (use project prefix, not first 3 letters of name)
   const projectPrefix = project.prefix || project.name.substring(0, 3).toUpperCase();
   const existingDocs = await this.getBrdDocuments(data.projectId);
   const nextNumber = existingDocs.length + 1;
   const documentId = `${projectPrefix}-REQ-${String(nextNumber).padStart(3, '0')}`;
+
+  console.log(`Creating BRD document with ID: ${documentId} (Project: ${project.name}, Prefix: ${projectPrefix})`);
 
   const document = {
     id,
@@ -214,7 +216,13 @@ async createFunctionalRequirement(data: any): Promise<any> {
     throw new Error(`BRD Document with ID ${data.brdId} not found`);
   }
 
-  // Generate requirement ID using the exact BRD document ID: BEG-REQ-001-FR-001
+  // Get project to ensure we use the correct project prefix
+  const project = await this.getProject(brdDocument.projectId);
+  if (!project) {
+    throw new Error(`Project with ID ${brdDocument.projectId} not found`);
+  }
+
+  // Generate requirement ID using the project prefix from the BRD document ID: BEG-REQ-001-FR-001
   const existingRequirements = await this.getFunctionalRequirements(data.brdId);
   console.log(`📊 Existing requirements for BRD ${data.brdId}:`, existingRequirements.map(r => ({ id: r.id, requirementId: r.requirementId })));
   
@@ -244,10 +252,10 @@ async createFunctionalRequirement(data: any): Promise<any> {
     }
   }
   
-  // Use the actual BRD document ID from the database
+  // Use the actual BRD document ID from the database (which should already have the correct project prefix)
   const requirementId = `${brdDocument.documentId}-FR-${String(nextNumber).padStart(3, '0')}`;
 
-  console.log(`Creating functional requirement with ID: ${requirementId} for BRD: ${brdDocument.documentId}`);
+  console.log(`Creating functional requirement with ID: ${requirementId} for BRD: ${brdDocument.documentId} (Project: ${project.name}, Prefix: ${project.prefix || project.name.substring(0, 3).toUpperCase()})`);
 
   const requirement = {
     id,
