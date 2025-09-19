@@ -1,0 +1,13 @@
+Global error: Error: Objects are not valid as a React child (found: object with keys {brdId, title, description, priority, status, acceptanceCriteria, notes, brdDocumentId, createdById, id, requirementId, createdAt, updatedAt}). If you meant to render a collection of children, use an array instead.
+    at throwOnInvalidObjectType (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=09b9b153:9934:17)
+    at createChild (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=09b9b153:10110:15)
+    at reconcileChildrenArray (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=09b9b153:10282:33)
+    at reconcileChildFibers2 (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=09b9b153:10559:24)
+    at reconcileChildren (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=09b9b153:14290:37)
+    at updateHostComponent (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=09b9b153:14807:11)
+    at beginWork (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=09b9b153:15935:22)
+    at HTMLUnknownElement.callCallback2 (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=09b9b153:3674:22)
+    at Object.invokeGuardedCallbackDev (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=09b9b153:3699:24)
+    at invokeGuardedCallback (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=09b9b153:3733:39)
+(anonymous) @ main.tsx:15Understand this error
+@fs/home/runner/work….js?v=09b9b153:9934 Uncaught Error: Objects are not valid as a React child (found: object with keys {brdId, title, description, priority, status, acceptanceCriteria, notes, brdDocumentId, createdById, id, requirementId, createdAt, updatedAt}). If you meant to render a collection of children, use an array instead.
