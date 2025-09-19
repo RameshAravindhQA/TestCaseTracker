@@ -1,0 +1,305 @@
+1. Project & Module Management
+
+Show me all projects.
+
+How many projects are active?
+
+List all inactive/archived projects.
+
+Who created Project X and when?
+
+What’s the status of Project Y?
+
+Show all modules in Project A.
+
+How many modules are in Project B?
+
+Show details of Module M1.
+
+Add a new project called ABC.
+
+Update status of Project Z to Completed.
+
+Delete Project X.
+
+Export project XYZ to PDF.
+
+Export all projects to CSV.
+
+Sync Project B with GitHub.
+
+Show linked GitHub repo for Project A.
+
+What are the recent updates in Project Y?
+
+🔹 2. Project Tracker & Worklogs
+
+Show all worklogs for Project X.
+
+How many hours were logged for Project Y today?
+
+Show this week’s worklogs for Employee A.
+
+Who worked on Feature F1 yesterday?
+
+Show pending features in Project Z.
+
+Compare estimated vs actual hours in Feature F2.
+
+Add 4 hours worklog for Feature Login Page.
+
+Update worklog WL-100 to 6 hours.
+
+Delete yesterday’s worklog for Project A.
+
+Show clean report for Project B.
+
+Export worklogs for Project C to CSV.
+
+🔹 3. Test Case Module
+
+Show all test cases in Project A.
+
+How many test cases are in Module M1?
+
+Show test cases with status Passed.
+
+Show test cases with status Failed.
+
+Show test cases that are Not Executed.
+
+List test cases tagged with Smoke.
+
+List test cases tagged with Regression.
+
+Show test cases assigned to Employee X.
+
+Who created Test Case TC-101?
+
+View details of Test Case TC-200.
+
+Add a new test case in Module Y.
+
+Update Test Case TC-150 to status Blocked.
+
+Delete Test Case TC-300.
+
+Export test cases for Project B to PDF.
+
+Export all failed test cases to CSV.
+
+🔹 4. Bug Report Module
+
+Show all bugs in Project A.
+
+How many open bugs in Project B?
+
+Show critical severity bugs in Module X.
+
+Show bugs tagged UI.
+
+Who reported Bug BUG-101?
+
+Show all closed bugs in last 7 days.
+
+Show bugs assigned to Employee Y.
+
+Update status of Bug BUG-202 to In Progress.
+
+Assign Bug BUG-250 to Employee X.
+
+Delete Bug BUG-301.
+
+Export bug reports for Project Z to PDF.
+
+Export open bugs to CSV.
+
+🔹 5. Messenger
+
+Send message to User X: “Check test case 101”.
+
+Show my unread messages.
+
+Show chat history with User Y.
+
+Start a voice call with User Z.
+
+Start a video call with User A.
+
+Delete message MSG-100.
+
+🔹 6. GitHub Integration
+
+Sync test cases with GitHub.
+
+Show linked GitHub issues for Project A.
+
+Push latest changes of Module X to GitHub.
+
+Show commit history for Project B.
+
+Disconnect GitHub from Project Z.
+
+🔹 7. Functional Flow (Tree View)
+
+Show functional flow of Module X.
+
+Show tree view of Project A.
+
+Export functional flow of Project B to PDF.
+
+Add a new node under Module Y.
+
+Delete node Login Validation.
+
+Show saved flows for Project C.
+
+🔹 8. Timesheets
+
+Show my timesheet for this month.
+
+Show timesheet for Employee A in September.
+
+Add 5 hours to Project X today.
+
+Update today’s timesheet entry to 7 hours.
+
+Delete yesterday’s log for Project B.
+
+Export timesheets for Project Y.
+
+🔹 9. Document Management
+
+Show all documents in Project A.
+
+Upload design_doc_v1.pdf to Project B.
+
+Create folder Test Data under Project C.
+
+Show documents in folder Specifications.
+
+Delete file test_plan.docx.
+
+Download requirement_spec.pdf.
+
+🔹 10. BRD Documentation
+
+Show BRD of Project A.
+
+Add a new requirement to Project B: “System must support SSO”.
+
+Update Requirement REQ-101 description.
+
+Delete Requirement REQ-202.
+
+Link Requirement REQ-101 to Test Case TC-200.
+
+Export BRD for Project X to PDF.
+
+🔹 11. Notebooks
+
+Show all notes.
+
+Add a note: “Staging server password = 12345”.
+
+Show notes tagged Credentials.
+
+Update note Note-101.
+
+Delete note DB Config.
+
+🔹 12. Todo List
+
+Show my todo list.
+
+Add todo: “Prepare release notes”.
+
+Mark todo ID-12 as complete.
+
+Show pending todos.
+
+Delete todo ID-7.
+
+🔹 13. Test Sheets
+
+Show Google Sheet link for Regression Tests.
+
+Add Google Sheet link for Project A.
+
+Update sheet link for Project B.
+
+Delete sheet link for Project C.
+
+🔹 14. Reports
+
+Show bug report summary for Project X.
+
+Show pie chart of test case status in Project Y.
+
+Show overall execution report.
+
+Show bug trends in last 30 days.
+
+Copy bug details of Project A to clipboard.
+
+Export test case summary for Project Z to PDF.
+
+🔹 15. Traceability Matrix
+
+Show traceability matrix for Project X.
+
+Map Test Case TC-101 to Requirement REQ-201.
+
+Show unmapped requirements in Project Y.
+
+Export traceability matrix to CSV.
+
+Delete mapping of REQ-100 and TC-500.
+
+🔹 16. Test Data Generator
+
+Generate 50 random emails.
+
+Generate 100 phone numbers for India.
+
+Generate random addresses for USA.
+
+Create 25 sample user profiles.
+
+Export generated data to CSV.
+
+🔹 17. Navadhiti Project
+
+Show allocation status of Project X.
+
+Show all projects with allocation In Progress.
+
+Preview Project A.
+
+Assign Employee Y to Project B.
+
+Update allocation status of Project C to Completed.
+
+🔹 18. Resource Requests
+
+Show all open resource requests.
+
+Request 2 QA engineers for Project A.
+
+Reopen request REQ-20.
+
+Close request REQ-21.
+
+Add comment to REQ-30: “Need by next week”.
+
+🔹 19. Dashboard
+
+Show overall project dashboard.
+
+Show bug vs test case status for all projects.
+
+Show top 5 projects with most open bugs.
+
+Show status overview of all test cases.
+
+Show active projects summary.
