@@ -1162,6 +1162,49 @@ export async function registerRoutes(app: Express): Server {
     }
   });
 
+  // Intelligent chatbot endpoint
+  apiRouter.post("/chat/intelligent", isAuthenticated, async (req, res) => {
+    try {
+      const { message, context } = req.body;
+
+      if (!message) {
+        return res.status(400).json({ error: 'Message is required' });
+      }
+
+      // Simple AI response logic (you can enhance this with actual AI integration)
+      const responses = {
+        'test-management': [
+          "I can help you create test cases, manage bugs, and organize your testing workflow. What specific area would you like assistance with?",
+          "For test case management, I recommend organizing your test cases by modules and using clear naming conventions. Would you like me to guide you through creating a test case?",
+          "Bug reporting should include clear steps to reproduce, expected vs actual results, and severity level. Need help with a specific bug?",
+          "I can help you generate test reports, analyze test coverage, and track project progress. What metrics are you interested in?",
+          "For automation, consider starting with your most repetitive test cases. Would you like guidance on automation strategy?"
+        ]
+      };
+
+      const contextResponses = responses[context as keyof typeof responses] || responses['test-management'];
+      const randomResponse = contextResponses[Math.floor(Math.random() * contextResponses.length)];
+
+      // Add some intelligence based on message content
+      let response = randomResponse;
+
+      if (message.toLowerCase().includes('test case')) {
+        response = "I can help you create test cases! Test cases should include: 1) Clear test objectives, 2) Preconditions, 3) Test steps, 4) Expected results. Would you like me to guide you through creating a specific test case?";
+      } else if (message.toLowerCase().includes('bug')) {
+        response = "For effective bug reporting, include: 1) Steps to reproduce, 2) Expected behavior, 3) Actual behavior, 4) Environment details, 5) Screenshots if applicable. Need help reporting a specific bug?";
+      } else if (message.toLowerCase().includes('report')) {
+        response = "I can help you generate various reports including test execution reports, bug summary reports, and project progress reports. Which type of report are you looking for?";
+      } else if (message.toLowerCase().includes('automation')) {
+        response = "Test automation is great for repetitive tests! Start by identifying stable test cases, then consider tools like Selenium for web testing. What type of testing are you looking to automate?";
+      }
+
+      res.json({ response });
+    } catch (error) {
+      console.error('Intelligent Chat error:', error);
+      res.status(500).json({ error: 'Failed to process chat message' });
+    }
+  });
+
   // AI API key status endpoint
   apiRouter.get("/ai/api-key-status", isAuthenticated, async (req, res) => {
     try {
