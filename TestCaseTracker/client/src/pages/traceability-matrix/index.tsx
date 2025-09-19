@@ -381,16 +381,19 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
 
       // Table headers
       const headers = ['Req ID', 'Requirement Title', 'Test Case ID', 'Test Case Feature', 'Status'];
-      const columnWidths = [25, 50, 30, 45, 20];
+      const columnWidths = [30, 60, 35, 50, 25];
       let xPosition = margin;
 
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
 
-      // Draw header row
+      // Draw header row with proper text alignment
       headers.forEach((header, index) => {
         doc.rect(xPosition, yPosition, columnWidths[index], 8);
-        doc.text(header, xPosition + 2, yPosition + 6);
+        // Center text in cells
+        const textWidth = doc.getTextWidth(header);
+        const textX = xPosition + (columnWidths[index] - textWidth) / 2;
+        doc.text(header, textX, yPosition + 5.5);
         xPosition += columnWidths[index];
       });
       yPosition += 8;
@@ -410,7 +413,10 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
               doc.setFont("helvetica", "bold");
               headers.forEach((header, index) => {
                 doc.rect(xPosition, yPosition, columnWidths[index], 8);
-                doc.text(header, xPosition + 2, yPosition + 6);
+                // Center text in header cells
+                const textWidth = doc.getTextWidth(header);
+                const textX = xPosition + (columnWidths[index] - textWidth) / 2;
+                doc.text(header, textX, yPosition + 5.5);
                 xPosition += columnWidths[index];
               });
               yPosition += 8;
@@ -420,16 +426,23 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
             const testCase = rtmData?.testCases?.find((tc: any) => tc.id === mapping.testCaseId);
             const rowData = [
               req.requirementId || 'N/A',
-              (req.title || 'N/A').substring(0, 25) + (req.title?.length > 25 ? '...' : ''),
+              (req.title || 'N/A').substring(0, 35) + (req.title?.length > 35 ? '...' : ''),
               testCase?.testCaseId || 'Unknown',
-              (testCase?.feature || testCase?.title || 'N/A').substring(0, 22) + ((testCase?.feature || testCase?.title)?.length > 22 ? '...' : ''),
+              (testCase?.feature || testCase?.title || 'N/A').substring(0, 30) + ((testCase?.feature || testCase?.title)?.length > 30 ? '...' : ''),
               mapping.status
             ];
 
             xPosition = margin;
             rowData.forEach((data, index) => {
               doc.rect(xPosition, yPosition, columnWidths[index], 8);
-              doc.text(data, xPosition + 2, yPosition + 6);
+              // Proper text alignment within cells
+              let textX = xPosition + 2;
+              if (index === 0 || index === 2 || index === 4) {
+                // Center align for ID and Status columns
+                const textWidth = doc.getTextWidth(data);
+                textX = xPosition + (columnWidths[index] - textWidth) / 2;
+              }
+              doc.text(data, textX, yPosition + 5.5);
               xPosition += columnWidths[index];
             });
             yPosition += 8;
@@ -453,7 +466,7 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
 
           const rowData = [
             req.requirementId || 'N/A',
-            (req.title || 'N/A').substring(0, 25) + (req.title?.length > 25 ? '...' : ''),
+            (req.title || 'N/A').substring(0, 35) + (req.title?.length > 35 ? '...' : ''),
             'No mappings',
             '-',
             'Not Mapped'
@@ -462,7 +475,14 @@ const RTMComponent = ({ selectedProjectId }: { selectedProjectId: number | null 
           xPosition = margin;
           rowData.forEach((data, index) => {
             doc.rect(xPosition, yPosition, columnWidths[index], 8);
-            doc.text(data, xPosition + 2, yPosition + 6);
+            // Proper text alignment within cells
+            let textX = xPosition + 2;
+            if (index === 0 || index === 2 || index === 4) {
+              // Center align for ID and Status columns
+              const textWidth = doc.getTextWidth(data);
+              textX = xPosition + (columnWidths[index] - textWidth) / 2;
+            }
+            doc.text(data, textX, yPosition + 5.5);
             xPosition += columnWidths[index];
           });
           yPosition += 8;

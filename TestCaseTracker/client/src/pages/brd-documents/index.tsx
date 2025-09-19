@@ -704,8 +704,13 @@ export default function BrdDocumentsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        setSelectedDocument(document);
+                        console.log("Opening document view for:", document);
+                        setSelectedDocument({
+                          ...document,
+                          functionalRequirements: document.functionalRequirements || []
+                        });
                         setShowTestCases(false);
+                        setShowVersionHistory(false);
                       }}
                       className="flex items-center gap-1"
                     >
