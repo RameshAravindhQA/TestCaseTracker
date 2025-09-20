@@ -1,4 +1,30 @@
-<nav className="space-y-2">
+import { 
+  LayoutDashboard, 
+  Folder, 
+  FileText, 
+  Bug, 
+  BarChart3, 
+  Users, 
+  Settings, 
+  MessageSquare, 
+  Clock, 
+  Grid3X3, 
+  Kanban, 
+  BookOpen, 
+  TestTube, 
+  GitBranch, 
+  Workflow, 
+  CheckSquare,
+  Target 
+} from 'lucide-react';
+
+// Assuming SidebarItem and location are defined elsewhere and available in this scope
+
+function Sidebar() {
+  const location = { pathname: '/dashboard' }; // Placeholder for actual location object
+
+  return (
+    <nav className="space-y-2">
         <SidebarItem
           icon={<LayoutDashboard className="h-5 w-5" />}
           label="Dashboard"
@@ -82,10 +108,10 @@
         />
 
         <SidebarItem
-          icon={<TestTube className="h-5 w-5" />}
-          label="Test Sheets"
-          to="/test-sheets"
-          isActive={location.pathname.startsWith('/test-sheets')}
+          icon={<Target className="h-5 w-5" />}
+          label="Project Tracker"
+          to="/project-tracker"
+          isActive={location.pathname.startsWith('/project-tracker')}
         />
 
         <SidebarItem
@@ -123,3 +149,7 @@
           isActive={location.pathname.startsWith('/settings')}
         />
       </nav>
+  );
+}
+
+export default Sidebar; // Assuming Sidebar is the default export

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MainLayout } from "@/components/layout/main-layout";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
@@ -45,6 +46,7 @@ import { TestStatusChart } from '@/components/dashboard/test-status-chart';
 import { BugSeverityChart } from '@/components/dashboard/bug-severity-chart';
 import { TestStatusCounts } from '@/components/dashboard/test-status-counts';
 import MotionGraphicsShowcase from '@/components/ui/motion-graphics-showcase';
+import { TrackerReports } from '@/components/project-tracker/tracker-reports';
 import { 
   ScrollTriggeredSection, 
   ParallaxBackground, 
@@ -269,9 +271,24 @@ export function DashboardPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600">Overview of your testing projects and metrics</p>
+            <p className="text-gray-600">Overview of your testing projects and comprehensive reports</p>
           </div>
         </div>
+
+        {/* Dashboard Tabs */}
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Dashboard Overview
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Project Reports & Analytics
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">{/* Dashboard Overview Content */}
 
         {/* Statistics Cards with Interactive Dialogs */}
         <motion.div 
@@ -688,55 +705,67 @@ export function DashboardPage() {
         </div>
 
         {/* Status Overview Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Test Status Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {testStatusData.map((status) => (
-                    <div key={status.name} className="text-center">
-                      <div className="text-2xl font-bold mb-1" style={{ color: status.color }}>
-                        {status.value}
-                      </div>
-                      <div className="text-sm text-gray-600">{status.name}</div>
-                      <div className="text-xs text-gray-500">
-                        {totalTestCases > 0 ? Math.round((status.value / totalTestCases) * 100) : 0}%
-                      </div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Test Status Overview</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {testStatusData.map((status) => (
+                        <div key={status.name} className="text-center">
+                          <div className="text-2xl font-bold mb-1" style={{ color: status.color }}>
+                            {status.value}
+                          </div>
+                          <div className="text-sm text-gray-600">{status.name}</div>
+                          <div className="text-xs text-gray-500">
+                            {totalTestCases > 0 ? Math.round((status.value / totalTestCases) * 100) : 0}%
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
 
 
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Bug Severity Distribution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {bugSeverityData.map((severity) => (
-                    <div key={severity.name} className="text-center">
-                      <div className="text-2xl font-bold mb-1" style={{ color: severity.color }}>
-                        {severity.value}
-                      </div>
-                      <div className="text-sm text-gray-600">{severity.name}</div>
-                      <div className="text-xs text-gray-500">
-                        {bugs && bugs.length > 0 ? Math.round((severity.value / bugs.length) * 100) : 0}%
-                      </div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Bug Severity Distribution</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {bugSeverityData.map((severity) => (
+                        <div key={severity.name} className="text-center">
+                          <div className="text-2xl font-bold mb-1" style={{ color: severity.color }}>
+                            {severity.value}
+                          </div>
+                          <div className="text-sm text-gray-600">{severity.name}</div>
+                          <div className="text-xs text-gray-500">
+                            {bugs && bugs.length > 0 ? Math.round((severity.value / bugs.length) * 100) : 0}%
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
 
-        </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="reports" className="space-y-6">
+            {/* Project Tracker Reports */}
+            <TrackerReports 
+              projects={projects || []} 
+              features={[]}
+              subFeatures={[]}
+            />
+          </TabsContent>
+
+        </Tabs>
       {/* Welcome Dialog */}
-      {showWelcomeDialog && (
+        {showWelcomeDialog && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
             <div className="mt-3 text-center">
@@ -760,7 +789,7 @@ export function DashboardPage() {
           </div>
         </div>
       )}
-      </div>
+        </div>
     </MainLayout>
   );
 }
