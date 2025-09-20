@@ -422,14 +422,6 @@ export function DashboardPage() {
   const totalExecutedTests = testCases?.filter(tc => tc.status !== 'Not Executed').length || 0;
   const passRate = totalExecutedTests > 0 ? Math.round((passedTests / totalExecutedTests) * 100) : 0;
 
-  // Bug severity distribution data
-  const bugSeverityData = [
-    { name: 'Critical', value: bugs?.filter(bug => bug.severity === 'Critical').length || 0, color: '#dc2626' },
-    { name: 'Major', value: bugs?.filter(bug => bug.severity === 'Major').length || 0, color: '#ea580c' },
-    { name: 'Minor', value: bugs?.filter(bug => bug.severity === 'Minor').length || 0, color: '#facc15' },
-    { name: 'Trivial', value: bugs?.filter(bug => bug.severity === 'Trivial').length || 0, color: '#22c55e' }
-  ];
-
   useEffect(() => {
     // Check if welcome dialog should be shown
     const shouldShowWelcome = sessionStorage.getItem('showWelcomeDialog');
