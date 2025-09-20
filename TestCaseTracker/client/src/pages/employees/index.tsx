@@ -25,7 +25,7 @@ export default function EmployeesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
   const [technologyFilter, setTechnologyFilter] = useState("");
   const [projectMappingEmployee, setProjectMappingEmployee] = useState(null);
   const { toast } = useToast();
@@ -82,7 +82,7 @@ export default function EmployeesPage() {
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     
-    const departmentMatch = !departmentFilter || employee.department === departmentFilter;
+    const departmentMatch = !departmentFilter || departmentFilter === "all" || employee.department === departmentFilter;
     
     const technologyMatch = !technologyFilter || 
       (Array.isArray(employee.technologies) && 
@@ -577,7 +577,7 @@ Mike,Johnson,mike.johnson@company.com,5551234567,Sales,Sales Executive,2023-12-0
                     <SelectValue placeholder="Filter by Department" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Departments</SelectItem>
+                    <SelectItem value="all">All Departments</SelectItem>
                     <SelectItem value="Development">Development</SelectItem>
                     <SelectItem value="Quality Assurance">Quality Assurance</SelectItem>
                     <SelectItem value="DevOps">DevOps</SelectItem>
@@ -598,12 +598,12 @@ Mike,Johnson,mike.johnson@company.com,5551234567,Sales,Sales Executive,2023-12-0
                 />
               </div>
 
-              {(departmentFilter || technologyFilter) && (
+              {(departmentFilter && departmentFilter !== "all" || technologyFilter) && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    setDepartmentFilter("");
+                    setDepartmentFilter("all");
                     setTechnologyFilter("");
                   }}
                 >
