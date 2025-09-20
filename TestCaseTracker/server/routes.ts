@@ -8827,44 +8827,57 @@ export async function registerRoutes(app: Express): Server {
         });
       }
 
-      // Use the same API that the GitHub Issue Reporter uses
-      const issuePayload = {
-        title: bug.title,
-        body: formatBugForGitHub(bug),
-        labels: [
-          `severity: ${bug.severity.toLowerCase()}`,
-          `priority: ${bug.priority.toLowerCase()}`,
-          'bug'
-        ],
-        projectId: bug.projectId
-      };
-
-      // Call the same create-issue endpoint that the GitHub Issue Reporter uses
-      const response = await fetch(`${req.protocol}://${req.get('host')}/api/github/create-issue`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Cookie': req.headers.cookie || ''
-        },
-        body: JSON.stringify(issuePayload)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        return res.status(response.status).json({
-          success: false,
-          error: errorData.message || 'Failed to create GitHub issue'
+      // Get GitHub integration for this project
+      let githubIntegration;
+      try {
+        githubIntegration = await storage.getGitHubConfig(bug.projectId);
+      } catch (error: any) {
+        console.error("Error getting GitHub integration:", error);
+        return res.status(500).json({ 
+          success: false, 
+          error: "Failed to get GitHub integration", 
+          details: error.message 
         });
       }
 
-      const githubResult = await response.json();
+      if (!githubIntegration) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "No GitHub integration found for this project. Please set up GitHub integration first." 
+        });
+      }
+
+      // Configure GitHub service
+      githubService.setConfig({
+        owner: githubIntegration.githubUsername,
+        repo: githubIntegration.repositoryName,
+        token: githubIntegration.personalAccessToken
+      });
+
+      // Create GitHub issue using the GitHub service
+      const issueTitle = `[${bug.bugId}] ${bug.title}`;
+      const issueBody = formatBugForGitHub(bug);
+      const labels = [
+        `severity: ${bug.severity.toLowerCase()}`,
+        `priority: ${bug.priority.toLowerCase()}`,
+        'bug'
+      ];
+
+      const githubResult = await githubService.createIssue(issueTitle, issueBody, labels);
+
+      if (!githubResult.success) {
+        return res.status(400).json({
+          success: false,
+          error: githubResult.message || 'Failed to create GitHub issue'
+        });
+      }
 
       // Save GitHub issue to storage
       const githubIssue = {
         bugId: bugId,
-        githubIssueNumber: githubResult.issueNumber,
-        githubIssueId: githubResult.data?.number || githubResult.issueNumber,
-        githubUrl: githubResult.githubUrl || githubResult.data?.url,
+        githubIssueNumber: githubResult.data?.number || 0,
+        githubIssueId: githubResult.data?.id || 0,
+        githubUrl: githubResult.data?.html_url || '',
         status: 'open'
       };
 

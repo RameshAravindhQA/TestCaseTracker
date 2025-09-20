@@ -474,4 +474,69 @@ router.post('/issues', requireAuth, async (req, res) => {
   }
 });
 
+// Create GitHub issue endpoint
+router.post('/create-issue', async (req, res) => {
+  try {
+    const { title, body, labels, projectId } = req.body;
+
+    if (!title || !body) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title and body are required'
+      });
+    }
+
+    // Get GitHub integration for the project
+    let githubConfig;
+    try {
+      githubConfig = await storage.getGitHubConfig(projectId);
+    } catch (error: any) {
+      console.error("Error getting GitHub integration:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to get GitHub integration"
+      });
+    }
+
+    if (!githubConfig) {
+      return res.status(400).json({
+        success: false,
+        message: "No GitHub integration found for this project"
+      });
+    }
+
+    // Configure GitHub service
+    githubService.setConfig({
+      owner: githubConfig.githubUsername,
+      repo: githubConfig.repositoryName,
+      token: githubConfig.personalAccessToken
+    });
+
+    // Create the GitHub issue
+    const result = await githubService.createIssue(title, body, labels || []);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'GitHub issue created successfully',
+        issueNumber: result.data?.number,
+        githubUrl: result.data?.html_url,
+        data: result.data
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.message || 'Failed to create GitHub issue'
+      });
+    }
+
+  } catch (error: any) {
+    console.error('GitHub create-issue error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 export default router;
