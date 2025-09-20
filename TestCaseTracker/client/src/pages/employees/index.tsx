@@ -345,46 +345,121 @@ export default function EmployeesPage() {
   // Handle file import
   const handleImport = async (file: File) => {
     setIsImporting(true);
-    const formData = new FormData();
-    formData.append('file', file);
 
     try {
-      const response = await fetch('/api/employees/import', {
-        method: 'POST',
-        body: formData,
+      // Read and parse the CSV file
+      const text = await file.text();
+      const results = Papa.parse(text, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (header) => {
+          // Normalize headers to match expected field names
+          const headerMap: { [key: string]: string } = {
+            'first name': 'firstName',
+            'firstname': 'firstName',
+            'first_name': 'firstName',
+            'last name': 'lastName',
+            'lastname': 'lastName',
+            'last_name': 'lastName',
+            'phone number': 'phoneNumber',
+            'phonenumber': 'phoneNumber',
+            'phone_number': 'phoneNumber',
+            'phone': 'phoneNumber',
+            'employee id': 'employeeId',
+            'employeeid': 'employeeId',
+            'employee_id': 'employeeId',
+            'emp id': 'employeeId',
+            'empid': 'employeeId',
+            'joining date': 'joiningDate',
+            'joiningdate': 'joiningDate',
+            'joining_date': 'joiningDate',
+            'join date': 'joiningDate',
+            'joindate': 'joiningDate',
+            'overall experience': 'overallExperience',
+            'overallexperience': 'overallExperience',
+            'overall_experience': 'overallExperience',
+            'experience': 'overallExperience'
+          };
+          
+          const normalizedHeader = header.toLowerCase().trim();
+          return headerMap[normalizedHeader] || header;
+        }
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          toast({
-            title: "Import Successful",
-            description: `Imported ${result.imported} employees successfully`,
-          });
+      if (results.errors && results.errors.length > 0) {
+        console.warn('CSV parsing errors:', results.errors);
+      }
 
-          if (result.errors && result.errors.length > 0) {
-            console.warn('Import warnings:', result.errors);
-            toast({
-              title: "Import Warnings",
-              description: `${result.errors.length} rows had issues. Check console for details.`,
-              variant: "destructive",
-            });
-          }
+      if (!results.data || results.data.length === 0) {
+        toast({
+          title: "Import Failed",
+          description: "No valid data found in the CSV file",
+          variant: "destructive",
+        });
+        return;
+      }
 
-          refetch();
-          setIsImportDialogOpen(false);
-        } else {
+      // Process and validate the data
+      const employeesToImport = results.data
+        .filter((row: any) => row.firstName && row.email) // Basic validation
+        .map((row: any) => ({
+          employeeId: row.employeeId || `EMP${Date.now()}${Math.floor(Math.random() * 1000)}`,
+          firstName: row.firstName?.trim(),
+          lastName: row.lastName?.trim() || '',
+          email: row.email?.trim(),
+          phoneNumber: row.phoneNumber?.trim() || '',
+          department: row.department?.trim() || '',
+          designation: row.designation?.trim() || '',
+          joiningDate: row.joiningDate ? new Date(row.joiningDate).toISOString() : new Date().toISOString(),
+          status: row.status?.trim() || 'Active',
+          locality: row.locality?.trim() || '',
+          overallExperience: row.overallExperience?.trim() || '',
+          technologies: row.technologies 
+            ? (typeof row.technologies === 'string' 
+               ? row.technologies.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0)
+               : Array.isArray(row.technologies) ? row.technologies : [])
+            : [],
+        }));
+
+      if (employeesToImport.length === 0) {
+        toast({
+          title: "Import Failed",
+          description: "No valid employees found. Please ensure firstName and email are provided.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Sending employee data:', { employees: employeesToImport });
+
+      // Send the parsed data to the server
+      const response = await apiRequest('POST', '/api/employees/import', {
+        employees: employeesToImport
+      });
+
+      const result = await response.json();
+
+      if (result.success !== false) {
+        toast({
+          title: "Import Successful",
+          description: `Imported ${result.imported || result.successCount || employeesToImport.length} employees successfully`,
+        });
+
+        if (result.errors && result.errors.length > 0) {
+          console.warn('Import warnings:', result.errors);
           toast({
-            title: "Import Failed",
-            description: result.message || "Failed to import employees",
+            title: "Import Warnings",
+            description: `${result.errors.length} rows had issues. Check console for details.`,
             variant: "destructive",
           });
         }
+
+        refetch();
+        setIsImportDialogOpen(false);
       } else {
-        const error = await response.json();
         toast({
           title: "Import Failed",
-          description: error.message || "Failed to import employees",
+          description: result.message || "Failed to import employees",
           variant: "destructive",
         });
       }
@@ -392,7 +467,7 @@ export default function EmployeesPage() {
       console.error('Import error:', error);
       toast({
         title: "Import Failed",
-        description: "An error occurred while importing employees",
+        description: "An error occurred while parsing or importing the CSV file",
         variant: "destructive",
       });
     } finally {
