@@ -923,7 +923,7 @@ function RequestFormsPageContent() {
 
                                         // Audit Trail Section
                                         if (auditLogs && auditLogs.length > 0) {
-                                          if (yPos > 220) {
+                                          if (yPos > 200) {
                                             doc.addPage();
                                             yPos = 20;
                                           }
@@ -932,73 +932,95 @@ function RequestFormsPageContent() {
                                           doc.text('Audit Trail', 20, yPos);
                                           yPos += 15;
 
-                                          doc.setFontSize(10);
-                                          doc.setFont("helvetica", "normal");
-
-                                          auditLogs.forEach((log, index) => {
-                                            if (yPos > 270) {
-                                              doc.addPage();
-                                              yPos = 20;
-                                            }
-
-                                            // Log header
-                                            doc.setFont("helvetica", "bold");
-                                            doc.text(`${index + 1}. ${log.action.toUpperCase()} - ${formatDate(log.createdAt)}`, 20, yPos);
-                                            yPos += 8;
-
-                                            doc.setFont("helvetica", "normal");
-                                            
-                                            // Basic change info
-                                            if (log.previousValue && log.newValue) {
-                                              doc.text(`   Changed from: ${log.previousValue} → ${log.newValue}`, 20, yPos);
-                                              yPos += 6;
-                                            }
-
-                                            // Detailed information from log.details
+                                          // Prepare audit trail data for table
+                                          const auditTableData = auditLogs.map((log, index) => {
+                                            let details = '';
                                             if (log.details) {
-                                              const details = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
+                                              const logDetails = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
                                               
-                                              // Reason
-                                              if (details.reason) {
-                                                doc.text(`   Reason: ${details.reason}`, 20, yPos);
-                                                yPos += 6;
+                                              if (logDetails.reason) {
+                                                details += `Reason: ${logDetails.reason}\n`;
                                               }
-
-                                              // Date changes
-                                              if (details.dateChanges) {
-                                                const dateChanges = details.dateChanges;
+                                              
+                                              if (logDetails.dateChanges) {
+                                                const dateChanges = logDetails.dateChanges;
                                                 if (dateChanges.originalStartDate !== dateChanges.newStartDate) {
-                                                  doc.text(`   Start Date: ${formatDate(dateChanges.originalStartDate)} → ${formatDate(dateChanges.newStartDate)}`, 20, yPos);
-                                                  yPos += 6;
+                                                  details += `Start Date: ${formatDate(dateChanges.originalStartDate)} → ${formatDate(dateChanges.newStartDate)}\n`;
                                                 }
                                                 if (dateChanges.originalEndDate !== dateChanges.newEndDate) {
-                                                  doc.text(`   End Date: ${formatDate(dateChanges.originalEndDate)} → ${formatDate(dateChanges.newEndDate)}`, 20, yPos);
-                                                  yPos += 6;
+                                                  details += `End Date: ${formatDate(dateChanges.originalEndDate)} → ${formatDate(dateChanges.newEndDate)}\n`;
                                                 }
                                               }
-
-                                              // Employee changes
-                                              if (details.employeeChanges) {
-                                                const empChanges = details.employeeChanges;
+                                              
+                                              if (logDetails.employeeChanges) {
+                                                const empChanges = logDetails.employeeChanges;
                                                 if (empChanges.previousEmployeeName !== empChanges.newEmployeeName) {
-                                                  doc.text(`   Assigned Employee: ${empChanges.previousEmployeeName} → ${empChanges.newEmployeeName}`, 20, yPos);
-                                                  yPos += 6;
+                                                  details += `Employee: ${empChanges.previousEmployeeName} → ${empChanges.newEmployeeName}\n`;
                                                 }
                                               }
-
-                                              // Single date fields (for older logs)
-                                              if (details.newStartDate && !details.dateChanges) {
-                                                doc.text(`   New Start Date: ${formatDate(details.newStartDate)}`, 20, yPos);
-                                                yPos += 6;
+                                              
+                                              if (logDetails.newStartDate && !logDetails.dateChanges) {
+                                                details += `New Start Date: ${formatDate(logDetails.newStartDate)}\n`;
                                               }
-                                              if (details.newEndDate && !details.dateChanges) {
-                                                doc.text(`   New End Date: ${formatDate(details.newEndDate)}`, 20, yPos);
-                                                yPos += 6;
+                                              if (logDetails.newEndDate && !logDetails.dateChanges) {
+                                                details += `New End Date: ${formatDate(logDetails.newEndDate)}\n`;
                                               }
                                             }
 
-                                            yPos += 5; // Space between entries
+                                            return [
+                                              index + 1,
+                                              log.action.toUpperCase(),
+                                              formatDate(log.createdAt),
+                                              details.trim() || 'No additional details'
+                                            ];
                                           });
+
+                                          // Create audit trail table using autoTable
+                                          try {
+                                            (doc as any).autoTable({
+                                              startY: yPos,
+                                              head: [['#', 'Action', 'Date', 'Details']],
+                                              body: auditTableData,
+                                              theme: 'grid',
+                                              headStyles: {
+                                                fillColor: [66, 139, 202],
+                                                textColor: 255,
+                                                fontSize: 10,
+                                                fontStyle: 'bold'
+                                              },
+                                              bodyStyles: {
+                                                fontSize: 9,
+                                                cellPadding: 3
+                                              },
+                                              columnStyles: {
+                                                0: { cellWidth: 15 }, // # column
+                                                1: { cellWidth: 35 }, // Action column
+                                                2: { cellWidth: 35 }, // Date column
+                                                3: { cellWidth: 105 } // Details column
+                                              },
+                                              margin: { left: 20, right: 20 },
+                                              tableWidth: 'wrap',
+                                              styles: {
+                                                overflow: 'linebreak',
+                                                cellPadding: 2,
+                                                fontSize: 9,
+                                                valign: 'top'
+                                              }
+                                            });
+                                          } catch (tableError) {
+                                            console.warn('Could not create audit trail table, falling back to text format');
+                                            // Fallback to simple text format if autoTable fails
+                                            doc.setFontSize(10);
+                                            doc.setFont("helvetica", "normal");
+                                            auditLogs.forEach((log, index) => {
+                                              if (yPos > 270) {
+                                                doc.addPage();
+                                                yPos = 20;
+                                              }
+                                              doc.text(`${index + 1}. ${log.action.toUpperCase()} - ${formatDate(log.createdAt)}`, 20, yPos);
+                                              yPos += 8;
+                                            });
+                                          }
                                         }
 
                                         // Save the PDF
@@ -1375,22 +1397,50 @@ function RequestFormsPageContent() {
                       </Card>
                     )}
 
-                    {(selectedRequest.reopenedDate || selectedRequest.reopenReason) && (
-                      <Card>
+                    {(selectedRequest.reopenedDate || selectedRequest.reopenReason || selectedRequest.status === 'Reopened') && (
+                      <Card className="border-orange-200 bg-orange-50">
                         <CardHeader>
-                          <CardTitle className="text-orange-600">Reopen Information</CardTitle>
+                          <CardTitle className="flex items-center gap-2 text-orange-700">
+                            <History className="h-5 w-5" />
+                            Reopen Information
+                          </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-3">
+                        <CardContent className="space-y-4">
                           {selectedRequest.reopenedDate && (
                             <div>
-                              <label className="text-sm font-medium text-gray-500">Reopened Date</label>
-                              <p className="mt-1">{formatDate(selectedRequest.reopenedDate)}</p>
+                              <label className="text-sm font-medium text-orange-600">Reopened Date</label>
+                              <p className="mt-1 font-medium">{formatDate(selectedRequest.reopenedDate)}</p>
                             </div>
                           )}
                           {selectedRequest.reopenReason && (
                             <div>
-                              <label className="text-sm font-medium text-gray-500">Reopen Reason</label>
-                              <p className="mt-1 whitespace-pre-wrap">{selectedRequest.reopenReason}</p>
+                              <label className="text-sm font-medium text-orange-600">Reopen Reason</label>
+                              <div className="mt-1 p-3 bg-white border border-orange-200 rounded-md">
+                                <p className="whitespace-pre-wrap text-sm">{selectedRequest.reopenReason}</p>
+                              </div>
+                            </div>
+                          )}
+                          {selectedRequest.newStartDate && (
+                            <div>
+                              <label className="text-sm font-medium text-orange-600">Updated Start Date</label>
+                              <p className="mt-1 font-medium">{formatDate(selectedRequest.newStartDate)}</p>
+                            </div>
+                          )}
+                          {selectedRequest.newEndDate && (
+                            <div>
+                              <label className="text-sm font-medium text-orange-600">Updated End Date</label>
+                              <p className="mt-1 font-medium">{formatDate(selectedRequest.newEndDate)}</p>
+                            </div>
+                          )}
+                          {selectedRequest.reassignedEmployeeId && (
+                            <div>
+                              <label className="text-sm font-medium text-orange-600">Reassigned To</label>
+                              <p className="mt-1 font-medium">
+                                {(() => {
+                                  const reassignedEmployee = employees.find(emp => emp.id === selectedRequest.reassignedEmployeeId);
+                                  return reassignedEmployee ? `${reassignedEmployee.firstName} ${reassignedEmployee.lastName}` : 'Employee not found';
+                                })()}
+                              </p>
                             </div>
                           )}
                         </CardContent>

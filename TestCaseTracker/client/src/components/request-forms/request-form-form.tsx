@@ -37,6 +37,7 @@ const requestFormSchema = z.object({
   acceptanceCriteria: z.string().optional(),
   additionalNotes: z.string().optional(),
   leadId: z.number().optional(),
+  requestedById: z.number().min(1, { message: "Requested by is required" }),
 });
 
 type RequestFormValues = z.infer<typeof requestFormSchema>;
@@ -78,6 +79,7 @@ export function RequestFormForm({ request, projects, requestTypes, employees = [
       acceptanceCriteria: request?.acceptanceCriteria || "",
       additionalNotes: request?.additionalNotes || "",
       leadId: request?.leadId || 0,
+      requestedById: request?.requestedById || 0,
     },
   });
 
@@ -428,6 +430,44 @@ export function RequestFormForm({ request, projects, requestTypes, employees = [
                                 />
                               ) : (
                                 <div className="h-5 w-5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium">
+                                  {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+                                </div>
+                              )}
+                              {employee.firstName} {employee.lastName} - {employee.department || 'No Dept'}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="requestedById"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Requested By *</FormLabel>
+                    <Select onValueChange={(value) => field.onChange(parseInt(value) || 0)} value={field.value?.toString() || "0"}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select requester" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {employees.map((employee) => (
+                          <SelectItem key={employee.id} value={employee.id.toString()}>
+                            <div className="flex items-center gap-2">
+                              {employee.profilePicture ? (
+                                <img
+                                  src={employee.profilePicture}
+                                  alt={`${employee.firstName} ${employee.lastName}`}
+                                  className="h-5 w-5 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="h-5 w-5 rounded-full bg-gradient-to-r from-green-500 to-blue-600 flex items-center justify-center text-white text-xs font-medium">
                                   {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
                                 </div>
                               )}

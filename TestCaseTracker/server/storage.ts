@@ -4295,68 +4295,72 @@ class MemStorage implements IStorage {
   }
 
   async reopenResourceRequest(id: number, reason: string, userId: number, newStartDate?: string, newEndDate?: string, newAssignedEmployee?: number): Promise<any> {
-    const request = this.resourceRequests.find(r => r.id === id);
-    if (!request) {
-      throw new Error('Request not found');
+    const index = this.resourceRequests.findIndex(req => req.id === id);
+    if (index === -1) {
+      throw new Error('Resource request not found');
     }
 
-    const originalStatus = request.status;
-    const originalAssignedTo = request.assignedToId;
-    const originalStartDate = request.startDate;
-    const originalEndDate = request.endDate;
+    const now = new Date();
+    const originalRequest = { ...this.resourceRequests[index] };
 
-    // Update request status and add reopen information
     const updatedRequest = {
-      ...request,
+      ...this.resourceRequests[index],
       status: 'Reopened',
-      reopenedAt: new Date(),
       reopenReason: reason,
-      reopenedById: userId,
-      updatedAt: new Date()
+      reopenedDate: now,
+      updatedAt: now
     };
 
+    // Update dates if provided
     if (newStartDate) {
+      updatedRequest.newStartDate = newStartDate;
       updatedRequest.startDate = newStartDate;
     }
     if (newEndDate) {
+      updatedRequest.newEndDate = newEndDate;
       updatedRequest.endDate = newEndDate;
     }
     if (newAssignedEmployee !== undefined) {
-      updatedRequest.assignedToId = newAssignedEmployee === 0 ? null : newAssignedEmployee;
+      updatedRequest.reassignedEmployeeId = newAssignedEmployee === 0 ? null : newAssignedEmployee;
+      updatedRequest.leadId = newAssignedEmployee === 0 ? null : newAssignedEmployee;
     }
 
-    // Update the request in storage
-    const index = this.resourceRequests.findIndex(r => r.id === id);
     this.resourceRequests[index] = updatedRequest;
 
-    // Get employee details for audit log
-    const previousEmployee = originalAssignedTo ? await this.getEmployee(originalAssignedTo) : null;
-    const newEmployee = updatedRequest.assignedToId ? await this.getEmployee(updatedRequest.assignedToId) : null;
+    // Create detailed audit log with employee name changes
+    const auditDetails: any = {
+      reason: reason
+    };
 
-    // Create comprehensive audit log
+    if (newStartDate || newEndDate) {
+      auditDetails.dateChanges = {
+        originalStartDate: originalRequest.startDate,
+        originalEndDate: originalRequest.endDate,
+        newStartDate: newStartDate || originalRequest.startDate,
+        newEndDate: newEndDate || originalRequest.endDate
+      };
+    }
+
+    if (newAssignedEmployee !== undefined) {
+      const previousEmployee = this.employees.find(emp => emp.id === originalRequest.leadId);
+      const newEmployee = newAssignedEmployee === 0 ? null : this.employees.find(emp => emp.id === newAssignedEmployee);
+
+      auditDetails.employeeChanges = {
+        previousEmployeeId: originalRequest.leadId,
+        previousEmployeeName: previousEmployee ? `${previousEmployee.firstName} ${previousEmployee.lastName}` : 'Unassigned',
+        newEmployeeId: newAssignedEmployee === 0 ? null : newAssignedEmployee,
+        newEmployeeName: newEmployee ? `${newEmployee.firstName} ${newEmployee.lastName}` : 'Unassigned'
+      };
+    }
+
     await this.createRequestAuditLog({
       requestId: id,
-      action: 'reopened',
-      previousValue: originalStatus,
-      newValue: 'Reopened',
-      userId,
-      details: {
-        reason,
-        dateChanges: {
-          originalStartDate,
-          originalEndDate,
-          newStartDate: updatedRequest.startDate,
-          newEndDate: updatedRequest.endDate
-        },
-        employeeChanges: {
-          previousEmployeeId: originalAssignedTo,
-          previousEmployeeName: previousEmployee ? `${previousEmployee.firstName} ${previousEmployee.lastName}` : 'Unassigned',
-          newEmployeeId: updatedRequest.assignedToId,
-          newEmployeeName: newEmployee ? `${newEmployee.firstName} ${newEmployee.lastName}` : 'Unassigned'
-        }
-      }
+      userId: userId,
+      action: 'REOPENED',
+      details: auditDetails
     });
 
+    console.log(`Storage: Reopened resource request ${id} with reason: ${reason}`);
     return updatedRequest;
   }
 
