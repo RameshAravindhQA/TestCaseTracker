@@ -12,7 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DialogFooter } from "@/components/ui/dialog";
-import { Calendar, CalendarDays, Clock, FileText, Users, Settings } from "lucide-react";
+import { Calendar, CalendarDays, Clock, FileText, Users, Settings, Edit2, Trash2 } from "lucide-react";
+import { format } from "date-fns";
+import { useState } from "react";
 
 const requestFormSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters" }),
@@ -50,6 +52,8 @@ interface RequestFormFormProps {
 
 export function RequestFormForm({ request, projects, requestTypes, employees = [], onSubmit, onCancel }: RequestFormFormProps) {
   const isEditing = !!request;
+  const [editingReopenId, setEditingReopenId] = useState<number | null>(null);
+  const [editingReopenData, setEditingReopenData] = useState<any>(null);
 
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(requestFormSchema),
@@ -191,6 +195,35 @@ export function RequestFormForm({ request, projects, requestTypes, employees = [
 
   const getCurrentResourceTypeOptions = () => {
     return resourceTypeOptions[watchedRequestType as keyof typeof resourceTypeOptions] || [];
+  };
+
+  const handleEditReopen = (reopen: any) => {
+    setEditingReopenId(reopen.id);
+    setEditingReopenData({
+      reason: reopen.reason,
+      newStartDate: reopen.newStartDate ? format(new Date(reopen.newStartDate), 'yyyy-MM-dd') : '',
+      newEndDate: reopen.newEndDate ? format(new Date(reopen.newEndDate), 'yyyy-MM-dd') : '',
+      reassignedEmployeeId: reopen.reassignedEmployeeId || ''
+    });
+  };
+
+  const handleSaveReopen = async (reopenId: number) => {
+    // TODO: Implement save reopen API call
+    console.log('Save reopen:', reopenId, editingReopenData);
+    setEditingReopenId(null);
+    setEditingReopenData(null);
+  };
+
+  const handleCancelEditReopen = () => {
+    setEditingReopenId(null);
+    setEditingReopenData(null);
+  };
+
+  const handleDeleteReopen = async (reopenId: number) => {
+    if (confirm('Are you sure you want to delete this reopen record?')) {
+      // TODO: Implement delete reopen API call
+      console.log('Delete reopen:', reopenId);
+    }
   };
 
   return (
@@ -742,14 +775,106 @@ export function RequestFormForm({ request, projects, requestTypes, employees = [
                   <CardContent>
                     <div className="space-y-2">
                       {request.reopenHistory.map((reopen: any, index: number) => (
-                        <div key={index} className="text-sm p-2 bg-gray-50 rounded">
-                          <div className="flex justify-between items-center">
-                            <span className="font-medium">Reopened</span>
-                            <span className="text-muted-foreground">{format(new Date(reopen.createdAt), 'MMM dd, yyyy')}</span>
-                          </div>
-                          <p className="text-muted-foreground mt-1">{reopen.reason}</p>
-                          {reopen.newStartDate && (
-                            <p className="text-xs text-muted-foreground">New dates: {format(new Date(reopen.newStartDate), 'MMM dd')} - {format(new Date(reopen.newEndDate), 'MMM dd')}</p>
+                        <div key={index} className="text-sm p-3 bg-gray-50 rounded border">
+                          {editingReopenId === reopen.id ? (
+                            <div className="space-y-3">
+                              <div>
+                                <Label className="text-xs font-medium">Reason</Label>
+                                <Textarea
+                                  value={editingReopenData?.reason || ''}
+                                  onChange={(e) => setEditingReopenData(prev => ({ ...prev, reason: e.target.value }))}
+                                  className="mt-1"
+                                  rows={2}
+                                />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <Label className="text-xs font-medium">New Start Date</Label>
+                                  <Input
+                                    type="date"
+                                    value={editingReopenData?.newStartDate || ''}
+                                    onChange={(e) => setEditingReopenData(prev => ({ ...prev, newStartDate: e.target.value }))}
+                                    className="mt-1"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs font-medium">New End Date</Label>
+                                  <Input
+                                    type="date"
+                                    value={editingReopenData?.newEndDate || ''}
+                                    onChange={(e) => setEditingReopenData(prev => ({ ...prev, newEndDate: e.target.value }))}
+                                    className="mt-1"
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-medium">Reassigned Employee</Label>
+                                <Select 
+                                  value={editingReopenData?.reassignedEmployeeId?.toString() || ''} 
+                                  onValueChange={(value) => setEditingReopenData(prev => ({ ...prev, reassignedEmployeeId: parseInt(value) || null }))}
+                                >
+                                  <SelectTrigger className="mt-1">
+                                    <SelectValue placeholder="Select employee" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="0">No Employee Assigned</SelectItem>
+                                    {employees.map((employee) => (
+                                      <SelectItem key={employee.id} value={employee.id.toString()}>
+                                        {employee.firstName} {employee.lastName} - {employee.department || 'No Dept'}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="flex gap-2 pt-2">
+                                <Button size="sm" onClick={() => handleSaveReopen(reopen.id)}>
+                                  Save
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={handleCancelEditReopen}>
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <div className="flex justify-between items-center">
+                                    <span className="font-medium">Reopened</span>
+                                    <div className="flex gap-1">
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleEditReopen(reopen)}
+                                        className="h-6 w-6 p-0"
+                                      >
+                                        <Edit2 className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleDeleteReopen(reopen.id)}
+                                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  <span className="text-muted-foreground text-xs">{format(new Date(reopen.createdAt), 'MMM dd, yyyy')}</span>
+                                </div>
+                              </div>
+                              <p className="text-muted-foreground mt-1">{reopen.reason}</p>
+                              {reopen.newStartDate && (
+                                <p className="text-xs text-muted-foreground">
+                                  New dates: {format(new Date(reopen.newStartDate), 'MMM dd')} - {format(new Date(reopen.newEndDate), 'MMM dd')}
+                                </p>
+                              )}
+                              {reopen.reassignedEmployeeId && (
+                                <p className="text-xs text-muted-foreground">
+                                  Reassigned to: {employees.find(emp => emp.id === reopen.reassignedEmployeeId)?.firstName} {employees.find(emp => emp.id === reopen.reassignedEmployeeId)?.lastName}
+                                </p>
+                              )}
+                            </div>
                           )}
                         </div>
                       ))}
