@@ -701,11 +701,11 @@ class MemStorage implements IStorage {
 
       // For each functional requirement, get its mappings
       for (const req of functionalReqs) {
-        const mappings = this.requirementTestCaseMappings.filter(mapping => 
+        const mappings = this.requirementTestCaseMappings.filter(mapping =>
           mapping.functionalRequirementId === req.id
         );
         req.mappings = mappings;
-        console.log(`Storage: Functional requirement ${req.id} (${req.requirementId}) has ${mappings.length} mappings:`, 
+        console.log(`Storage: Functional requirement ${req.id} (${req.requirementId}) has ${mappings.length} mappings:`,
           mappings.map(m => ({ id: m.id, testCaseId: m.testCaseId, status: m.status })));
       }
 
@@ -715,10 +715,10 @@ class MemStorage implements IStorage {
     console.log(`Storage: getBrdDocuments called with projectId: ${projectId}`);
     console.log(`Storage: Total BRD documents in storage: ${this.brdDocumentsStore.length}`);
     console.log(`Storage: Found ${results.length} BRD documents for project ${projectId}:`,
-      results.map(doc => ({ 
-        id: doc.id, 
-        title: doc.title, 
-        documentId: doc.documentId, 
+      results.map(doc => ({
+        id: doc.id,
+        title: doc.title,
+        documentId: doc.documentId,
         projectId: doc.projectId,
         functionalRequirementsCount: doc.functionalRequirements?.length || 0,
         totalMappings: doc.functionalRequirements?.reduce((sum: number, req: any) => sum + (req.mappings?.length || 0), 0) || 0
@@ -947,8 +947,8 @@ class MemStorage implements IStorage {
           designation: employee.designation || '',
           joiningDate: employee.joiningDate ? new Date(employee.joiningDate).toISOString() : new Date().toISOString(),
           status: employee.status || 'Active',
-          technologies: Array.isArray(employee.technologies) ? employee.technologies : 
-                       (typeof employee.technologies === 'string' ? employee.technologies.split(',').map(t => t.trim()).filter(t => t.length > 0) : []),
+          technologies: Array.isArray(employee.technologies) ? employee.technologies :
+            (typeof employee.technologies === 'string' ? employee.technologies.split(',').map(t => t.trim()).filter(t => t.length > 0) : []),
           locality: employee.locality || '',
           overallExperience: employee.overallExperience || '',
           createdAt: new Date(),
@@ -2179,8 +2179,8 @@ class MemStorage implements IStorage {
   async getRequestAuditLogs(requestId: number): Promise<any[]> {
     // Filter activities related to this request
     return this.activities
-      .filter(activity => 
-        activity.entityType === 'resource_request' && 
+      .filter(activity =>
+        activity.entityType === 'resource_request' &&
         activity.entityId === requestId
       )
       .map(activity => ({
@@ -2782,7 +2782,7 @@ class MemStorage implements IStorage {
     if (projectId && sprintId) {
       results = results.filter(col => col.projectId === projectId && col.sprintId === sprintId);
     } else if (projectId) {
-      results = results.filter(col => col.projectId ===projectId);
+      results = results.filter(col => col.projectId === projectId);
     } else if (sprintId) {
       results = results.filter(col => col.sprintId === sprintId);
     }
@@ -2862,7 +2862,7 @@ class MemStorage implements IStorage {
     if (index === -1) throw new Error("Card not found");
 
     const updatedCard = { ...this.kanbanCards[index], ...cardData, updatedAt: new Date() };
-    this.kanbanCards[index] =updatedCard;
+    this.kanbanCards[index] = updatedCard;
     return updatedCard;
   }
 
@@ -2908,14 +2908,24 @@ class MemStorage implements IStorage {
     );
   }
 
-  async deleteMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<boolean> {
-    const initialLength = this.matrixCells.length;
-    this.matrixCells = this.matrixCells.filter(cell =>
-      !(cell.rowModuleId === rowModuleId &&
-        cell.colModuleId === colModuleId &&
-        cell.projectId === projectId)
-    );
-    return this.matrixCells.length < initialLength;
+  async deleteMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<boolean>;
+  async deleteMatrixCell(id: number): Promise<boolean>;
+  async deleteMatrixCell(idOrRowModuleId: number, colModuleId?: number, projectId?: number): Promise<boolean> {
+    if (colModuleId !== undefined && projectId !== undefined) {
+      // Delete by row/col/project combination
+      const initialLength = this.matrixCells.length;
+      this.matrixCells = this.matrixCells.filter(cell =>
+        !(cell.rowModuleId === idOrRowModuleId &&
+          cell.colModuleId === colModuleId &&
+          cell.projectId === projectId)
+      );
+      return this.matrixCells.length < initialLength;
+    } else {
+      // Delete by ID
+      const initialLength = this.matrixCells.length;
+      this.matrixCells = this.matrixCells.filter(cell => cell.id !== idOrRowModuleId);
+      return this.matrixCells.length < initialLength;
+    }
   }
 
   // Custom marker operations with proper ID handling
@@ -5342,7 +5352,7 @@ class MemStorage implements IStorage {
     if (!requirementId || requirementId.trim() === '') {
       // Get project to use the actual project prefix
       const project = await this.getProject(brdDocument.projectId);
-      const projectPrefix = project ? 
+      const projectPrefix = project ?
         (project.prefix || project.name.split(' ').map(word => word.charAt(0).toUpperCase()).join('').substring(0, 3)) :
         'DEF'; // Default fallback
 
@@ -5381,10 +5391,10 @@ class MemStorage implements IStorage {
     const index = this.functionalRequirements.findIndex(req => req.id === id);
     if (index === -1) return null;
 
-    const updatedRequirement = { 
-      ...this.functionalRequirements[index], 
-      ...data, 
-      updatedAt: new Date() 
+    const updatedRequirement = {
+      ...this.functionalRequirements[index],
+      ...data,
+      updatedAt: new Date()
     };
     this.functionalRequirements[index] = updatedRequirement;
 
@@ -5452,8 +5462,8 @@ class MemStorage implements IStorage {
     const now = new Date();
 
     // Check for existing mapping to prevent duplicates
-    const existingMapping = this.requirementTestCaseMappings.find(mapping => 
-      mapping.functionalRequirementId === data.functionalRequirementId && 
+    const existingMapping = this.requirementTestCaseMappings.find(mapping =>
+      mapping.functionalRequirementId === data.functionalRequirementId &&
       mapping.testCaseId === data.testCaseId
     );
 
@@ -5482,10 +5492,10 @@ class MemStorage implements IStorage {
     const index = this.requirementTestCaseMappings.findIndex(mapping => mapping.id === id);
     if (index === -1) return null;
 
-    const updatedMapping = { 
-      ...this.requirementTestCaseMappings[index], 
-      ...data, 
-      updatedAt: new Date() 
+    const updatedMapping = {
+      ...this.requirementTestCaseMappings[index],
+      ...data,
+      updatedAt: new Date()
     };
     this.requirementTestCaseMappings[index] = updatedMapping;
 

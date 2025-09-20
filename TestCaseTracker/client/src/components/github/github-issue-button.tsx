@@ -112,7 +112,7 @@ export function GitHubIssueButton({ bug, projectId }: GitHubIssueButtonProps) {
     onSuccess: (data) => {
       toast({
         title: "Issue Synced",
-        description: data.newStatus ? 
+        description: data.newStatus ?
           `Bug status updated from ${data.previousStatus} to ${data.newStatus}` :
           "Bug status is already in sync",
       });
