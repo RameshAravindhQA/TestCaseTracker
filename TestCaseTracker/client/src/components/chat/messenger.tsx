@@ -977,16 +977,17 @@ export function Messenger() {
                             : "bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600"
                         )}>
                           {editingMessageId === message.id ? (
-                            <div className="space-y-2">
+                            <div className="space-y-2 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-600">
                               <Textarea
                                 value={editingContent}
                                 onChange={(e) => setEditingContent(e.target.value)}
-                                className="min-h-[60px] resize-none"
+                                className="min-h-[60px] resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                                 onKeyPress={handleKeyPress}
+                                placeholder="Edit your message..."
                               />
                               <div className="flex space-x-2">
-                                <Button size="sm" onClick={handleSaveEdit}>Save</Button>
-                                <Button size="sm" variant="outline" onClick={() => setEditingMessageId(null)}>Cancel</Button>
+                                <Button size="sm" onClick={handleSaveEdit} className="bg-blue-600 hover:bg-blue-700 text-white">Save</Button>
+                                <Button size="sm" variant="outline" onClick={() => setEditingMessageId(null)} className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">Cancel</Button>
                               </div>
                             </div>
                           ) : (

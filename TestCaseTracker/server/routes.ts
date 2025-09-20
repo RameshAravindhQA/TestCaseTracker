@@ -8786,6 +8786,30 @@ export async function registerRoutes(app: Express): Server {
     }
   });
 
+  // Update/edit a message
+  apiRouter.put('/messages/:id', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const messageId = parseInt(req.params.id);
+      const { content } = req.body;
+      
+      if (!content || !content.trim()) {
+        return res.status(400).json({ error: 'Message content is required' });
+      }
+      
+      const updatedMessage = await storage.updateChatMessage(messageId, userId, { content: content.trim(), isEdited: true });
+      
+      if (!updatedMessage) {
+        return res.status(404).json({ error: 'Message not found or you do not have permission to edit it' });
+      }
+      
+      res.json(updatedMessage);
+    } catch (error) {
+      console.error('Error updating message:', error);
+      res.status(500).json({ error: 'Failed to update message' });
+    }
+  });
+
   // Mark messages from a sender as read
   apiRouter.post('/messages/mark-read/:senderId', isAuthenticated, async (req, res) => {
     try {
