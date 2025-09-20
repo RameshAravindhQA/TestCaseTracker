@@ -835,6 +835,50 @@ class MemStorage implements IStorage {
     return requirement;
   }
 
+  // Employee methods
+  async getEmployees(): Promise<any[]> {
+    return [...this.employees];
+  }
+
+  async getEmployee(id: number): Promise<any | null> {
+    return this.employees.find(emp => emp.id === id) || null;
+  }
+
+  async createEmployee(employeeData: any): Promise<any> {
+    const id = this.getNextId();
+    const now = new Date();
+
+    const employee = {
+      id,
+      ...employeeData,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    this.employees.push(employee);
+    return employee;
+  }
+
+  async updateEmployee(id: number, employeeData: any): Promise<any | null> {
+    const index = this.employees.findIndex(emp => emp.id === id);
+    if (index === -1) return null;
+
+    const updatedEmployee = {
+      ...this.employees[index],
+      ...employeeData,
+      updatedAt: new Date()
+    };
+
+    this.employees[index] = updatedEmployee;
+    return updatedEmployee;
+  }
+
+  async deleteEmployee(id: number): Promise<boolean> {
+    const initialLength = this.employees.length;
+    this.employees = this.employees.filter(emp => emp.id !== id);
+    return this.employees.length < initialLength;
+  }
+
   // Initialize data property for compatibility
   private data: any = {
     todoLists: [],
@@ -882,6 +926,51 @@ class MemStorage implements IStorage {
   // private statusReviews = new Map<number, any>(); // Already declared in data
   private employeeProjectHistory: any[] = []; // Added for storing history
   private nextEmployeeId = 1;
+
+  // Employee import method
+  async importEmployees(employeeData: any[]): Promise<{ successCount: number; errorCount: number; errors: any[] }> {
+    let successCount = 0;
+    let errorCount = 0;
+    const errors: any[] = [];
+
+    for (const employee of employeeData) {
+      try {
+        const newEmployee = {
+          id: this.getNextId(),
+          employeeId: employee.employeeId || `EMP${Date.now()}${Math.floor(Math.random() * 1000)}`,
+          firstName: employee.firstName,
+          lastName: employee.lastName,
+          email: employee.email,
+          phoneNumber: employee.phoneNumber || employee.phone || '',
+          department: employee.department || '',
+          designation: employee.designation || '',
+          joiningDate: employee.joiningDate ? new Date(employee.joiningDate).toISOString() : new Date().toISOString(),
+          status: employee.status || 'Active',
+          technologies: Array.isArray(employee.technologies) ? employee.technologies : 
+                       (typeof employee.technologies === 'string' ? employee.technologies.split(',').map(t => t.trim()).filter(t => t.length > 0) : []),
+          locality: employee.locality || '',
+          overallExperience: employee.overallExperience || '',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+
+        this.employees.push(newEmployee);
+        successCount++;
+      } catch (error) {
+        errorCount++;
+        errors.push({
+          employee: employee,
+          error: error.message
+        });
+      }
+    }
+
+    return {
+      successCount,
+      errorCount,
+      errors
+    };
+  }
 
   // Request Forms Module Maps
   private requestFormTypes: any[] = [];

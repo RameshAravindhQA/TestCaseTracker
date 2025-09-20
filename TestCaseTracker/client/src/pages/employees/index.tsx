@@ -25,6 +25,8 @@ export default function EmployeesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [technologyFilter, setTechnologyFilter] = useState("");
   const [projectMappingEmployee, setProjectMappingEmployee] = useState(null);
   const { toast } = useToast();
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -75,11 +77,19 @@ export default function EmployeesPage() {
     }
   };
 
-  const filteredEmployees = employees.filter((employee: any) =>
-    `${employee.firstName} ${employee.lastName} ${employee.email} ${employee.employeeId}`
+  const filteredEmployees = employees.filter((employee: any) => {
+    const searchMatch = `${employee.firstName} ${employee.lastName} ${employee.email} ${employee.employeeId}`
       .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
+      .includes(searchTerm.toLowerCase());
+    
+    const departmentMatch = !departmentFilter || employee.department === departmentFilter;
+    
+    const technologyMatch = !technologyFilter || 
+      (Array.isArray(employee.technologies) && 
+       employee.technologies.some((tech: string) => tech.toLowerCase().includes(technologyFilter.toLowerCase())));
+    
+    return searchMatch && departmentMatch && technologyMatch;
+  });
 
   const handleEdit = (employee: any) => {
     setEditingEmployee(employee);
@@ -547,16 +557,59 @@ Mike,Johnson,mike.johnson@company.com,5551234567,Sales,Sales Executive,2023-12-0
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Employees ({filteredEmployees.length})
+              Employees ({filteredEmployees.length}{employees.length !== filteredEmployees.length ? ` of ${employees.length}` : ''})
             </CardTitle>
-            <div className="flex items-center space-x-2">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search employees..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
+            <div className="flex items-center space-x-4 flex-wrap">
+              <div className="flex items-center space-x-2">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search employees..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-sm"
+                />
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by Department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Departments</SelectItem>
+                    <SelectItem value="Development">Development</SelectItem>
+                    <SelectItem value="Quality Assurance">Quality Assurance</SelectItem>
+                    <SelectItem value="DevOps">DevOps</SelectItem>
+                    <SelectItem value="UI/UX Design">UI/UX Design</SelectItem>
+                    <SelectItem value="Project Management">Project Management</SelectItem>
+                    <SelectItem value="Marketing">Marketing</SelectItem>
+                    <SelectItem value="Sales">Sales</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Input
+                  placeholder="Filter by technology/skill..."
+                  value={technologyFilter}
+                  onChange={(e) => setTechnologyFilter(e.target.value)}
+                  className="w-48"
+                />
+              </div>
+
+              {(departmentFilter || technologyFilter) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setDepartmentFilter("");
+                    setTechnologyFilter("");
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>

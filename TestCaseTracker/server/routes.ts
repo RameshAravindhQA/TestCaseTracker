@@ -1309,6 +1309,93 @@ export async function registerRoutes(app: Express): Server {
     }
   });
 
+  // Employee Management Routes
+  apiRouter.get("/employees", isAuthenticated, async (req, res) => {
+    try {
+      const employees = await storage.getEmployees();
+      res.json(employees);
+    } catch (error) {
+      console.error("Get employees error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/employees/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const employee = await storage.getEmployee(id);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      res.json(employee);
+    } catch (error) {
+      console.error("Get employee error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/employees", isAuthenticated, async (req, res) => {
+    try {
+      const employee = await storage.createEmployee(req.body);
+      res.status(201).json(employee);
+    } catch (error) {
+      console.error("Create employee error:", error);
+      res.status(400).json({ message: "Invalid employee data" });
+    }
+  });
+
+  apiRouter.put("/employees/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedEmployee = await storage.updateEmployee(id, req.body);
+      if (!updatedEmployee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      res.json(updatedEmployee);
+    } catch (error) {
+      console.error("Update employee error:", error);
+      res.status(400).json({ message: "Invalid employee data" });
+    }
+  });
+
+  apiRouter.delete("/employees/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteEmployee(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete employee error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Employee Import Route
+  apiRouter.post("/employees/import", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.body || !req.body.employees || !Array.isArray(req.body.employees)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid request format. Expected employees array."
+        });
+      }
+
+      const result = await storage.importEmployees(req.body.employees);
+      
+      res.json({
+        success: true,
+        imported: result.successCount,
+        failed: result.errorCount,
+        errors: result.errors
+      });
+    } catch (error) {
+      console.error("Employee import error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to import employees"
+      });
+    }
+  });
+
   // GitHub integrations routes
   apiRouter.use("/github", githubIntegrationsRouter);
 
