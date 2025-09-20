@@ -39,7 +39,6 @@ import {
   UserCheck,
 } from "lucide-react";
 import { ProjectChat } from "@/components/chat/project-chat";
-import { GlobalChatbot } from "@/components/chat/global-chatbot";
 import { IntelligentHelperBot } from "@/components/chat/intelligent-helper-bot";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -345,9 +344,6 @@ function MainLayout({ children }: MainLayoutProps) {
 
         {/* Intelligent Helper Bot */}
       <IntelligentHelperBot />
-
-      {/* Global Chat */}
-      <GlobalChatbot />
 
       {/* Project Chat - Only show on specific pages */}
       {shouldShowProjectChat && currentProjectId && (
