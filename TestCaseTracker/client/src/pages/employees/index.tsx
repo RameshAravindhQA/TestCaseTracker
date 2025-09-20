@@ -399,6 +399,22 @@ export default function EmployeesPage() {
         return;
       }
 
+      // Helper function to validate and parse dates
+      const parseDate = (dateValue: any): string => {
+        if (!dateValue) return new Date().toISOString();
+        
+        // Try to parse the date
+        const parsedDate = new Date(dateValue);
+        
+        // Check if the date is valid
+        if (isNaN(parsedDate.getTime())) {
+          console.warn(`Invalid date value: ${dateValue}, using current date`);
+          return new Date().toISOString();
+        }
+        
+        return parsedDate.toISOString();
+      };
+
       // Process and validate the data
       const employeesToImport = results.data
         .filter((row: any) => row.firstName && row.email) // Basic validation
@@ -410,7 +426,7 @@ export default function EmployeesPage() {
           phoneNumber: row.phoneNumber?.trim() || '',
           department: row.department?.trim() || '',
           designation: row.designation?.trim() || '',
-          joiningDate: row.joiningDate ? new Date(row.joiningDate).toISOString() : new Date().toISOString(),
+          joiningDate: parseDate(row.joiningDate),
           status: row.status?.trim() || 'Active',
           locality: row.locality?.trim() || '',
           overallExperience: row.overallExperience?.trim() || '',
