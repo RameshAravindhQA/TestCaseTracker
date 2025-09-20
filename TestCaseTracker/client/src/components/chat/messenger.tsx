@@ -765,28 +765,7 @@ export function Messenger() {
     }
   };
 
-  const fetchMessages = async (userId: number) => {
-    try {
-      const messagesResponse = await fetch(`/api/messages?receiverId=${userId}`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!messagesResponse.ok) {
-        const errorText = await messagesResponse.text();
-        console.error('[MESSENGER] Failed to fetch messages:', messagesResponse.status, errorText);
-        return [];
-      }
-
-      const data = await messagesResponse.json();
-      setMessages(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('[MESSENGER] Error fetching messages:', error);
-    }
-  };
+  // Note: React Query handles message fetching automatically via useQuery hook above
 
   return (
     <div className="h-full flex bg-gray-50 dark:bg-gray-900 min-h-screen">
@@ -967,7 +946,8 @@ export function Messenger() {
                       id: message.senderId,
                       firstName: 'Unknown',
                       lastName: 'User',
-                      name: 'Unknown User'
+                      name: 'Unknown User',
+                      profilePicture: undefined
                     };
 
                     return (
@@ -1171,7 +1151,8 @@ export function Messenger() {
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
                     className="min-h-[40px] max-h-[120px] resize-none pr-10 text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
-                  /></div>
+                  />
+                </div>
                   <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
                     <PopoverTrigger asChild>
                       <Button
