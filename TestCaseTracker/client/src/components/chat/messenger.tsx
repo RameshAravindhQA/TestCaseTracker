@@ -626,25 +626,30 @@ export function Messenger() {
     }
   };
 
-  const formatMessageTime = (timestamp: string) => {
-    if (!timestamp) {
-      return 'Unknown time';
+  const formatMessageTime = (timestamp: string | undefined | null) => {
+    if (!timestamp || timestamp === 'undefined' || timestamp === 'null') {
+      return 'Just now';
     }
     
-    const date = new Date(timestamp);
-    
-    // Check if the date is valid
-    if (isNaN(date.getTime())) {
-      return 'Invalid time';
-    }
-    
-    const now = new Date();
-    const diffInHours = Math.abs(now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    try {
+      const date = new Date(timestamp);
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        return 'Just now';
+      }
+      
+      const now = new Date();
+      const diffInHours = Math.abs(now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
-    if (diffInHours < 24) {
-      return format(date, 'HH:mm');
-    } else {
-      return format(date, 'MMM dd, HH:mm');
+      if (diffInHours < 24) {
+        return format(date, 'HH:mm');
+      } else {
+        return format(date, 'MMM dd, HH:mm');
+      }
+    } catch (error) {
+      console.warn('Error formatting message time:', error);
+      return 'Just now';
     }
   };
 
