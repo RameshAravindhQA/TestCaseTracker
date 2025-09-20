@@ -1,0 +1,49 @@
+[MESSENGER] Failed to fetch messages: 404 {"success":false,"error":"API endpoint not found: GET /","timestamp":"2025-09-20T08:27:10.602Z"}
+queryFn @ messenger.tsx:145Understand this error
+api/messages?userId=3:1  Failed to load resource: the server responded with a status of 404 (Not Found)Understand this error
+messenger.tsx:145 [MESSENGER] Failed to fetch messages: 404 {"success":false,"error":"API endpoint not found: GET /","timestamp":"2025-09-20T08:27:10.883Z"}
+queryFn @ messenger.tsx:145Understand this error
+:24678/:1  Failed to load resource: net::ERR_CONNECTION_TIMED_OUTUnderstand this error
+messenger.tsx:131 [MESSENGER] Fetching messages for contact: 3
+messenger.tsx:135  GET https://ac21e1f3-b8de-4e25-ae14-090b82d9594e-00-22vzc3mw89uf6.janeway.replit.dev/api/messages?userId=3 404 (Not Found)
+queryFn @ messenger.tsx:135
+fetchFn @ @tanstack_react-query.js?v=eb9dc70a:1097
+run @ @tanstack_react-query.js?v=eb9dc70a:795
+start @ @tanstack_react-query.js?v=eb9dc70a:838
+fetch @ @tanstack_react-query.js?v=eb9dc70a:1144
+executeFetch_fn @ @tanstack_react-query.js?v=eb9dc70a:1639
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:1673Understand this error
+messenger.tsx:145 [MESSENGER] Failed to fetch messages: 404 {"success":false,"error":"API endpoint not found: GET /","timestamp":"2025-09-20T08:27:16.179Z"}
+queryFn @ messenger.tsx:145
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=eb9dc70a:1097
+run @ @tanstack_react-query.js?v=eb9dc70a:795
+start @ @tanstack_react-query.js?v=eb9dc70a:838
+fetch @ @tanstack_react-query.js?v=eb9dc70a:1144
+executeFetch_fn @ @tanstack_react-query.js?v=eb9dc70a:1639
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:1673Understand this error
+messenger.tsx:131 [MESSENGER] Fetching messages for contact: 3
+messenger.tsx:135  GET https://ac21e1f3-b8de-4e25-ae14-090b82d9594e-00-22vzc3mw89uf6.janeway.replit.dev/api/messages?userId=3 404 (Not Found)
+queryFn @ messenger.tsx:135
+fetchFn @ @tanstack_react-query.js?v=eb9dc70a:1097
+run @ @tanstack_react-query.js?v=eb9dc70a:795
+start @ @tanstack_react-query.js?v=eb9dc70a:838
+fetch @ @tanstack_react-query.js?v=eb9dc70a:1144
+executeFetch_fn @ @tanstack_react-query.js?v=eb9dc70a:1639
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:1673
+setInterval
+setInterval @ @tanstack_react-query.js?v=eb9dc70a:53
+setInterval @ @tanstack_react-query.js?v=eb9dc70a:95
+updateRefetchInterval_fn @ @tanstack_react-query.js?v=eb9dc70a:1671
+updateTimers_fn @ @tanstack_react-query.js?v=eb9dc70a:1678
+onQueryUpdate @ @tanstack_react-query.js?v=eb9dc70a:1634
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:1262
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:1261
+batch @ @tanstack_react-query.js?v=eb9dc70a:624
+dispatch_fn @ @tanstack_react-query.js?v=eb9dc70a:1260
+setData @ @tanstack_react-query.js?v=eb9dc70a:931
+fetch @ @tanstack_react-query.js?v=eb9dc70a:1153
+await in fetch
+executeFetch_fn @ @tanstack_react-query.js?v=eb9dc70a:1639
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:1673Understand this error
+messenger.tsx:145 [MESSENGER] Failed to fetch messages: 404 {"success":false,"error":"API endpoint not found: GET /","timestamp":"2025-09-20T08:27:21.472Z"}

@@ -5621,6 +5621,22 @@ class MemStorage implements IStorage {
   async getGitHubIntegration(projectId: number): Promise<any | undefined> {
     return this.githubConfigs.find(config => config.projectId === projectId && config.isEnabled);
   }
+
+  // Chat message operations
+  async createChatMessage(messageData: any): Promise<any> {
+    const message = {
+      id: this.data.messages.length + 1,
+      ...messageData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.data.messages.push(message);
+    return message;
+  }
+
+  async getMessagesByChat(chatId: number): Promise<any[]> {
+    return this.data.messages.filter(message => message.chatId === chatId);
+  }
 }
 
 // Export storage and class
