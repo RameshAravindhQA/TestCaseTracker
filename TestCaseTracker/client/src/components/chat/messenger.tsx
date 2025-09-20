@@ -752,7 +752,7 @@ export function Messenger() {
 
   const fetchMessages = async (userId: number) => {
     try {
-      const messagesResponse = await fetch(`/api/messages?userId=${userId}`, {
+      const messagesResponse = await fetch(`/api/messages?receiverId=${userId}`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -943,9 +943,17 @@ export function Messenger() {
                   </div>
                 ) : (
                   (messages || []).map((message) => {
-                    if (!message || !message.sender) {
+                    if (!message || !message.senderId) {
                       return null;
                     }
+                    
+                    // Find sender details from contacts
+                    const sender = contacts?.find(c => c.id === message.senderId) || {
+                      id: message.senderId,
+                      firstName: 'Unknown',
+                      lastName: 'User',
+                      name: 'Unknown User'
+                    };
 
                     return (
                       <motion.div
@@ -962,9 +970,9 @@ export function Messenger() {
                           message.senderId === user?.id ? "flex-row-reverse space-x-reverse" : "flex-row"
                         )}>
                           <Avatar className="h-6 w-6">
-                            <AvatarImage src={message.sender?.profilePicture} />
+                            <AvatarImage src={sender?.profilePicture} />
                             <AvatarFallback className="text-xs">
-                              {message.sender?.firstName?.[0] || '?'}{message.sender?.lastName?.[0] || '?'}
+                              {sender?.firstName?.[0] || '?'}{sender?.lastName?.[0] || '?'}
                             </AvatarFallback>
                           </Avatar>
                         <div className={cn(
