@@ -3779,12 +3779,12 @@ export async function registerRoutes(app: Express): Server {
       let playwrightStatus = 'not available';
 
       try {
-        const testProcess = spawn('npx', ['playwright', '--version'], {
+      const testProcess = spawn('npx', ['playwright', '--version'], {
           stdio: 'pipe',
           timeout: 5000
         });
 
-        await new Promise((resolve, reject) => {
+        await new Promise((resolve) => {
           testProcess.on('close', (code) => {
             if (code === 0) {
               playwrightStatus = 'available';
@@ -8799,16 +8799,28 @@ export async function registerRoutes(app: Express): Server {
     try {
       const bugId = parseInt(req.params.bugId);
 
-      // Get the bug
-      const bug = await storage.getBug(bugId);
-      if (!bug) {
-        return res.status(404).json({ success: false, error: "Bug not found" });
+      if (!bugId || isNaN(bugId)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid bug ID'
+        });
       }
 
-      // Get GitHub integration for the project
-      let integration;
+      logger.info('Syncing bug with GitHub:', { bugId });
+
+      // Get bug details
+      const bug = await storage.getBugById(bugId);
+      if (!bug) {
+        return res.status(404).json({
+          success: false,
+          error: 'Bug not found'
+        });
+      }
+
+      // Get GitHub integration for this project
+      let githubIntegration;
       try {
-        integration = await storage.getGitHubConfig(bug.projectId);
+        githubIntegration = await storage.getGitHubConfig(bug.projectId);
       } catch (error: any) {
         console.error("Error getting GitHub integration:", error);
         return res.status(500).json({ 
@@ -8818,14 +8830,14 @@ export async function registerRoutes(app: Express): Server {
         });
       }
 
-      if (!integration) {
+      if (!githubIntegration) {
         return res.status(400).json({ 
           success: false, 
           error: "No GitHub integration found for this project. Please set up GitHub integration first." 
         });
       }
 
-      // Check if bug is already synced
+      // Check if there's already a GitHub issue for this bug
       const existingIssue = await storage.getGitHubIssueByBugId(bugId);
       if (existingIssue) {
         return res.status(400).json({ 
@@ -8835,36 +8847,32 @@ export async function registerRoutes(app: Express): Server {
         });
       }
 
-      // For now, create a mock GitHub issue since we don't have full GitHub service implementation
-      const mockGitHubIssue = {
-        number: Math.floor(Math.random() * 1000) + 1,
-        html_url: `https://github.com/example/repo/issues/${Math.floor(Math.random() * 1000) + 1}`,
-        state: 'open'
+      // For now, create a mock GitHub issue sincewe don't have full GitHub service implementation
+      const mockGithubIssue = {
+        bugId: bugId,
+        githubIssueNumber: Math.floor(Math.random() * 1000) + 1,
+        githubIssueId: Math.floor(Math.random() * 10000) + 1,
+        githubUrl: `https://github.com/owner/repo/issues/${Math.floor(Math.random() * 1000) + 1}`,
+        status: 'open'
       };
 
-      // Store the GitHub issue reference
-      await storage.createGitHubIssue({
-        bugId: bugId,
-        githubId: mockGitHubIssue.number,
-        githubUrl: mockGitHubIssue.html_url,
-        projectId: bug.projectId,
-        status: 'synced'
-      });
+      // Save GitHub issue to storage
+      await storage.createGitHubIssue(mockGithubIssue);
 
       res.json({ 
         success: true, 
-        message: "Bug successfully pushed to GitHub",
-        githubIssue: {
-          number: mockGitHubIssue.number,
-          url: mockGitHubIssue.html_url
+        message: 'Bug pushed to GitHub successfully',
+        data: {
+          githubIssueNumber: mockGithubIssue.githubIssueNumber,
+          githubUrl: mockGithubIssue.githubUrl
         }
       });
 
     } catch (error: any) {
-      console.error("GitHub sync route error:", error);
+      logger.error('GitHub sync error:', error);
       res.status(500).json({ 
         success: false, 
-        error: "Internal server error", 
+        error: 'Failed to sync with GitHub',
         details: error.message 
       });
     }
@@ -8952,99 +8960,6 @@ export async function registerRoutes(app: Express): Server {
       res.status(500).json({
         success: false,
         message: 'Failed to sync GitHub comments'
-      });
-    }
-  });
-
-  // Enhanced AI Chatbot endpoint for intelligent queries
-  apiRouter.post("/chat/intelligent", isAuthenticated, async (req, res) => {
-    try {
-      const { query, context } = req.body;
-
-      if (!query || query.trim() === '') {
-        return res.status(400).json({
-          success: false,
-          error: 'Query is required'
-        });
-      }
-
-      // Enhanced response with contextual intelligence
-      let response = "I understand you need help with that. Let me assist you with your test management tasks.";
-      let suggestions = [];
-
-      const queryLower = query.toLowerCase();
-
-      // Project-related queries
-      if (queryLower.includes('project')) {
-        if (queryLower.includes('create') || queryLower.includes('add') || queryLower.includes('new')) {
-          response = "I can help you create a new project! You'll need:\n\n1. Project Name\n2. Description\n3. Project Prefix (like 'PROJ' for project codes)\n4. Initial team members\n\nWould you like me to guide you through the project creation process?";
-          suggestions = ["Guide me through project creation", "Show project creation form", "List existing projects first"];
-        } else if (queryLower.includes('status') || queryLower.includes('active') || queryLower.includes('inactive')) {
-          response = "I can show you project statuses! Here's what I can help with:\n\n📊 Show all active projects\n📋 List inactive/archived projects\n🔄 Change project status\n📈 Project status summary\n\nWhat specific project information do you need?";
-          suggestions = ["Show all active projects", "Show project status summary", "List all projects"];
-        }
-      }
-
-      // Bug-related queries
-      else if (queryLower.includes('bug')) {
-        if (queryLower.includes('report') || queryLower.includes('create') || queryLower.includes('new')) {
-          response = "I can help you report a new bug! A good bug report should include:\n\n🔍 Clear title and description\n📝 Steps to reproduce\n✅ Expected behavior\n❌ Actual behavior\n🖼️ Screenshots (if applicable)\n🏷️ Severity and priority\n\nShall I open the bug reporting form for you?";
-          suggestions = ["Open bug report form", "Show bug reporting guidelines", "View existing bugs"];
-        } else if (queryLower.includes('critical') || queryLower.includes('high priority')) {
-          response = "Critical bugs need immediate attention! I can help you:\n\n🚨 List all critical severity bugs\n⚡ Show high priority bugs\n📊 Bug severity breakdown\n🔔 Set up bug notifications\n\nWhat critical bug information do you need?";
-          suggestions = ["Show critical bugs", "Bug severity summary", "Recent high priority bugs"];
-        }
-      }
-
-      // Test case queries
-      else if (queryLower.includes('test case') || queryLower.includes('testing')) {
-        if (queryLower.includes('create') || queryLower.includes('generate') || queryLower.includes('ai')) {
-          response = "I can help you create test cases! I have AI-powered test case generation that can:\n\n🤖 Generate comprehensive test cases from requirements\n📋 Create test cases for different scenarios\n🎯 Generate edge cases and negative tests\n✅ Build regression test suites\n\nWould you like to use the AI test case generator?";
-          suggestions = ["Open AI test case generator", "Show test case templates", "View existing test cases"];
-        } else if (queryLower.includes('status') || queryLower.includes('execution')) {
-          response = "I can show you test execution status! Here's what's available:\n\n✅ Passed test cases\n❌ Failed test cases\n⏸️ Not executed test cases\n📊 Test execution reports\n📈 Test progress tracking\n\nWhat test status information do you need?";
-          suggestions = ["Show test execution summary", "List failed test cases", "Test progress report"];
-        }
-      }
-
-      // Export/Report queries
-      else if (queryLower.includes('export') || queryLower.includes('report') || queryLower.includes('download')) {
-        response = "I can help you export data in various formats:\n\n📄 PDF Reports (Test cases, Bug reports, Project summaries)\n📊 CSV/Excel exports (Data tables, Analytics)\n📋 Custom reports\n🔗 Traceability matrices\n\nWhat would you like to export?";
-        suggestions = ["Export test cases to PDF", "Download bug report CSV", "Generate project summary"];
-      }
-
-      // Dashboard/Overview queries
-      else if (queryLower.includes('dashboard') || queryLower.includes('overview') || queryLower.includes('summary')) {
-        response = "I can show you comprehensive overviews:\n\n📊 Project dashboard with key metrics\n🐛 Bug summary and trends\n✅ Test case execution status\n👥 Team productivity insights\n📈 Progress tracking\n\nWhich overview would you like to see?";
-        suggestions = ["Show main dashboard", "Bug trends analysis", "Test execution overview"];
-      }
-
-      // Time tracking queries
-      else if (queryLower.includes('time') || queryLower.includes('worklog') || queryLower.includes('hours')) {
-        response = "I can assist with time tracking:\n\n⏰ Log work hours for projects\n📅 View timesheets\n📊 Time tracking reports\n👤 Team time allocation\n🎯 Project time estimates vs actual\n\nWhat time tracking help do you need?";
-        suggestions = ["Log time for current project", "Show my timesheet", "Team time tracking report"];
-      }
-
-      res.json({
-        success: true,
-        response,
-        suggestions,
-        context: {
-          queryType: queryLower.includes('project') ? 'project' : 
-                     queryLower.includes('bug') ? 'bug' :
-                     queryLower.includes('test') ? 'test_case' :
-                     queryLower.includes('export') ? 'export' : 'general',
-          canExecute: true,
-          requiresData: true
-        }
-      });
-
-    } catch (error) {
-      console.error('Intelligent chat error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to process intelligent query',
-        response: "I'm sorry, I encountered an error processing your request. Please try again or contact support if the issue persists."
       });
     }
   });
