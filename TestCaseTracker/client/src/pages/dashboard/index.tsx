@@ -422,14 +422,6 @@ export function DashboardPage() {
   const totalExecutedTests = testCases?.filter(tc => tc.status !== 'Not Executed').length || 0;
   const passRate = totalExecutedTests > 0 ? Math.round((passedTests / totalExecutedTests) * 100) : 0;
 
-  // Test status distribution data
-  const testStatusData = [
-    { name: 'Passed', value: testCases?.filter(tc => tc.status === 'Pass').length || 0, color: '#10b981' },
-    { name: 'Failed', value: testCases?.filter(tc => tc.status === 'Fail').length || 0, color: '#ef4444' },
-    { name: 'Blocked', value: testCases?.filter(tc => tc.status === 'Blocked').length || 0, color: '#f59e0b' },
-    { name: 'Not Executed', value: testCases?.filter(tc => tc.status === 'Not Executed').length || 0, color: '#6b7280' }
-  ];
-
   // Bug severity distribution data
   const bugSeverityData = [
     { name: 'Critical', value: bugs?.filter(bug => bug.severity === 'Critical').length || 0, color: '#dc2626' },
