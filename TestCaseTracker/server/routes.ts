@@ -8817,26 +8817,6 @@ export async function registerRoutes(app: Express): Server {
         });
       }
 
-      // Get GitHub integration for this project
-      let githubIntegration;
-      try {
-        githubIntegration = await storage.getGitHubConfig(bug.projectId);
-      } catch (error: any) {
-        console.error("Error getting GitHub integration:", error);
-        return res.status(500).json({ 
-          success: false, 
-          error: "Failed to get GitHub integration", 
-          details: error.message 
-        });
-      }
-
-      if (!githubIntegration) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "No GitHub integration found for this project. Please set up GitHub integration first." 
-        });
-      }
-
       // Check if there's already a GitHub issue for this bug
       const existingIssue = await storage.getGitHubIssueByBugId(bugId);
       if (existingIssue) {
@@ -8847,24 +8827,55 @@ export async function registerRoutes(app: Express): Server {
         });
       }
 
-      // For now, create a mock GitHub issue sincewe don't have full GitHub service implementation
-      const mockGithubIssue = {
+      // Use the same API that the GitHub Issue Reporter uses
+      const issuePayload = {
+        title: bug.title,
+        body: formatBugForGitHub(bug),
+        labels: [
+          `severity: ${bug.severity.toLowerCase()}`,
+          `priority: ${bug.priority.toLowerCase()}`,
+          'bug'
+        ],
+        projectId: bug.projectId
+      };
+
+      // Call the same create-issue endpoint that the GitHub Issue Reporter uses
+      const response = await fetch(`${req.protocol}://${req.get('host')}/api/github/create-issue`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cookie': req.headers.cookie || ''
+        },
+        body: JSON.stringify(issuePayload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return res.status(response.status).json({
+          success: false,
+          error: errorData.message || 'Failed to create GitHub issue'
+        });
+      }
+
+      const githubResult = await response.json();
+
+      // Save GitHub issue to storage
+      const githubIssue = {
         bugId: bugId,
-        githubIssueNumber: Math.floor(Math.random() * 1000) + 1,
-        githubIssueId: Math.floor(Math.random() * 10000) + 1,
-        githubUrl: `https://github.com/owner/repo/issues/${Math.floor(Math.random() * 1000) + 1}`,
+        githubIssueNumber: githubResult.issueNumber,
+        githubIssueId: githubResult.data?.number || githubResult.issueNumber,
+        githubUrl: githubResult.githubUrl || githubResult.data?.url,
         status: 'open'
       };
 
-      // Save GitHub issue to storage
-      await storage.createGitHubIssue(mockGithubIssue);
+      await storage.createGitHubIssue(githubIssue);
 
       res.json({ 
         success: true, 
         message: 'Bug pushed to GitHub successfully',
         data: {
-          githubIssueNumber: mockGithubIssue.githubIssueNumber,
-          githubUrl: mockGithubIssue.githubUrl
+          githubIssueNumber: githubIssue.githubIssueNumber,
+          githubUrl: githubIssue.githubUrl
         }
       });
 
@@ -8877,6 +8888,41 @@ export async function registerRoutes(app: Express): Server {
       });
     }
   });
+
+  // Helper function to format bug data for GitHub
+  function formatBugForGitHub(bug: any): string {
+    return `
+## Bug Report
+
+**Bug ID:** ${bug.bugId}
+**Severity:** ${bug.severity}
+**Priority:** ${bug.priority}
+**Status:** ${bug.status}
+
+## Description
+${bug.description || 'No description provided'}
+
+## Steps to Reproduce
+${bug.stepsToReproduce || 'No steps provided'}
+
+## Expected Result
+${bug.expectedResult || 'No expected result provided'}
+
+## Actual Result
+${bug.actualResult || 'No actual result provided'}
+
+## Environment
+${bug.environment || 'No environment information provided'}
+
+## Pre-conditions
+${bug.preConditions || 'No pre-conditions specified'}
+
+${bug.comments ? `## Additional Comments\n${bug.comments}` : ''}
+
+---
+*This issue was automatically created from the Test Case Tracker bug system*
+`.trim();
+  }
 
 
   // Sync GitHub comments to bug comments
