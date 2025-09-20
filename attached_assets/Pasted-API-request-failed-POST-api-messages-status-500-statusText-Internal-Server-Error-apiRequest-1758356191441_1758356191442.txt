@@ -1,0 +1,60 @@
+API request failed: POST /api/messages {status: 500, statusText: 'Internal Server Error'}
+apiRequest @ queryClient.ts:43
+await in apiRequest
+mutationFn @ messenger.tsx:385
+fn @ @tanstack_react-query.js?v=eb9dc70a:1991
+run @ @tanstack_react-query.js?v=eb9dc70a:795
+start @ @tanstack_react-query.js?v=eb9dc70a:838
+execute @ @tanstack_react-query.js?v=eb9dc70a:2027
+await in execute
+mutate @ @tanstack_react-query.js?v=eb9dc70a:2346
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:3509
+handleSendMessage @ messenger.tsx:551
+handleKeyPress @ messenger.tsx:600
+callCallback2 @ chunk-RPCDYKBN.js?v=eb9dc70a:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=eb9dc70a:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=eb9dc70a:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=eb9dc70a:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=eb9dc70a:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=eb9dc70a:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=eb9dc70a:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=eb9dc70a:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=eb9dc70a:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=eb9dc70a:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=eb9dc70a:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=eb9dc70a:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=eb9dc70a:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5449Understand this error
+messenger.tsx:414 [MESSENGER] Error in send message mutation: Error: API request failed: POST /api/messages {status: 500, statusText: 'Internal Server Error'}
+    at apiRequest (queryClient.ts:47:11)
+    at async Object.mutationFn (messenger.tsx:385:26)
+mutationFn @ messenger.tsx:414
+await in mutationFn
+fn @ @tanstack_react-query.js?v=eb9dc70a:1991
+run @ @tanstack_react-query.js?v=eb9dc70a:795
+start @ @tanstack_react-query.js?v=eb9dc70a:838
+execute @ @tanstack_react-query.js?v=eb9dc70a:2027
+await in execute
+mutate @ @tanstack_react-query.js?v=eb9dc70a:2346
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:3509
+handleSendMessage @ messenger.tsx:551
+handleKeyPress @ messenger.tsx:600
+callCallback2 @ chunk-RPCDYKBN.js?v=eb9dc70a:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=eb9dc70a:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=eb9dc70a:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=eb9dc70a:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=eb9dc70a:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=eb9dc70a:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=eb9dc70a:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=eb9dc70a:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=eb9dc70a:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=eb9dc70a:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=eb9dc70a:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=eb9dc70a:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=eb9dc70a:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5449Understand this error
+messenger.tsx:436 [MESSENGER] Send message error: Error: API request failed: POST /api/messages {status: 500, statusText: 'Internal Server Error'}
+    at apiRequest (queryClient.ts:47:11)
+    at async Object.mutationFn (messenger.tsx:385:26)
