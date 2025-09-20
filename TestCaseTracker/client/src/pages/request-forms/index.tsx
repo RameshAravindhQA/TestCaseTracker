@@ -931,283 +931,150 @@ function RequestFormsPageContent() {
                                             doc.addPage();
                                             yPos = 20;
                                           }
-                                          doc.setFontSize(14);
+                                          doc.setFontSize(16);
                                           doc.setFont("helvetica", "bold");
                                           doc.text('Audit Trail', 20, yPos);
                                           yPos += 15;
 
                                           console.log('PDF Generation - Processing audit logs:', auditLogs);
 
-                                          // Prepare audit trail data for table
-                                          const auditTableData = auditLogs.map((log, index) => {
-                                            let details = '';
-                                            let actionBy = 'System';
-
-                                            console.log(`PDF Generation - Processing log ${index + 1}:`, log);
+                                          // Enhanced, well-formatted audit trail without autoTable
+                                          auditLogs.forEach((log, index) => {
+                                            // Check if we need a new page
+                                            if (yPos > 250) {
+                                              doc.addPage();
+                                              yPos = 30;
+                                            }
 
                                             // Get user who performed the action
+                                            let actionBy = 'System';
                                             if (log.user) {
                                               actionBy = `${log.user.firstName} ${log.user.lastName}`;
-                                              console.log(`PDF Generation - Found user in log:`, actionBy);
                                             } else if (log.userId) {
                                               const actionUser = employees.find(emp => emp.id === log.userId);
                                               if (actionUser) {
                                                 actionBy = `${actionUser.firstName} ${actionUser.lastName}`;
-                                                console.log(`PDF Generation - Found user by ID:`, actionBy);
                                               }
                                             }
 
-                                            // Enhanced details processing
-                                            console.log(`PDF Generation - Log details:`, log.details, typeof log.details);
-
-                                            // First, handle the simple case where details is a string
+                                            // Process details for better readability
+                                            let formattedDetails = [];
+                                            
+                                            // Handle string details
                                             if (typeof log.details === 'string') {
                                               try {
-                                                // Try to parse as JSON in case it's a stringified object
                                                 const parsed = JSON.parse(log.details);
-                                                if (typeof parsed === 'object') {
-                                                  log.details = parsed;
-                                                } else {
-                                                  details = log.details;
-                                                }
+                                                log.details = parsed;
                                               } catch {
-                                                details = log.details;
+                                                formattedDetails.push(log.details);
                                               }
-                                              console.log(`PDF Generation - Using string details:`, details);
                                             }
 
+                                            // Handle object details with proper formatting
                                             if (log.details && typeof log.details === 'object') {
-                                              // Handle object details
                                               const logDetails = log.details;
-                                              console.log(`PDF Generation - Processing object details:`, logDetails);
 
-                                              // Build details string from object properties
-                                              const detailParts = [];
-
-                                              // Handle reason field
                                               if (logDetails.reason) {
-                                                detailParts.push(`Reason: ${logDetails.reason}`);
+                                                formattedDetails.push(`• Reason: ${logDetails.reason}`);
                                               }
 
-                                              // Handle message field
                                               if (logDetails.message) {
-                                                detailParts.push(logDetails.message);
+                                                formattedDetails.push(`• ${logDetails.message}`);
                                               }
 
-                                              // Handle reopen specific fields
+                                              // Handle reopen specific fields with cleaner formatting
                                               if (log.action.toLowerCase().includes('reopen')) {
                                                 if (logDetails.newStartDate || logDetails.startDate) {
-                                                  detailParts.push(`New Start Date: ${formatDate(logDetails.newStartDate || logDetails.startDate)}`);
+                                                  formattedDetails.push(`• New Start Date: ${formatDate(logDetails.newStartDate || logDetails.startDate)}`);
                                                 }
                                                 if (logDetails.newEndDate || logDetails.endDate) {
-                                                  detailParts.push(`New End Date: ${formatDate(logDetails.newEndDate || logDetails.endDate)}`);
+                                                  formattedDetails.push(`• New End Date: ${formatDate(logDetails.newEndDate || logDetails.endDate)}`);
                                                 }
                                                 if (logDetails.reassignedEmployeeId || logDetails.newAssignedEmployee) {
                                                   const empId = logDetails.reassignedEmployeeId || logDetails.newAssignedEmployee;
                                                   if (empId && empId !== '0') {
                                                     const emp = employees.find(e => e.id === parseInt(empId));
                                                     if (emp) {
-                                                      detailParts.push(`Reassigned to: ${emp.firstName} ${emp.lastName}`);
+                                                      formattedDetails.push(`• Reassigned to: ${emp.firstName} ${emp.lastName}`);
                                                     }
                                                   } else if (empId === '0') {
-                                                    detailParts.push('Employee assignment removed');
+                                                    formattedDetails.push('• Employee assignment removed');
                                                   }
-                                                }
-                                              }
-
-                                              // Handle date changes
-                                              if (logDetails.newStartDate && !log.action.toLowerCase().includes('reopen')) {
-                                                detailParts.push(`New Start Date: ${formatDate(logDetails.newStartDate)}`);
-                                              }
-                                              if (logDetails.newEndDate && !log.action.toLowerCase().includes('reopen')) {
-                                                detailParts.push(`New End Date: ${formatDate(logDetails.newEndDate)}`);
-                                              }
-
-                                              // Handle employee reassignment
-                                              if (logDetails.newAssignedEmployee && !log.action.toLowerCase().includes('reopen')) {
-                                                const empId = logDetails.newAssignedEmployee;
-                                                const emp = employees.find(e => e.id === empId);
-                                                if (emp) {
-                                                  detailParts.push(`Reassigned to: ${emp.firstName} ${emp.lastName}`);
-                                                }
-                                              }
-
-                                              // Handle nested date changes
-                                              if (logDetails.dateChanges) {
-                                                const dateChanges = logDetails.dateChanges;
-                                                if (dateChanges.originalStartDate && dateChanges.newStartDate) {
-                                                  detailParts.push(`Start Date: ${formatDate(dateChanges.originalStartDate)} → ${formatDate(dateChanges.newStartDate)}`);
-                                                }
-                                                if (dateChanges.originalEndDate && dateChanges.newEndDate) {
-                                                  detailParts.push(`End Date: ${formatDate(dateChanges.originalEndDate)} → ${formatDate(dateChanges.newEndDate)}`);
-                                                }
-                                              }
-
-                                              // Handle employee changes
-                                              if (logDetails.employeeChanges) {
-                                                const empChanges = logDetails.employeeChanges;
-                                                if (empChanges.previousEmployeeName !== empChanges.newEmployeeName) {
-                                                  detailParts.push(`Employee: ${empChanges.previousEmployeeName || 'None'} → ${empChanges.newEmployeeName || 'None'}`);
                                                 }
                                               }
 
                                               // Handle status changes
                                               if (logDetails.oldStatus && logDetails.newStatus) {
-                                                detailParts.push(`Status: ${logDetails.oldStatus} → ${logDetails.newStatus}`);
+                                                formattedDetails.push(`• Status changed: ${logDetails.oldStatus} → ${logDetails.newStatus}`);
                                               }
 
                                               // Handle comments
                                               if (logDetails.comments) {
-                                                detailParts.push(`Comments: ${logDetails.comments}`);
+                                                formattedDetails.push(`• Comments: ${logDetails.comments}`);
                                               }
-
-                                              // Handle any other fields in details
-                                              Object.keys(logDetails).forEach(key => {
-                                                if (!['reason', 'message', 'newStartDate', 'newEndDate', 'startDate', 'endDate',
-                                                      'reassignedEmployeeId', 'newAssignedEmployee', 'dateChanges',
-                                                      'employeeChanges', 'oldStatus', 'newStatus', 'comments'].includes(key)) {
-                                                  if (logDetails[key] && typeof logDetails[key] !== 'object') {
-                                                    detailParts.push(`${key}: ${logDetails[key]}`);
-                                                  }
-                                                }
-                                              });
-
-                                              details = detailParts.length > 0 ? detailParts.join('; ') : '';
-                                              console.log(`PDF Generation - Built details from object:`, details);
                                             }
 
-                                            // Use action-specific fallbacks if no details found
-                                            if (!details || details.trim() === '') {
+                                            // Fallback details if nothing was processed
+                                            if (formattedDetails.length === 0) {
                                               switch (log.action.toLowerCase()) {
                                                 case 'reopened':
                                                 case 'reopen':
-                                                  // For reopen actions, try to get reason from request data
                                                   if (selectedRequest.reopenReason) {
-                                                    details = `Reason: ${selectedRequest.reopenReason}`;
+                                                    formattedDetails.push(`• Reason: ${selectedRequest.reopenReason}`);
                                                   } else {
-                                                    details = 'Request was reopened';
+                                                    formattedDetails.push('• Request was reopened');
                                                   }
                                                   break;
-                                                case 'reopen_updated':
-                                                  details = 'Reopen record was updated';
-                                                  break;
                                                 case 'created':
-                                                  details = 'Request was created';
+                                                  formattedDetails.push('• Request was created');
                                                   break;
                                                 case 'updated':
-                                                  details = 'Request was updated';
+                                                  formattedDetails.push('• Request was updated');
                                                   break;
                                                 case 'approved':
-                                                  details = 'Request was approved';
+                                                  formattedDetails.push('• Request was approved');
                                                   break;
                                                 case 'rejected':
-                                                  details = 'Request was rejected';
+                                                  formattedDetails.push('• Request was rejected');
                                                   break;
                                                 default:
-                                                  details = `Action: ${log.action}`;
+                                                  formattedDetails.push(`• ${log.action} action performed`);
                                               }
-                                              console.log(`PDF Generation - Used fallback details:`, details);
                                             }
 
-                                            const formattedDetails = details.trim() || 'Request action performed';
-                                            console.log(`PDF Generation - Final details for ${log.action}:`, formattedDetails);
+                                            // Draw audit entry with proper formatting and spacing
+                                            doc.setFillColor(248, 250, 252); // Light gray background
+                                            doc.rect(15, yPos - 5, 180, 20 + (formattedDetails.length * 6), 'F');
+                                            doc.setDrawColor(226, 232, 240); // Light gray border
+                                            doc.rect(15, yPos - 5, 180, 20 + (formattedDetails.length * 6));
 
-                                            return [
-                                              index + 1,
-                                              log.action.toUpperCase(),
-                                              formatDate(log.createdAt || log.timestamp),
-                                              actionBy,
-                                              formattedDetails
-                                            ];
-                                          });
+                                            // Entry number and action
+                                            doc.setFontSize(12);
+                                            doc.setFont("helvetica", "bold");
+                                            doc.setTextColor(30, 58, 138); // Blue color
+                                            doc.text(`${index + 1}. ${log.action.toUpperCase()}`, 20, yPos);
 
-                                          console.log('PDF Generation - Final audit table data:', auditTableData);
-
-                                          // Check if jspdf-autotable is available for table generation
-                                          if (typeof doc.autoTable === 'function') {
-                                            try {
-                                              doc.autoTable({
-                                                startY: yPos,
-                                                head: [['#', 'Action', 'Date', 'Performed By', 'Details']],
-                                                body: auditTableData,
-                                                theme: 'grid',
-                                                headStyles: {
-                                                  fillColor: [66, 139, 202],
-                                                  textColor: 255,
-                                                  fontSize: 10,
-                                                  fontStyle: 'bold'
-                                                },
-                                                bodyStyles: {
-                                                  fontSize: 8,
-                                                  cellPadding: 2
-                                                },
-                                                columnStyles: {
-                                                  0: { cellWidth: 10 }, // # column
-                                                  1: { cellWidth: 25 }, // Action column
-                                                  2: { cellWidth: 25 }, // Date column
-                                                  3: { cellWidth: 30 }, // Performed By column
-                                                  4: { cellWidth: 100 } // Details column
-                                                },
-                                                margin: { left: 20, right: 20 },
-                                                tableWidth: 'wrap',
-                                                styles: {
-                                                  overflow: 'linebreak',
-                                                  cellPadding: 2,
-                                                  fontSize: 8,
-                                                  valign: 'top'
-                                                }
-                                              });
-                                            } catch (tableError) {
-                                              console.warn('Could not create audit trail table, falling back to text format');
-                                              // Fallback to simple text format if autoTable fails
-                                              doc.setFontSize(10);
-                                              doc.setFont("helvetica", "normal");
-                                              auditTableData.forEach((row, index) => {
-                                                if (yPos > 270) {
-                                                  doc.addPage();
-                                                  yPos = 20;
-                                                }
-                                                doc.text(`${index + 1}. ${row[1]} - ${row[2]}`, 20, yPos); // Action and Performed By
-                                                yPos += 6;
-                                                doc.text(`   Date: ${row[3]}`, 25, yPos); // Date
-                                                yPos += 5;
-                                                if (row[4] && row[4].trim()) {
-                                                  const detailLines = doc.splitTextToSize(`   Details: ${row[4]}`, 170);
-                                                  doc.text(detailLines, 20, yPos);
-                                                  yPos += detailLines.length * 5 + 3;
-                                                }
-                                                yPos += 8; // Extra spacing between entries
-                                              });
-                                            }
-                                          } else {
-                                            // Fallback when autoTable is not available
-                                            console.log('PDF Generation - autoTable not available, using text fallback');
-                                            doc.setFontSize(10);
+                                            // Date and performer on the same line
+                                            doc.setFontSize(9);
                                             doc.setFont("helvetica", "normal");
-                                            auditTableData.forEach((row, index) => {
-                                              if (yPos > 270) {
-                                                doc.addPage();
-                                                yPos = 20;
-                                              }
-                                              doc.setFontSize(10);
-                                              doc.setFont("helvetica", "bold");
-                                              doc.text(`${index + 1}. ${row[1]}`, 20, yPos); // Action
-                                              yPos += 6;
+                                            doc.setTextColor(100, 100, 100); // Gray color
+                                            doc.text(`${formatDate(log.createdAt || log.timestamp)} | Performed by: ${actionBy}`, 20, yPos + 6);
 
-                                              doc.setFont("helvetica", "normal");
-                                              doc.text(`Performed by: ${row[3]}`, 25, yPos); // Performed By
-                                              yPos += 5;
-                                              doc.text(`Date: ${row[2]}`, 25, yPos); // Date
-                                              yPos += 5;
+                                            // Details section with proper spacing
+                                            if (formattedDetails.length > 0) {
+                                              doc.setFontSize(9);
+                                              doc.setTextColor(0, 0, 0); // Black for details
+                                              let detailY = yPos + 12;
+                                              
+                                              formattedDetails.forEach(detail => {
+                                                const wrappedText = doc.splitTextToSize(detail, 170);
+                                                doc.text(wrappedText, 25, detailY);
+                                                detailY += wrappedText.length * 4;
+                                              });
+                                            }
 
-                                              if (row[4] && row[4].trim()) { // Details
-                                                doc.text(`Details: ${row[4]}`, 25, yPos);
-                                                const detailLines = doc.splitTextToSize(row[4], 160);
-                                                yPos += detailLines.length * 5;
-                                              }
-                                              yPos += 8; // Extra spacing between entries
-                                            });
-                                          }
+                                            yPos += 25 + (formattedDetails.length * 6);
+                                          });
 
                                           console.log('PDF Generation - Audit trail section completed');
                                         } else {
@@ -1218,13 +1085,14 @@ function RequestFormsPageContent() {
                                             doc.addPage();
                                             yPos = 20;
                                           }
-                                          doc.setFontSize(14);
+                                          doc.setFontSize(16);
                                           doc.setFont("helvetica", "bold");
                                           doc.text('Audit Trail', 20, yPos);
                                           yPos += 15;
 
                                           doc.setFontSize(10);
                                           doc.setFont("helvetica", "normal");
+                                          doc.setTextColor(100, 100, 100);
                                           doc.text('No audit trail information available for this request.', 20, yPos);
                                         }
 
