@@ -5685,7 +5685,7 @@ export async function registerRoutes(app: Express): Server {
         filteredBugs = filteredBugs.filter(bug => bug.projectId === projectIdNum);
       }
 
-if (moduleId) {
+      if (moduleId) {
         const moduleIdNum = parseInt(moduleId as string);
         filteredBugs = filteredBugs.filter(bug => bug.moduleId === moduleIdNum);
       }
