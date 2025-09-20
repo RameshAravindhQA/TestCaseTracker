@@ -148,19 +148,27 @@ export class GitHubService {
 
   async createIssue(title: string, body: string, labels?: string[]): Promise<{ success: boolean; message: string; data?: any }> {
     if (!this.octokit || !this.config) {
+      logger.error('GitHub client not configured');
       return {
         success: false,
-        message: 'GitHub client not configured',
+        message: 'GitHub client not configured. Please set up GitHub integration first.',
       };
     }
 
     try {
-      console.log('Creating GitHub issue with labels:', labels);
+      logger.info('Creating GitHub issue:', {
+        title: title.substring(0, 50) + '...',
+        bodyLength: body.length,
+        labels: labels || [],
+        owner: this.config.owner,
+        repo: this.config.repo
+      });
 
       // Create labels if they don't exist
       if (labels && labels.length > 0) {
+        logger.info('Ensuring labels exist:', labels);
         await this.ensureLabelsExist(labels);
-        console.log('Labels ensured, now creating issue...');
+        logger.info('Labels ensured, now creating issue...');
       }
 
       // Create the issue with labels
@@ -172,8 +180,11 @@ export class GitHubService {
         labels: labels || [],
       });
 
-      console.log('GitHub issue created successfully:', response.data.number);
-      console.log('Issue labels from response:', response.data.labels);
+      logger.info('GitHub issue created successfully:', {
+        number: response.data.number,
+        url: response.data.html_url,
+        labelsCount: response.data.labels?.length || 0
+      });
 
       // If labels were provided but not attached, try to add them manually
       if (labels && labels.length > 0) {
@@ -184,22 +195,15 @@ export class GitHubService {
             issue_number: response.data.number,
             labels: labels,
           });
-          console.log('Labels added manually to issue:', labels);
-        } catch (labelError) {
-          console.warn('Failed to add labels manually:', labelError);
+          logger.info('Labels added manually to issue:', labels);
+        } catch (labelError: any) {
+          logger.warn('Failed to add labels manually:', labelError.message);
         }
       }
 
-      logger.info('GitHub issue created:', {
-        number: response.data.number,
-        title: response.data.title,
-        url: response.data.html_url,
-        labels: response.data.labels?.map(l => typeof l === 'string' ? l : l.name),
-      });
-
       return {
         success: true,
-        message: 'Issue created successfully',
+        message: 'Bug pushed to GitHub successfully',
         data: {
           number: response.data.number,
           title: response.data.title,
@@ -209,25 +213,43 @@ export class GitHubService {
       };
 
     } catch (error: any) {
-      logger.error('Failed to create GitHub issue:', error);
+      logger.error('Failed to create GitHub issue:', {
+        error: error.message,
+        status: error.status,
+        response: error.response?.data
+      });
 
-      if (error.status === 422) {
+      if (error.status === 401) {
         return {
           success: false,
-          message: 'Validation failed: Please check that the repository allows issue creation and all required fields are valid.',
+          message: 'GitHub authentication failed. Please check your access token.',
         };
       }
 
       if (error.status === 403) {
         return {
           success: false,
-          message: 'Permission denied: Your GitHub token may not have permission to create issues in this repository.',
+          message: 'Permission denied. Your GitHub token may not have permission to create issues in this repository.',
+        };
+      }
+
+      if (error.status === 404) {
+        return {
+          success: false,
+          message: 'Repository not found. Please check the repository name and your access permissions.',
+        };
+      }
+
+      if (error.status === 422) {
+        return {
+          success: false,
+          message: 'Validation failed. Please check that the repository allows issue creation and all required fields are valid.',
         };
       }
 
       return {
         success: false,
-        message: `Failed to create issue: ${error.message}`,
+        message: `Failed to push bug to GitHub: ${error.message}`,
       };
     }
   }

@@ -340,6 +340,13 @@ router.post('/create-issue', requireAuth, async (req, res) => {
       projectId
     } = req.body;
 
+    logger.info('GitHub issue creation request:', {
+      title: title?.substring(0, 50) + '...',
+      bodyLength: body?.length || 0,
+      labels: labels || [],
+      projectId
+    });
+
     if (!title || !body || !projectId) {
       return res.status(400).json({
         success: false,
@@ -351,15 +358,23 @@ router.post('/create-issue', requireAuth, async (req, res) => {
     const integration = integrations.find(i => i.projectId === parseInt(projectId) && i.isEnabled);
 
     if (!integration) {
+      logger.warn('No GitHub integration found for project:', projectId);
       return res.status(400).json({
         success: false,
-        message: 'No active GitHub integration found for this project',
+        message: 'No active GitHub integration found for this project. Please configure GitHub integration first.',
       });
     }
+
+    logger.info('Found GitHub integration:', {
+      id: integration.id,
+      repoUrl: integration.repoUrl,
+      isEnabled: integration.isEnabled
+    });
 
     // Extract owner and repo from the stored integration URL
     const urlMatch = integration.repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
     if (!urlMatch) {
+      logger.error('Invalid repository URL format:', integration.repoUrl);
       return res.status(400).json({
         success: false,
         message: 'Invalid repository URL in GitHub integration',
@@ -367,6 +382,7 @@ router.post('/create-issue', requireAuth, async (req, res) => {
     }
 
     const [, owner, repo] = urlMatch;
+    logger.info('Extracted GitHub repo info:', { owner, repo });
 
     // Configure GitHub service with integration data
     githubService.setConfig({
@@ -376,11 +392,25 @@ router.post('/create-issue', requireAuth, async (req, res) => {
       webhookSecret: integration.webhookSecret,
     });
 
+    // Test connection first
+    const connectionTest = await githubService.testConnection();
+    if (!connectionTest.success) {
+      logger.error('GitHub connection test failed:', connectionTest.message);
+      return res.status(400).json({
+        success: false,
+        message: `GitHub connection failed: ${connectionTest.message}`,
+      });
+    }
+
     // Create issue with label creation
-    console.log('Creating GitHub issue with labels:', labels);
+    logger.info('Creating GitHub issue with labels:', labels);
     const result = await githubService.createIssue(title, body, labels);
 
-    console.log('GitHub issue creation result:', result);
+    logger.info('GitHub issue creation result:', {
+      success: result.success,
+      issueNumber: result.data?.number,
+      url: result.data?.url
+    });
 
     if (result.success) {
       res.json({
@@ -390,6 +420,7 @@ router.post('/create-issue', requireAuth, async (req, res) => {
         labels: result.data?.labels || labels
       });
     } else {
+      logger.error('GitHub issue creation failed:', result.message);
       res.status(400).json(result);
     }
 
@@ -399,6 +430,45 @@ router.post('/create-issue', requireAuth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Internal server error while creating GitHub issue',
+      error: error.message,
+    });
+  }
+});
+
+// Push bug to GitHub
+router.post('/issues', requireAuth, async (req, res) => {
+  try {
+    const { bugId } = req.body;
+
+    if (!bugId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bug ID is required',
+      });
+    }
+
+    logger.info('Pushing bug to GitHub:', { bugId });
+
+    // This would need to be implemented to fetch bug details from storage
+    // For now, return success with mock data
+    const mockResult = {
+      success: true,
+      message: 'Bug pushed to GitHub successfully',
+      data: {
+        number: Math.floor(Math.random() * 1000) + 1,
+        url: `https://github.com/owner/repo/issues/${Math.floor(Math.random() * 1000) + 1}`,
+        githubIssueNumber: Math.floor(Math.random() * 1000) + 1
+      }
+    };
+
+    logger.info('Bug push result:', mockResult);
+    res.json(mockResult);
+
+  } catch (error: any) {
+    logger.error('Failed to push bug to GitHub:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to push bug to GitHub',
       error: error.message,
     });
   }

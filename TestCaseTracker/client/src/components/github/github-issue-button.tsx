@@ -70,8 +70,8 @@ export function GitHubIssueButton({ bug, projectId }: GitHubIssueButtonProps) {
     },
     onSuccess: (data) => {
       toast({
-        title: "GitHub Issue Created",
-        description: `Issue #${data.githubIssueNumber} created successfully`,
+        title: "Bug Pushed to GitHub",
+        description: `Bug successfully pushed as issue #${data.githubIssueNumber}`,
         action: (
           <Button
             variant="outline"
@@ -86,7 +86,7 @@ export function GitHubIssueButton({ bug, projectId }: GitHubIssueButtonProps) {
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to Create Issue",
+        title: "Failed to Push Bug to GitHub",
         description: error.message,
         variant: "destructive",
       });
@@ -189,16 +189,16 @@ export function GitHubIssueButton({ bug, projectId }: GitHubIssueButtonProps) {
         disabled={createIssueMutation.isPending}
       >
         <Github className="h-4 w-4 mr-2" />
-        {createIssueMutation.isPending ? "Creating..." : "Create Issue"}
+        {createIssueMutation.isPending ? "Pushing to GitHub..." : "Push the Bug to Github"}
       </Button>
 
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Create GitHub Issue</AlertDialogTitle>
+            <AlertDialogTitle>Push Bug to GitHub</AlertDialogTitle>
             <AlertDialogDescription>
-              This will create a new issue in the configured GitHub repository for bug "{bug.title}".
-              The issue will include all bug details and be automatically linked.
+              This will push bug "{bug.title}" to the configured GitHub repository as a new issue.
+              The issue will include all bug details and be automatically linked to this bug report.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -209,7 +209,7 @@ export function GitHubIssueButton({ bug, projectId }: GitHubIssueButtonProps) {
                 setShowConfirmDialog(false);
               }}
             >
-              Create Issue
+              Push to GitHub
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
