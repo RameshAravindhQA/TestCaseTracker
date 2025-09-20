@@ -627,7 +627,17 @@ export function Messenger() {
   };
 
   const formatMessageTime = (timestamp: string) => {
+    if (!timestamp) {
+      return 'Unknown time';
+    }
+    
     const date = new Date(timestamp);
+    
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      return 'Invalid time';
+    }
+    
     const now = new Date();
     const diffInHours = Math.abs(now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
