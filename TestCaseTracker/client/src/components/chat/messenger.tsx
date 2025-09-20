@@ -131,8 +131,8 @@ export function Messenger() {
       console.log(`[MESSENGER] Fetching messages for contact:`, selectedContact.id);
 
       try {
-        // Use the messages API directly with userId parameter
-        const messagesResponse = await fetch(`/api/messages?userId=${selectedContact.id}`, {
+        // Use the messages API directly with receiverId parameter
+        const messagesResponse = await fetch(`/api/messages?receiverId=${selectedContact.id}`, {
           method: 'GET',
           credentials: 'include',
           headers: {

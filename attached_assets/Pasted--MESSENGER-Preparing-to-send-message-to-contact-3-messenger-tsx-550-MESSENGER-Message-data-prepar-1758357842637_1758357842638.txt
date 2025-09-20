@@ -1,0 +1,142 @@
+[MESSENGER] Preparing to send message to contact 3
+messenger.tsx:550 [MESSENGER] Message data prepared: {receiverId: 3, content: 'He;;p', type: 'text', attachments: Array(0)}
+messenger.tsx:381 [MESSENGER] Sending message via API: {receiverId: 3, content: 'He;;p', type: 'text', attachments: Array(0)}
+queryClient.ts:38 Starting POST request to /api/messages
+messenger.tsx:394 [MESSENGER] Message saved via API: {id: 3, receiverId: 3, content: 'He;;p', type: 'text', attachments: Array(0), …}
+messenger.tsx:409 [MESSENGER] WebSocket not available, using API only
+mutationFn @ messenger.tsx:409
+await in mutationFn
+fn @ @tanstack_react-query.js?v=eb9dc70a:1991
+run @ @tanstack_react-query.js?v=eb9dc70a:795
+start @ @tanstack_react-query.js?v=eb9dc70a:838
+execute @ @tanstack_react-query.js?v=eb9dc70a:2027
+await in execute
+mutate @ @tanstack_react-query.js?v=eb9dc70a:2346
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:3509
+handleSendMessage @ messenger.tsx:551
+handleKeyPress @ messenger.tsx:600
+callCallback2 @ chunk-RPCDYKBN.js?v=eb9dc70a:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=eb9dc70a:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=eb9dc70a:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=eb9dc70a:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=eb9dc70a:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=eb9dc70a:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=eb9dc70a:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=eb9dc70a:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=eb9dc70a:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=eb9dc70a:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=eb9dc70a:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=eb9dc70a:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=eb9dc70a:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5449Understand this warning
+messenger.tsx:419 [MESSENGER] Message sent successfully: {id: 3, receiverId: 3, content: 'He;;p', type: 'text', attachments: Array(0), …}
+messenger.tsx:131 [MESSENGER] Fetching messages for contact: 3
+messenger.tsx:131 [MESSENGER] Fetching messages for contact: 3
+messenger.tsx:135  GET https://ac21e1f3-b8de-4e25-ae14-090b82d9594e-00-22vzc3mw89uf6.janeway.replit.dev/api/messages?userId=3 400 (Bad Request)
+queryFn @ messenger.tsx:135
+fetchFn @ @tanstack_react-query.js?v=eb9dc70a:1097
+run @ @tanstack_react-query.js?v=eb9dc70a:795
+start @ @tanstack_react-query.js?v=eb9dc70a:838
+fetch @ @tanstack_react-query.js?v=eb9dc70a:1144
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:2830
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:2829
+batch @ @tanstack_react-query.js?v=eb9dc70a:624
+refetchQueries @ @tanstack_react-query.js?v=eb9dc70a:2828
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:2814
+batch @ @tanstack_react-query.js?v=eb9dc70a:624
+invalidateQueries @ @tanstack_react-query.js?v=eb9dc70a:2807
+onSuccess @ messenger.tsx:425
+execute @ @tanstack_react-query.js?v=eb9dc70a:2035
+await in execute
+mutate @ @tanstack_react-query.js?v=eb9dc70a:2346
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:3509
+handleSendMessage @ messenger.tsx:551
+handleKeyPress @ messenger.tsx:600
+callCallback2 @ chunk-RPCDYKBN.js?v=eb9dc70a:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=eb9dc70a:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=eb9dc70a:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=eb9dc70a:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=eb9dc70a:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=eb9dc70a:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=eb9dc70a:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=eb9dc70a:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=eb9dc70a:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=eb9dc70a:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=eb9dc70a:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=eb9dc70a:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=eb9dc70a:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5449Understand this error
+messenger.tsx:145 [MESSENGER] Failed to fetch messages: 400 {"error":"receiverId is required"}
+queryFn @ messenger.tsx:145
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=eb9dc70a:1097
+run @ @tanstack_react-query.js?v=eb9dc70a:795
+start @ @tanstack_react-query.js?v=eb9dc70a:838
+fetch @ @tanstack_react-query.js?v=eb9dc70a:1144
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:2830
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:2829
+batch @ @tanstack_react-query.js?v=eb9dc70a:624
+refetchQueries @ @tanstack_react-query.js?v=eb9dc70a:2828
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:2814
+batch @ @tanstack_react-query.js?v=eb9dc70a:624
+invalidateQueries @ @tanstack_react-query.js?v=eb9dc70a:2807
+onSuccess @ messenger.tsx:425
+execute @ @tanstack_react-query.js?v=eb9dc70a:2035
+await in execute
+mutate @ @tanstack_react-query.js?v=eb9dc70a:2346
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:3509
+handleSendMessage @ messenger.tsx:551
+handleKeyPress @ messenger.tsx:600
+callCallback2 @ chunk-RPCDYKBN.js?v=eb9dc70a:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=eb9dc70a:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=eb9dc70a:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=eb9dc70a:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=eb9dc70a:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=eb9dc70a:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=eb9dc70a:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=eb9dc70a:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=eb9dc70a:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=eb9dc70a:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=eb9dc70a:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=eb9dc70a:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=eb9dc70a:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5449Understand this error
+messenger.tsx:135  GET https://ac21e1f3-b8de-4e25-ae14-090b82d9594e-00-22vzc3mw89uf6.janeway.replit.dev/api/messages?userId=3 400 (Bad Request)
+queryFn @ messenger.tsx:135
+fetchFn @ @tanstack_react-query.js?v=eb9dc70a:1097
+run @ @tanstack_react-query.js?v=eb9dc70a:795
+start @ @tanstack_react-query.js?v=eb9dc70a:838
+fetch @ @tanstack_react-query.js?v=eb9dc70a:1144
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:2830
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:2829
+batch @ @tanstack_react-query.js?v=eb9dc70a:624
+refetchQueries @ @tanstack_react-query.js?v=eb9dc70a:2828
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:2814
+batch @ @tanstack_react-query.js?v=eb9dc70a:624
+invalidateQueries @ @tanstack_react-query.js?v=eb9dc70a:2807
+onSuccess @ messenger.tsx:427
+execute @ @tanstack_react-query.js?v=eb9dc70a:2035
+await in execute
+mutate @ @tanstack_react-query.js?v=eb9dc70a:2346
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:3509
+handleSendMessage @ messenger.tsx:551
+handleKeyPress @ messenger.tsx:600
+callCallback2 @ chunk-RPCDYKBN.js?v=eb9dc70a:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=eb9dc70a:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=eb9dc70a:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=eb9dc70a:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=eb9dc70a:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=eb9dc70a:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=eb9dc70a:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=eb9dc70a:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=eb9dc70a:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=eb9dc70a:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=eb9dc70a:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=eb9dc70a:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=eb9dc70a:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5449Understand this error
+messenger.tsx:145 [MESSENGER] Failed to fetch me
