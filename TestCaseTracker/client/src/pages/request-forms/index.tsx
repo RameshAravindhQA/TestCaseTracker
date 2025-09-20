@@ -951,49 +951,109 @@ function RequestFormsPageContent() {
                                               }
                                             }
 
+                                            // Parse and format details
                                             if (log.details) {
-                                              let logDetails;
                                               try {
-                                                logDetails = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
-                                              } catch (e) {
-                                                logDetails = { message: log.details };
-                                              }
-
-                                              if (logDetails.reason) {
-                                                details += `Reason: ${logDetails.reason}\n`;
-                                              }
-
-                                              if (logDetails.dateChanges) {
-                                                const dateChanges = logDetails.dateChanges;
-                                                if (dateChanges.originalStartDate !== dateChanges.newStartDate) {
-                                                  details += `Start Date: ${formatDate(dateChanges.originalStartDate)} → ${formatDate(dateChanges.newStartDate)}\n`;
+                                                let logDetails;
+                                                if (typeof log.details === 'string') {
+                                                  try {
+                                                    logDetails = JSON.parse(log.details);
+                                                  } catch (e) {
+                                                    // If parsing fails, treat as plain text
+                                                    details = log.details;
+                                                    logDetails = null;
+                                                  }
+                                                } else {
+                                                  logDetails = log.details;
                                                 }
-                                                if (dateChanges.originalEndDate !== dateChanges.newEndDate) {
-                                                  details += `End Date: ${formatDate(dateChanges.originalEndDate)} → ${formatDate(dateChanges.newEndDate)}\n`;
+
+                                                if (logDetails && typeof logDetails === 'object') {
+                                                  // Handle reason
+                                                  if (logDetails.reason) {
+                                                    details += `Reason: ${logDetails.reason}\n`;
+                                                  }
+
+                                                  // Handle date changes
+                                                  if (logDetails.dateChanges) {
+                                                    const dateChanges = logDetails.dateChanges;
+                                                    if (dateChanges.originalStartDate && dateChanges.newStartDate && 
+                                                        dateChanges.originalStartDate !== dateChanges.newStartDate) {
+                                                      details += `Start Date: ${formatDate(dateChanges.originalStartDate)} → ${formatDate(dateChanges.newStartDate)}\n`;
+                                                    }
+                                                    if (dateChanges.originalEndDate && dateChanges.newEndDate && 
+                                                        dateChanges.originalEndDate !== dateChanges.newEndDate) {
+                                                      details += `End Date: ${formatDate(dateChanges.originalEndDate)} → ${formatDate(dateChanges.newEndDate)}\n`;
+                                                    }
+                                                  }
+
+                                                  // Handle employee changes
+                                                  if (logDetails.employeeChanges) {
+                                                    const empChanges = logDetails.employeeChanges;
+                                                    if (empChanges.previousEmployeeName !== empChanges.newEmployeeName) {
+                                                      details += `Employee: ${empChanges.previousEmployeeName || 'None'} → ${empChanges.newEmployeeName || 'None'}\n`;
+                                                    }
+                                                  }
+
+                                                  // Handle direct date fields
+                                                  if (logDetails.newStartDate && !logDetails.dateChanges) {
+                                                    details += `New Start Date: ${formatDate(logDetails.newStartDate)}\n`;
+                                                  }
+                                                  if (logDetails.newEndDate && !logDetails.dateChanges) {
+                                                    details += `New End Date: ${formatDate(logDetails.newEndDate)}\n`;
+                                                  }
+
+                                                  // Handle reassigned employee
+                                                  if (logDetails.newAssignedEmployee || logDetails.reassignedEmployeeId) {
+                                                    const empId = logDetails.newAssignedEmployee || logDetails.reassignedEmployeeId;
+                                                    const emp = employees.find(e => e.id === empId);
+                                                    if (emp) {
+                                                      details += `Reassigned to: ${emp.firstName} ${emp.lastName}\n`;
+                                                    }
+                                                  }
+
+                                                  // Handle message field
+                                                  if (logDetails.message && !details) {
+                                                    details = logDetails.message;
+                                                  }
+
+                                                  // If still no details but object has content, format it
+                                                  if (!details && Object.keys(logDetails).length > 0) {
+                                                    details = Object.entries(logDetails)
+                                                      .filter(([key, value]) => value !== null && value !== undefined && value !== '')
+                                                      .map(([key, value]) => `${key}: ${value}`)
+                                                      .join('\n');
+                                                  }
                                                 }
+                                              } catch (error) {
+                                                console.error('Error parsing audit log details:', error, log);
+                                                details = typeof log.details === 'string' ? log.details : 'Error parsing details';
                                               }
+                                            }
 
-                                              if (logDetails.employeeChanges) {
-                                                const empChanges = logDetails.employeeChanges;
-                                                if (empChanges.previousEmployeeName !== empChanges.newEmployeeName) {
-                                                  details += `Employee: ${empChanges.previousEmployeeName || 'None'} → ${empChanges.newEmployeeName || 'None'}\n`;
-                                                }
-                                              }
-
-                                              if (logDetails.newStartDate && !logDetails.dateChanges) {
-                                                details += `New Start Date: ${formatDate(logDetails.newStartDate)}\n`;
-                                              }
-                                              if (logDetails.newEndDate && !logDetails.dateChanges) {
-                                                details += `New End Date: ${formatDate(logDetails.newEndDate)}\n`;
-                                              }
-
-                                              if (logDetails.message && !details) {
-                                                details = logDetails.message;
-                                              }
-
-                                              // Fallback: if details is still empty but logDetails has content, stringify it
-                                              if (!details && logDetails && typeof logDetails === 'object') {
-                                                details = JSON.stringify(logDetails, null, 2);
+                                            // Use action-specific fallbacks if no details
+                                            if (!details) {
+                                              switch (log.action.toLowerCase()) {
+                                                case 'reopened':
+                                                case 'reopen':
+                                                  details = 'Request was reopened';
+                                                  break;
+                                                case 'reopen_updated':
+                                                  details = 'Reopen record was updated';
+                                                  break;
+                                                case 'created':
+                                                  details = 'Request was created';
+                                                  break;
+                                                case 'updated':
+                                                  details = 'Request was updated';
+                                                  break;
+                                                case 'approved':
+                                                  details = 'Request was approved';
+                                                  break;
+                                                case 'rejected':
+                                                  details = 'Request was rejected';
+                                                  break;
+                                                default:
+                                                  details = `Action performed: ${log.action}`;
                                               }
                                             }
 
@@ -1002,7 +1062,7 @@ function RequestFormsPageContent() {
                                               log.action.toUpperCase(),
                                               formatDate(log.createdAt || log.timestamp),
                                               actionBy,
-                                              details.trim() || log.details || 'No additional details'
+                                              details.trim()
                                             ];
                                           });
 

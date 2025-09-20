@@ -369,7 +369,64 @@ export function RequestReopenDialog({
                         </span>
                       </div>
                       <p className="text-sm text-gray-600">
-                        {typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2)}
+                        {(() => {
+                          if (!log.details) return 'No additional details';
+                          
+                          try {
+                            let logDetails;
+                            if (typeof log.details === 'string') {
+                              try {
+                                logDetails = JSON.parse(log.details);
+                              } catch (e) {
+                                return log.details;
+                              }
+                            } else {
+                              logDetails = log.details;
+                            }
+
+                            if (logDetails && typeof logDetails === 'object') {
+                              let formattedDetails = '';
+                              
+                              if (logDetails.reason) {
+                                formattedDetails += `Reason: ${logDetails.reason}\n`;
+                              }
+                              
+                              if (logDetails.dateChanges) {
+                                const dateChanges = logDetails.dateChanges;
+                                if (dateChanges.originalStartDate !== dateChanges.newStartDate) {
+                                  formattedDetails += `Start Date: ${formatDate(dateChanges.originalStartDate)} → ${formatDate(dateChanges.newStartDate)}\n`;
+                                }
+                                if (dateChanges.originalEndDate !== dateChanges.newEndDate) {
+                                  formattedDetails += `End Date: ${formatDate(dateChanges.originalEndDate)} → ${formatDate(dateChanges.newEndDate)}\n`;
+                                }
+                              }
+                              
+                              if (logDetails.employeeChanges) {
+                                const empChanges = logDetails.employeeChanges;
+                                if (empChanges.previousEmployeeName !== empChanges.newEmployeeName) {
+                                  formattedDetails += `Employee: ${empChanges.previousEmployeeName || 'None'} → ${empChanges.newEmployeeName || 'None'}\n`;
+                                }
+                              }
+                              
+                              if (logDetails.newStartDate && !logDetails.dateChanges) {
+                                formattedDetails += `New Start Date: ${formatDate(logDetails.newStartDate)}\n`;
+                              }
+                              if (logDetails.newEndDate && !logDetails.dateChanges) {
+                                formattedDetails += `New End Date: ${formatDate(logDetails.newEndDate)}\n`;
+                              }
+                              
+                              if (logDetails.message && !formattedDetails) {
+                                formattedDetails = logDetails.message;
+                              }
+                              
+                              return formattedDetails.trim() || JSON.stringify(logDetails, null, 2);
+                            }
+                            
+                            return typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2);
+                          } catch (error) {
+                            return typeof log.details === 'string' ? log.details : 'Error parsing details';
+                          }
+                        })()}
                       </p>
                       {log.user && (
                         <p className="text-xs text-gray-500 mt-1">
