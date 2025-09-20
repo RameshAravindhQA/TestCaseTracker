@@ -1194,7 +1194,7 @@ export default function ProjectDetailPage() {
                 size="sm"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${syncAllMutation.isPending ? 'animate-spin' : ''}`} />
-                {syncAllMutation.isPending ? 'Syncing...' : 'Sync All GitHub Issues'}
+                {syncAllMutation.isPending ? 'Pushing...' : 'Push Bugs to GitHub'}
               </Button>
               <Button
                 onClick={handleSyncFromGithub}

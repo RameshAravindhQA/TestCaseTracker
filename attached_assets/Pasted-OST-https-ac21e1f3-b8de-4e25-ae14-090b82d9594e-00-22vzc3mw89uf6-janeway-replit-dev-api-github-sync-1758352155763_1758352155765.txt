@@ -1,0 +1,89 @@
+OST https://ac21e1f3-b8de-4e25-ae14-090b82d9594e-00-22vzc3mw89uf6.janeway.replit.dev/api/github/sync/8 500 (Internal Server Error)
+apiRequest @ queryClient.ts:40
+(anonymous) @ [id].tsx:571
+mutationFn @ [id].tsx:569
+await in mutationFn
+fn @ @tanstack_react-query.js?v=eb9dc70a:1991
+run @ @tanstack_react-query.js?v=eb9dc70a:795
+start @ @tanstack_react-query.js?v=eb9dc70a:838
+execute @ @tanstack_react-query.js?v=eb9dc70a:2027
+await in execute
+mutate @ @tanstack_react-query.js?v=eb9dc70a:2346
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:3509
+handleSyncAllGithubIssues @ [id].tsx:623
+callCallback2 @ chunk-RPCDYKBN.js?v=eb9dc70a:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=eb9dc70a:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=eb9dc70a:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=eb9dc70a:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=eb9dc70a:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=eb9dc70a:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=eb9dc70a:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=eb9dc70a:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=eb9dc70a:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=eb9dc70a:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=eb9dc70a:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=eb9dc70a:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=eb9dc70a:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5449Understand this error
+queryClient.ts:43 API request failed: POST /api/github/sync/8 {status: 500, statusText: 'Internal Server Error'}
+apiRequest @ queryClient.ts:43
+await in apiRequest
+(anonymous) @ [id].tsx:571
+mutationFn @ [id].tsx:569
+await in mutationFn
+fn @ @tanstack_react-query.js?v=eb9dc70a:1991
+run @ @tanstack_react-query.js?v=eb9dc70a:795
+start @ @tanstack_react-query.js?v=eb9dc70a:838
+execute @ @tanstack_react-query.js?v=eb9dc70a:2027
+await in execute
+mutate @ @tanstack_react-query.js?v=eb9dc70a:2346
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:3509
+handleSyncAllGithubIssues @ [id].tsx:623
+callCallback2 @ chunk-RPCDYKBN.js?v=eb9dc70a:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=eb9dc70a:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=eb9dc70a:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=eb9dc70a:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=eb9dc70a:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=eb9dc70a:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=eb9dc70a:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=eb9dc70a:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=eb9dc70a:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=eb9dc70a:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=eb9dc70a:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=eb9dc70a:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=eb9dc70a:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5449Understand this error
+[id].tsx:581 Failed to sync bug BUG-001 (ID: 8): Error: API request failed: POST /api/github/sync/8 {status: 500, statusText: 'Internal Server Error'}
+    at apiRequest (queryClient.ts:47:11)
+    at async [id].tsx:571:28
+    at async Promise.allSettled (/projects/index 0)
+    at async Object.mutationFn ([id].tsx:586:23)
+(anonymous) @ [id].tsx:581
+await in (anonymous)
+mutationFn @ [id].tsx:569
+await in mutationFn
+fn @ @tanstack_react-query.js?v=eb9dc70a:1991
+run @ @tanstack_react-query.js?v=eb9dc70a:795
+start @ @tanstack_react-query.js?v=eb9dc70a:838
+execute @ @tanstack_react-query.js?v=eb9dc70a:2027
+await in execute
+mutate @ @tanstack_react-query.js?v=eb9dc70a:2346
+(anonymous) @ @tanstack_react-query.js?v=eb9dc70a:3509
+handleSyncAllGithubIssues @ [id].tsx:623
+callCallback2 @ chunk-RPCDYKBN.js?v=eb9dc70a:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=eb9dc70a:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=eb9dc70a:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=eb9dc70a:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=eb9dc70a:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=eb9dc70a:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=eb9dc70a:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=eb9dc70a:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=eb9dc70a:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=eb9dc70a:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=eb9dc70a:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=eb9dc70a:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=eb9dc70a:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=eb9dc70a:5449Understand this warning

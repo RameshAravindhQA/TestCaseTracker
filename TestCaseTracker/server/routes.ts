@@ -4954,7 +4954,7 @@ export async function registerRoutes(app: Express): Server {
         // Extract first 2-5 letters from project name
         const cleanProjectName = project.name.replace(/[^a-zA-Z]/g, '');
         if (cleanProjectName.length >= 5) {
-          projectPrefix = cleanProjectName.substring(0, 5.toUpperCase());
+          projectPrefix = cleanProjectName.substring(0, 5).toUpperCase();
         } else if (cleanProjectName.length >= 3) {
           projectPrefix = cleanProjectName.substring(0, cleanProjectName.length).toUpperCase();
         } else {
@@ -5828,7 +5828,7 @@ export async function registerRoutes(app: Express): Server {
 
       // Try to automatically create GitHub issue if GitHub integration is configured
       try {
-        const githubConfig = await storage.getGitHubIntegration(projectId);
+        const githubConfig = await storage.getGitHubConfig(projectId);
         if (githubConfig && githubConfig.isEnabled) {
           console.log('GitHub integration found, creating GitHub issue for bug:', bug.bugId);
 
@@ -8808,7 +8808,7 @@ export async function registerRoutes(app: Express): Server {
       // Get GitHub integration for the project
       let integration;
       try {
-        integration = await storage.getGitHubIntegration(bug.projectId);
+        integration = await storage.getGitHubConfig(bug.projectId);
       } catch (error: any) {
         console.error("Error getting GitHub integration:", error);
         return res.status(500).json({ 
@@ -8889,7 +8889,7 @@ export async function registerRoutes(app: Express): Server {
       }
 
       // Get GitHub configuration
-      const githubConfig = await storage.getGitHubIntegration(bug.projectId);
+      const githubConfig = await storage.getGitHubConfig(bug.projectId);
       if (!githubConfig || !githubConfig.isEnabled) {
         return res.status(400).json({
           success: false,
