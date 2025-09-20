@@ -1380,7 +1380,7 @@ export async function registerRoutes(app: Express): Server {
       }
 
       const result = await storage.importEmployees(req.body.employees);
-      
+
       res.json({
         success: true,
         imported: result.successCount,
@@ -1691,7 +1691,7 @@ export async function registerRoutes(app: Express): Server {
       if (newStartDate && newEndDate) {
         const startDate = new Date(newStartDate);
         const endDate = new Date(newEndDate);
-        
+
         if (endDate <= startDate) {
           return res.status(400).json({ message: "End date must be after start date" });
         }
@@ -6109,72 +6109,6 @@ if (moduleId) {
     }
   });
 
-  // Create custom marker
-  apiRouter.post("/custom-markers", isAuthenticated, async (req, res) => {
-    try {
-      const markerData = req.body;
-      console.log('API: Creating marker with data:', markerData);
-
-      // Validate required fields
-      if (!markerData.markerId || !markerData.label || !markerData.projectId) {
-        return res.status(400).json({ message: "Missing required fields: markerId, label, projectId" });
-      }
-
-      // Always use storage for consistency - no database dependency
-      const marker = await storage.createCustomMarker({
-        markerId: markerData.markerId,
-        label: markerData.label,
-        color: markerData.color || '#4F46E5',
-        type: markerData.type || 'custom',
-        projectId: markerData.projectId,
-        createdById: markerData.createdById || req.session.userId
-      });
-
-      console.log('API: Created marker:', marker);
-      res.status(201).json(marker);
-    } catch (error) {
-      console.error("Create custom marker error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-
-  // Update custom marker
-  apiRouter.put("/custom-markers/:id", isAuthenticated, async (req, res) => {
-    try {
-      const markerId = req.params.id;
-      const { label, color, type } = req.body;
-
-      const updateData = {
-        label,
-        color,
-        type,
-        updatedAt: new Date().toISOString()
-      };
-
-      const updatedMarker = await storage.updateTraceabilityMarker(markerId, updateData);
-      if (!updatedMarker) {
-        return res.status(404).json({ message: "Marker not found" });
-      }
-
-      res.json(updatedMarker);
-    } catch (error) {
-      console.error("Update custom marker error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-
-  // Delete custom marker
-  apiRouter.delete("/custom-markers/:id", isAuthenticated, async (req, res) => {
-    try {
-      const markerId = req.params.id;
-      const success = await storage.deleteTraceabilityMarker(markerId);
-      res.json({ success });
-    } catch (error) {
-      console.error("Delete custom marker error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-
   // Save matrix cells
   apiRouter.post("/matrix-cells", isAuthenticated, async (req, res) => {
     try {
@@ -8982,7 +8916,7 @@ if (moduleId) {
   apiRouter.post("/chat/intelligent", isAuthenticated, async (req, res) => {
     try {
       const { query, context } = req.body;
-      
+
       if (!query || query.trim() === '') {
         return res.status(400).json({
           success: false,

@@ -822,6 +822,10 @@ function RequestFormsPageContent() {
                                         doc.setFontSize(10);
                                         doc.setFont('helvetica', 'normal');
 
+                                        // Get assigned employee details
+                                        const assignedEmployee = request.assignedToId ? employees.find(emp => emp.id === request.assignedToId) : null;
+                                        const requestedByEmployee = employees.find(emp => emp.id === request.requestedById);
+
                                         const summaryItems = [
                                           ['Request ID:', request.requestId || `REQ-${request.id}`],
                                           ['Title:', request.title],
@@ -830,6 +834,8 @@ function RequestFormsPageContent() {
                                           ['Project:', project?.projectName || project?.name || 'N/A'],
                                           ['Priority:', request.priority],
                                           ['Status:', request.status],
+                                          ['Requested By:', requestedByEmployee ? `${requestedByEmployee.firstName} ${requestedByEmployee.lastName}` : 'Unknown'],
+                                          ['Assigned To:', assignedEmployee ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}` : 'Unassigned'],
                                           ['Estimated Hours:', `${request.estimatedHours} hours`],
                                           ['Duration:', `${calculateDuration(request.startDate, request.endDate)} days`],
                                         ];
@@ -913,6 +919,86 @@ function RequestFormsPageContent() {
                                           doc.setFont('helvetica', 'normal');
                                           const splitCriteria = doc.splitTextToSize(request.acceptanceCriteria, 170);
                                           doc.text(splitCriteria, 20, yPos);
+                                        }
+
+                                        // Audit Trail Section
+                                        if (auditLogs && auditLogs.length > 0) {
+                                          if (yPos > 220) {
+                                            doc.addPage();
+                                            yPos = 20;
+                                          }
+                                          doc.setFontSize(14);
+                                          doc.setFont("helvetica", "bold");
+                                          doc.text('Audit Trail', 20, yPos);
+                                          yPos += 15;
+
+                                          doc.setFontSize(10);
+                                          doc.setFont("helvetica", "normal");
+
+                                          auditLogs.forEach((log, index) => {
+                                            if (yPos > 270) {
+                                              doc.addPage();
+                                              yPos = 20;
+                                            }
+
+                                            // Log header
+                                            doc.setFont("helvetica", "bold");
+                                            doc.text(`${index + 1}. ${log.action.toUpperCase()} - ${formatDate(log.createdAt)}`, 20, yPos);
+                                            yPos += 8;
+
+                                            doc.setFont("helvetica", "normal");
+                                            
+                                            // Basic change info
+                                            if (log.previousValue && log.newValue) {
+                                              doc.text(`   Changed from: ${log.previousValue} → ${log.newValue}`, 20, yPos);
+                                              yPos += 6;
+                                            }
+
+                                            // Detailed information from log.details
+                                            if (log.details) {
+                                              const details = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
+                                              
+                                              // Reason
+                                              if (details.reason) {
+                                                doc.text(`   Reason: ${details.reason}`, 20, yPos);
+                                                yPos += 6;
+                                              }
+
+                                              // Date changes
+                                              if (details.dateChanges) {
+                                                const dateChanges = details.dateChanges;
+                                                if (dateChanges.originalStartDate !== dateChanges.newStartDate) {
+                                                  doc.text(`   Start Date: ${formatDate(dateChanges.originalStartDate)} → ${formatDate(dateChanges.newStartDate)}`, 20, yPos);
+                                                  yPos += 6;
+                                                }
+                                                if (dateChanges.originalEndDate !== dateChanges.newEndDate) {
+                                                  doc.text(`   End Date: ${formatDate(dateChanges.originalEndDate)} → ${formatDate(dateChanges.newEndDate)}`, 20, yPos);
+                                                  yPos += 6;
+                                                }
+                                              }
+
+                                              // Employee changes
+                                              if (details.employeeChanges) {
+                                                const empChanges = details.employeeChanges;
+                                                if (empChanges.previousEmployeeName !== empChanges.newEmployeeName) {
+                                                  doc.text(`   Assigned Employee: ${empChanges.previousEmployeeName} → ${empChanges.newEmployeeName}`, 20, yPos);
+                                                  yPos += 6;
+                                                }
+                                              }
+
+                                              // Single date fields (for older logs)
+                                              if (details.newStartDate && !details.dateChanges) {
+                                                doc.text(`   New Start Date: ${formatDate(details.newStartDate)}`, 20, yPos);
+                                                yPos += 6;
+                                              }
+                                              if (details.newEndDate && !details.dateChanges) {
+                                                doc.text(`   New End Date: ${formatDate(details.newEndDate)}`, 20, yPos);
+                                                yPos += 6;
+                                              }
+                                            }
+
+                                            yPos += 5; // Space between entries
+                                          });
                                         }
 
                                         // Save the PDF

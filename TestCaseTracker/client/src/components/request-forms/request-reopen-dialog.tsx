@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -20,12 +19,12 @@ interface RequestReopenDialogProps {
   onSuccess: () => void;
 }
 
-export function RequestReopenDialog({ 
-  open, 
-  onOpenChange, 
-  request, 
+export function RequestReopenDialog({
+  open,
+  onOpenChange,
+  request,
   employees = [],
-  onSuccess 
+  onSuccess
 }: RequestReopenDialogProps) {
   const { toast } = useToast();
   const [reopenReason, setReopenReason] = useState("");
@@ -47,9 +46,9 @@ export function RequestReopenDialog({
 
   // Reopen request mutation
   const reopenMutation = useMutation({
-    mutationFn: async (data: { 
-      reason: string; 
-      newStartDate?: string; 
+    mutationFn: async (data: {
+      reason: string;
+      newStartDate?: string;
       newEndDate?: string;
       newAssignedEmployee?: number;
     }) => {
@@ -96,7 +95,7 @@ export function RequestReopenDialog({
     if (newStartDate && newEndDate) {
       const startDate = new Date(newStartDate);
       const endDate = new Date(newEndDate);
-      
+
       if (endDate <= startDate) {
         toast({
           title: "Invalid dates",
@@ -108,7 +107,7 @@ export function RequestReopenDialog({
     }
 
     const reopenData: any = { reason: reopenReason };
-    
+
     if (newStartDate) reopenData.newStartDate = newStartDate;
     if (newEndDate) reopenData.newEndDate = newEndDate;
     if (newAssignedEmployee && newAssignedEmployee !== "0") {
@@ -131,10 +130,10 @@ export function RequestReopenDialog({
     if (!startDate || !endDate) return 'N/A';
     const start = new Date(startDate);
     const end = new Date(endDate);
-    
+
     start.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
-    
+
     const diffTime = end.getTime() - start.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return Math.max(0, diffDays);

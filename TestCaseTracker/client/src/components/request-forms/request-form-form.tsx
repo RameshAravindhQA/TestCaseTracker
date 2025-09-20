@@ -409,7 +409,7 @@ export function RequestFormForm({ request, projects, requestTypes, employees = [
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Assigned Employee</FormLabel>
-                    <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                    <Select onValueChange={(value) => field.onChange(parseInt(value) || 0)} value={field.value?.toString() || "0"}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select employee" />
