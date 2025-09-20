@@ -368,7 +368,9 @@ export function RequestReopenDialog({
                           {formatDate(log.timestamp)}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600">{log.details}</p>
+                      <p className="text-sm text-gray-600">
+                        {typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2)}
+                      </p>
                       {log.user && (
                         <p className="text-xs text-gray-500 mt-1">
                           by {log.user.firstName} {log.user.lastName}

@@ -940,7 +940,7 @@ function RequestFormsPageContent() {
                                           const auditTableData = auditLogs.map((log, index) => {
                                             let details = '';
                                             let actionBy = 'System';
-                                            
+
                                             // Get user who performed the action
                                             if (log.user) {
                                               actionBy = `${log.user.firstName} ${log.user.lastName}`;
@@ -976,7 +976,7 @@ function RequestFormsPageContent() {
                                               if (logDetails.employeeChanges) {
                                                 const empChanges = logDetails.employeeChanges;
                                                 if (empChanges.previousEmployeeName !== empChanges.newEmployeeName) {
-                                                  details += `Employee: ${empChanges.previousEmployeeName} → ${empChanges.newEmployeeName}\n`;
+                                                  details += `Employee: ${empChanges.previousEmployeeName || 'None'} → ${empChanges.newEmployeeName || 'None'}\n`;
                                                 }
                                               }
 
@@ -989,6 +989,11 @@ function RequestFormsPageContent() {
 
                                               if (logDetails.message && !details) {
                                                 details = logDetails.message;
+                                              }
+
+                                              // Fallback: if details is still empty but logDetails has content, stringify it
+                                              if (!details && logDetails && typeof logDetails === 'object') {
+                                                details = JSON.stringify(logDetails, null, 2);
                                               }
                                             }
 
