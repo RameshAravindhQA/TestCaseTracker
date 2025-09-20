@@ -8810,6 +8810,25 @@ export async function registerRoutes(app: Express): Server {
     }
   });
 
+  // Delete a message
+  apiRouter.delete('/messages/:id', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const messageId = parseInt(req.params.id);
+      
+      const success = await storage.deleteChatMessage(messageId, userId);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'Message not found or you do not have permission to delete it' });
+      }
+      
+      res.json({ success: true, message: 'Message deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      res.status(500).json({ error: 'Failed to delete message' });
+    }
+  });
+
   // Mark messages from a sender as read
   apiRouter.post('/messages/mark-read/:senderId', isAuthenticated, async (req, res) => {
     try {

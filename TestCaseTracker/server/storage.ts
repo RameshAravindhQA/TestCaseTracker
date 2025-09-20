@@ -5668,6 +5668,39 @@ class MemStorage implements IStorage {
       }
     });
   }
+
+  async updateChatMessage(messageId: number, userId: number, updates: any): Promise<any | null> {
+    const messageIndex = this.data.messages.findIndex(message => 
+      message.id === messageId && message.senderId === userId
+    );
+    
+    if (messageIndex === -1) {
+      return null; // Message not found or user doesn't have permission
+    }
+    
+    // Update the message
+    this.data.messages[messageIndex] = {
+      ...this.data.messages[messageIndex],
+      ...updates,
+      updatedAt: new Date()
+    };
+    
+    return this.data.messages[messageIndex];
+  }
+
+  async deleteChatMessage(messageId: number, userId: number): Promise<boolean> {
+    const messageIndex = this.data.messages.findIndex(message => 
+      message.id === messageId && message.senderId === userId
+    );
+    
+    if (messageIndex === -1) {
+      return false; // Message not found or user doesn't have permission
+    }
+    
+    // Remove the message from the array
+    this.data.messages.splice(messageIndex, 1);
+    return true;
+  }
 }
 
 // Export storage and class
