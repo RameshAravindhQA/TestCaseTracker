@@ -1718,6 +1718,120 @@ export async function registerRoutes(app: Express): Server {
     }
   });
 
+  // Update reopen request endpoint
+  apiRouter.put("/resource-requests/:id/reopen", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const { reason, newStartDate, newEndDate, newAssignedEmployee } = req.body;
+      const userId = req.session.userId!;
+
+      if (!reason || reason.trim() === '') {
+        return res.status(400).json({ message: "Reason for reopening is required" });
+      }
+
+      // Validate dates if provided
+      if (newStartDate && newEndDate) {
+        const startDate = new Date(newStartDate);
+        const endDate = new Date(newEndDate);
+
+        if (endDate <= startDate) {
+          return res.status(400).json({ message: "End date must be after start date" });
+        }
+      }
+
+      const request = await storage.getResourceRequest(requestId);
+      if (!request) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+
+      // Check if request was actually reopened
+      if (!request.reopenedDate) {
+        return res.status(400).json({ message: "Request was not reopened, cannot update reopen record" });
+      }
+
+      // Update the reopen information
+      const updateData: any = {
+        reopenReason: reason,
+        updatedAt: new Date().toISOString()
+      };
+
+      if (newStartDate) {
+        updateData.updatedStartDate = newStartDate;
+        updateData.startDate = newStartDate; // Also update the main start date
+      }
+      if (newEndDate) {
+        updateData.updatedEndDate = newEndDate;
+        updateData.endDate = newEndDate; // Also update the main end date
+      }
+      if (newAssignedEmployee && newAssignedEmployee !== "0") {
+        updateData.reassignedEmployeeId = parseInt(newAssignedEmployee);
+        updateData.leadId = parseInt(newAssignedEmployee); // Also update the main lead
+      } else if (newAssignedEmployee === "0") {
+        updateData.reassignedEmployeeId = null;
+        updateData.leadId = null;
+      }
+
+      const updatedRequest = await storage.updateResourceRequest(requestId, updateData);
+
+      // Create audit log for update action
+      await storage.createRequestAuditLog({
+        requestId: requestId,
+        userId: userId,
+        action: 'REOPEN_UPDATED',
+        details: `Reopen record updated: ${reason}`,
+        timestamp: new Date().toISOString()
+      });
+
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error('Update reopen request error:', error);
+      res.status(500).json({ message: "Failed to update reopen record" });
+    }
+  });
+
+  // Delete/revert reopen request endpoint
+  apiRouter.delete("/resource-requests/:id/reopen", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const userId = req.session.userId!;
+
+      const request = await storage.getResourceRequest(requestId);
+      if (!request) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+
+      // Check if request was actually reopened
+      if (!request.reopenedDate) {
+        return res.status(400).json({ message: "Request was not reopened, nothing to delete" });
+      }
+
+      // Revert the request to its original state before reopen
+      const revertedRequest = await storage.updateResourceRequest(requestId, {
+        status: 'Closed', // or whatever the previous status was
+        reopenedDate: null,
+        reopenReason: null,
+        updatedStartDate: null,
+        updatedEndDate: null,
+        reassignedEmployeeId: null,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Create audit log for revert action
+      await storage.createRequestAuditLog({
+        requestId: requestId,
+        userId: userId,
+        action: 'REOPEN_DELETED',
+        details: 'Reopen record deleted, request reverted to previous state',
+        timestamp: new Date().toISOString()
+      });
+
+      res.json(revertedRequest);
+    } catch (error) {
+      console.error('Delete reopen request error:', error);
+      res.status(500).json({ message: "Failed to delete reopen record" });
+    }
+  });
+
   // Get request audit logs
   apiRouter.get("/resource-requests/:id/audit-logs", isAuthenticated, async (req, res) => {
     try {

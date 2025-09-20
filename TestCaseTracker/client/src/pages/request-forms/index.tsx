@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, startTransition } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Filter, Calendar, Clock, CheckCircle2, AlertCircle, FileText, Settings, History, MessageSquare, Eye, Edit, Trash2, Download, Upload } from "lucide-react";
+import { Plus, Search, Filter, Calendar, Clock, CheckCircle2, AlertCircle, FileText, Settings, History, MessageSquare, Eye, Edit, Trash2, Download, Upload, CalendarDays, Users, RefreshCw, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { MainLayout } from "@/components/layout/main-layout";
@@ -67,6 +67,8 @@ function RequestFormsPageContent() {
   const [reopenReason, setReopenReason] = useState('');
   const [newStartDate, setNewStartDate] = useState(''); // State for new start date
   const [newEndDate, setNewEndDate] = useState(''); // State for new end date
+  const [editingReopenId, setEditingReopenId] = useState<number | null>(null);
+  const [editingReopenData, setEditingReopenData] = useState<any>(null);
   const queryClient = useQueryClient();
 
   // Fetch resource requests
@@ -738,7 +740,7 @@ function RequestFormsPageContent() {
                                     variant="outline"
                                     onClick={() => {
                                       startTransition(() => {
-                                        setEditingRequest(request);
+                                        setSelectedRequest(request);
                                         setIsFormDialogOpen(true);
                                       });
                                     }}
@@ -937,11 +939,11 @@ function RequestFormsPageContent() {
                                             let details = '';
                                             if (log.details) {
                                               const logDetails = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
-                                              
+
                                               if (logDetails.reason) {
                                                 details += `Reason: ${logDetails.reason}\n`;
                                               }
-                                              
+
                                               if (logDetails.dateChanges) {
                                                 const dateChanges = logDetails.dateChanges;
                                                 if (dateChanges.originalStartDate !== dateChanges.newStartDate) {
@@ -951,14 +953,14 @@ function RequestFormsPageContent() {
                                                   details += `End Date: ${formatDate(dateChanges.originalEndDate)} → ${formatDate(dateChanges.newEndDate)}\n`;
                                                 }
                                               }
-                                              
+
                                               if (logDetails.employeeChanges) {
                                                 const empChanges = logDetails.employeeChanges;
                                                 if (empChanges.previousEmployeeName !== empChanges.newEmployeeName) {
                                                   details += `Employee: ${empChanges.previousEmployeeName} → ${empChanges.newEmployeeName}\n`;
                                                 }
                                               }
-                                              
+
                                               if (logDetails.newStartDate && !logDetails.dateChanges) {
                                                 details += `New Start Date: ${formatDate(logDetails.newStartDate)}\n`;
                                               }
@@ -1259,209 +1261,399 @@ function RequestFormsPageContent() {
               </DialogContent>
             </Dialog>
 
-            {/* Request View Dialog */}
+            {/* View Request Dialog */}
             <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Request Details</DialogTitle>
+                  <DialogTitle>Request Details - {selectedRequest?.requestId}</DialogTitle>
+                  <DialogDescription>
+                    Complete information about this resource request
+                  </DialogDescription>
                 </DialogHeader>
+
                 {selectedRequest && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <FileText className="h-5 w-5" />
-                            Basic Information
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div>
-                            <label className="text-sm font-medium text-gray-500">Request ID</label>
-                            <p className="mt-1">{selectedRequest.requestId}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500">Title</label>
-                            <p className="mt-1">{selectedRequest.title}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500">Description</label>
-                            <p className="mt-1">{selectedRequest.description}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500">Department</label>
-                            <Badge variant="secondary">{selectedRequest.department}</Badge>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500">Request Type</label>
-                            <Badge variant="outline">{selectedRequest.requestType}</Badge>
-                          </div>
-                        </CardContent>
-                      </Card>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Basic Information */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <FileText className="h-5 w-5" />
+                          Basic Information
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Request ID</Label>
+                          <p className="font-semibold">{selectedRequest.requestId}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Title</Label>
+                          <p className="font-semibold">{selectedRequest.title}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Description</Label>
+                          <p className="text-sm">{selectedRequest.description}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Request Type</Label>
+                          <Badge variant="outline">{selectedRequest.requestType}</Badge>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Department</Label>
+                          <Badge variant="secondary">{selectedRequest.department}</Badge>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Priority</Label>
+                          <Badge className={getPriorityColor(selectedRequest.priority)}>
+                            {selectedRequest.priority}
+                          </Badge>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Status</Label>
+                          <Badge className={getStatusColor(selectedRequest.status)}>
+                            {selectedRequest.status}
+                          </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
 
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <Calendar className="h-5 w-5" />
-                            Timeline & Status
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
+                    {/* Timeline & Status */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <CalendarDays className="h-5 w-5" />
+                          Timeline & Status
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Priority</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className={`w-3 h-3 rounded-full ${
+                              selectedRequest.priority === 'Critical' ? 'bg-red-500' :
+                              selectedRequest.priority === 'High' ? 'bg-orange-500' :
+                              selectedRequest.priority === 'Medium' ? 'bg-yellow-500' : 'bg-green-500'
+                            }`}></div>
+                            <span className="font-medium">{selectedRequest.priority}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Status</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className={`w-3 h-3 rounded-full ${
+                              selectedRequest.status === 'Open' ? 'bg-green-500' :
+                              selectedRequest.status === 'Hold' ? 'bg-yellow-500' : 'bg-gray-500'
+                            }`}></div>
+                            <Badge variant="outline">{selectedRequest.status}</Badge>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="text-sm font-medium text-gray-500">Priority</label>
-                            <Badge className={getPriorityColor(selectedRequest.priority)}>
-                              {selectedRequest.priority}
-                            </Badge>
+                            <Label className="text-sm font-medium text-gray-600">Start Date</Label>
+                            <p className="font-medium">{formatDate(selectedRequest.startDate)}</p>
                           </div>
                           <div>
-                            <label className="text-sm font-medium text-gray-500">Status</label>
-                            <Badge className={getStatusColor(selectedRequest.status)}>
-                              {selectedRequest.status}
-                            </Badge>
+                            <Label className="text-sm font-medium text-gray-600">End Date</Label>
+                            <p className="font-medium">{formatDate(selectedRequest.endDate)}</p>
                           </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500">Start Date</label>
-                            <p className="mt-1">{formatDate(selectedRequest.startDate)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500">End Date</label>
-                            <p className="mt-1">{formatDate(selectedRequest.endDate)}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500">Estimated Hours</label>
-                            <p className="mt-1">{selectedRequest.estimatedHours} hours</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-500">Duration</label>
-                            <p className="mt-1">{calculateDuration(selectedRequest.startDate, selectedRequest.endDate)} days</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Duration</Label>
+                          <p className="font-medium">{calculateDuration(selectedRequest.startDate, selectedRequest.endDate)} days</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Estimated Hours</Label>
+                          <p className="font-medium">{selectedRequest.estimatedHours} hours</p>
+                        </div>
+                      </CardContent>
+                    </Card>
 
-                    {(selectedRequest.deliverables || selectedRequest.acceptanceCriteria || selectedRequest.additionalNotes) && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Additional Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          {selectedRequest.deliverables && (
-                            <div>
-                              <label className="text-sm font-medium text-gray-500">Deliverables</label>
-                              <p className="mt-1 whitespace-pre-wrap">{selectedRequest.deliverables}</p>
-                            </div>
-                          )}
-                          {selectedRequest.acceptanceCriteria && (
-                            <div>
-                              <label className="text-sm font-medium text-gray-500">Acceptance Criteria</label>
-                              <p className="mt-1 whitespace-pre-wrap">{selectedRequest.acceptanceCriteria}</p>
-                            </div>
-                          )}
-                          {selectedRequest.additionalNotes && (
-                            <div>
-                              <label className="text-sm font-medium text-gray-500">Additional Notes</label>
-                              <p className="mt-1 whitespace-pre-wrap">{selectedRequest.additionalNotes}</p>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )}
+                    {/* Project & Assignment */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Users className="h-5 w-5" />
+                          Project & Assignment
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Project</Label>
+                          <p className="font-medium">
+                            {projects.find(p => p.id === selectedRequest.projectId)?.projectName || 
+                             projects.find(p => p.id === selectedRequest.projectId)?.name || 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Assigned Employee</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            {(() => {
+                              const assignedEmployee = employees.find(emp => emp.id === selectedRequest.leadId);
+                              return assignedEmployee ? (
+                                <>
+                                  {assignedEmployee.profilePicture ? (
+                                    <img
+                                      src={assignedEmployee.profilePicture}
+                                      alt={`${assignedEmployee.firstName} ${assignedEmployee.lastName}`}
+                                      className="h-6 w-6 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="h-6 w-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium">
+                                      {assignedEmployee.firstName?.charAt(0)}{assignedEmployee.lastName?.charAt(0)}
+                                    </div>
+                                  )}
+                                  <span className="font-medium">
+                                    {assignedEmployee.firstName} {assignedEmployee.lastName}
+                                  </span>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {assignedEmployee.department || 'No Dept'}
+                                  </Badge>
+                                </>
+                              ) : (
+                                <span className="text-gray-500 italic">Not Assigned</span>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600">Requested By</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            {(() => {
+                              const requestedByEmployee = employees.find(emp => emp.id === selectedRequest.requestedById);
+                              return requestedByEmployee ? (
+                                <>
+                                  {requestedByEmployee.profilePicture ? (
+                                    <img
+                                      src={requestedByEmployee.profilePicture}
+                                      alt={`${requestedByEmployee.firstName} ${requestedByEmployee.lastName}`}
+                                      className="h-6 w-6 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="h-6 w-6 rounded-full bg-gradient-to-r from-green-500 to-blue-600 flex items-center justify-center text-white text-xs font-medium">
+                                      {requestedByEmployee.firstName?.charAt(0)}{requestedByEmployee.lastName?.charAt(0)}
+                                    </div>
+                                  )}
+                                  <span className="font-medium">
+                                    {requestedByEmployee.firstName} {requestedByEmployee.lastName}
+                                  </span>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {requestedByEmployee.department || 'No Dept'}
+                                  </Badge>
+                                </>
+                              ) : (
+                                <span className="text-gray-500 italic">Unknown</span>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
 
-                    {(selectedRequest.skillsRequired?.length > 0 || selectedRequest.technologies?.length > 0) && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Skills & Technologies</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          {selectedRequest.skillsRequired?.length > 0 && (
-                            <div>
-                              <label className="text-sm font-medium text-gray-500">Required Skills</label>
-                              <div className="mt-1 flex flex-wrap gap-2">
-                                {selectedRequest.skillsRequired.map((skill: string, index: number) => (
-                                  <Badge key={index} variant="outline">{skill}</Badge>
-                                ))}
-                              </div>
+                    {/* Additional Information */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Settings className="h-5 w-5" />
+                          Additional Information
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {selectedRequest.deliverables && (
+                          <div>
+                            <Label className="text-sm font-medium text-gray-600">Deliverables</Label>
+                            <p className="text-sm mt-1">{selectedRequest.deliverables}</p>
+                          </div>
+                        )}
+                        {selectedRequest.acceptanceCriteria && (
+                          <div>
+                            <Label className="text-sm font-medium text-gray-600">Acceptance Criteria</Label>
+                            <p className="text-sm mt-1">{selectedRequest.acceptanceCriteria}</p>
+                          </div>
+                        )}
+                        {selectedRequest.additionalNotes && (
+                          <div>
+                            <Label className="text-sm font-medium text-gray-600">Additional Notes</Label>
+                            <p className="text-sm mt-1">{selectedRequest.additionalNotes}</p>
+                          </div>
+                        )}
+                        {selectedRequest.skillsRequired && selectedRequest.skillsRequired.length > 0 && (
+                          <div>
+                            <Label className="text-sm font-medium text-gray-600">Skills Required</Label>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {selectedRequest.skillsRequired.map((skill: string, index: number) => (
+                                <Badge key={index} variant="outline" className="text-xs">
+                                  {skill}
+                                </Badge>
+                              ))}
                             </div>
-                          )}
-                          {selectedRequest.technologies?.length > 0 && (
-                            <div>
-                              <label className="text-sm font-medium text-gray-500">Technologies</label>
-                              <div className="mt-1 flex flex-wrap gap-2">
-                                {selectedRequest.technologies.map((tech: string, index: number) => (
-                                  <Badge key={index} variant="secondary">{tech}</Badge>
-                                ))}
-                              </div>
+                          </div>
+                        )}
+                        {selectedRequest.technologies && selectedRequest.technologies.length > 0 && (
+                          <div>
+                            <Label className="text-sm font-medium text-gray-600">Technologies</Label>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {selectedRequest.technologies.map((tech: string, index: number) => (
+                                <Badge key={index} variant="secondary" className="text-xs">
+                                  {tech}
+                                </Badge>
+                              ))}
                             </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
 
-                    {(selectedRequest.reopenedDate || selectedRequest.reopenReason || selectedRequest.status === 'Reopened') && (
-                      <Card className="border-orange-200 bg-orange-50">
+                    {/* Reopen Information */}
+                    {selectedRequest.reopenedDate && (
+                      <Card className="md:col-span-2">
                         <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-orange-700">
-                            <History className="h-5 w-5" />
+                          <CardTitle className="flex items-center gap-2 text-orange-600">
+                            <RefreshCw className="h-5 w-5" />
                             Reopen Information
                           </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                          {selectedRequest.reopenedDate && (
-                            <div>
-                              <label className="text-sm font-medium text-orange-600">Reopened Date</label>
-                              <p className="mt-1 font-medium">{formatDate(selectedRequest.reopenedDate)}</p>
-                            </div>
-                          )}
-                          {selectedRequest.reopenReason && (
-                            <div>
-                              <label className="text-sm font-medium text-orange-600">Reopen Reason</label>
-                              <div className="mt-1 p-3 bg-white border border-orange-200 rounded-md">
-                                <p className="whitespace-pre-wrap text-sm">{selectedRequest.reopenReason}</p>
+                        <CardContent className="space-y-3">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-600">Reopened Date</Label>
+                            <p className="font-medium">{formatDate(selectedRequest.reopenedDate)}</p>
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium text-gray-600">Reopen Reason</Label>
+                            <p className="text-sm">{selectedRequest.reopenReason || 'No reason provided'}</p>
+                          </div>
+                          {selectedRequest.updatedStartDate && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label className="text-sm font-medium text-gray-600">Updated Start Date</Label>
+                                <p className="font-medium">{formatDate(selectedRequest.updatedStartDate)}</p>
                               </div>
-                            </div>
-                          )}
-                          {selectedRequest.newStartDate && (
-                            <div>
-                              <label className="text-sm font-medium text-orange-600">Updated Start Date</label>
-                              <p className="mt-1 font-medium">{formatDate(selectedRequest.newStartDate)}</p>
-                            </div>
-                          )}
-                          {selectedRequest.newEndDate && (
-                            <div>
-                              <label className="text-sm font-medium text-orange-600">Updated End Date</label>
-                              <p className="mt-1 font-medium">{formatDate(selectedRequest.newEndDate)}</p>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-600">Updated End Date</Label>
+                                <p className="font-medium">{formatDate(selectedRequest.updatedEndDate)}</p>
+                              </div>
                             </div>
                           )}
                           {selectedRequest.reassignedEmployeeId && (
                             <div>
-                              <label className="text-sm font-medium text-orange-600">Reassigned To</label>
-                              <p className="mt-1 font-medium">
+                              <Label className="text-sm font-medium text-gray-600">Reassigned To</Label>
+                              <div className="flex items-center gap-2 mt-1">
                                 {(() => {
                                   const reassignedEmployee = employees.find(emp => emp.id === selectedRequest.reassignedEmployeeId);
-                                  return reassignedEmployee ? `${reassignedEmployee.firstName} ${reassignedEmployee.lastName}` : 'Employee not found';
+                                  return reassignedEmployee ? (
+                                    <>
+                                      {reassignedEmployee.profilePicture ? (
+                                        <img
+                                          src={reassignedEmployee.profilePicture}
+                                          alt={`${reassignedEmployee.firstName} ${reassignedEmployee.lastName}`}
+                                          className="h-6 w-6 rounded-full object-cover"
+                                        />
+                                      ) : (
+                                        <div className="h-6 w-6 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center text-white text-xs font-medium">
+                                          {reassignedEmployee.firstName?.charAt(0)}{reassignedEmployee.lastName?.charAt(0)}
+                                        </div>
+                                      )}
+                                      <span className="font-medium">
+                                        {reassignedEmployee.firstName} {reassignedEmployee.lastName}
+                                      </span>
+                                      <Badge variant="secondary" className="text-xs">
+                                        {reassignedEmployee.department || 'No Dept'}
+                                      </Badge>
+                                    </>
+                                  ) : (
+                                    <span className="text-gray-500 italic">Employee not found</span>
+                                  );
                                 })()}
-                              </p>
+                              </div>
                             </div>
                           )}
+
+                          {/* Edit and Delete Actions for Reopen Record */}
+                          <div className="flex gap-2 pt-3 border-t">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                // Set up editing mode for this reopen record
+                                setEditingReopenId(selectedRequest.id);
+                                setEditingReopenData({
+                                  reason: selectedRequest.reopenReason || '',
+                                  newStartDate: selectedRequest.updatedStartDate ? format(new Date(selectedRequest.updatedStartDate), 'yyyy-MM-dd') : '',
+                                  newEndDate: selectedRequest.updatedEndDate ? format(new Date(selectedRequest.updatedEndDate), 'yyyy-MM-dd') : '',
+                                  reassignedEmployeeId: selectedRequest.reassignedEmployeeId || ''
+                                });
+                                // Close view dialog and open reopen dialog in edit mode
+                                setIsViewDialogOpen(false);
+                                setIsReopenDialogOpen(true);
+                              }}
+                              className="flex items-center gap-1"
+                            >
+                              <Edit2 className="h-3 w-3" />
+                              Edit Reopen
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={async () => {
+                                if (confirm('Are you sure you want to delete this reopen record? This will revert the request to its previous state.')) {
+                                  try {
+                                    // Call API to delete/revert reopen
+                                    const response = await apiRequest('DELETE', `/api/resource-requests/${selectedRequest.id}/reopen`);
+                                    if (response.ok) {
+                                      toast({
+                                        title: "Reopen record deleted",
+                                        description: "The reopen record has been removed and the request reverted to its previous state.",
+                                      });
+                                      // Refresh the data
+                                      queryClient.invalidateQueries({ queryKey: ["/api/resource-requests"] });
+                                      setIsViewDialogOpen(false);
+                                    } else {
+                                      throw new Error('Failed to delete reopen record');
+                                    }
+                                  } catch (error: any) {
+                                    toast({
+                                      title: "Failed to delete reopen record",
+                                      description: error.message || "An unexpected error occurred.",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }
+                              }}
+                              className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              Delete Reopen
+                            </Button>
+                          </div>
                         </CardContent>
                       </Card>
                     )}
                   </div>
                 )}
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                    Close
+                  </Button>
+                </DialogFooter>
               </DialogContent>
             </Dialog>
 
-
-            {/* Reopen Request Dialog */}
             <RequestReopenDialog
               open={isReopenDialogOpen}
               onOpenChange={setIsReopenDialogOpen}
               request={selectedRequest}
               employees={employees}
+              editingReopenId={editingReopenId}
+              editingReopenData={editingReopenData}
+              onCancelEdit={() => {
+                setEditingReopenId(null);
+                setEditingReopenData(null);
+              }}
               onSuccess={() => {
                 refetchRequests();
                 setIsReopenDialogOpen(false);
-                setSelectedRequest(null);
+                setEditingReopenId(null);
+                setEditingReopenData(null);
               }}
             />
           </>

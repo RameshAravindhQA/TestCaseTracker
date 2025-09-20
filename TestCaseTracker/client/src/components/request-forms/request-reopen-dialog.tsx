@@ -17,6 +17,9 @@ interface RequestReopenDialogProps {
   request: any;
   employees: any[];
   onSuccess: () => void;
+  editingReopenId?: number | null;
+  editingReopenData?: any;
+  onCancelEdit?: () => void;
 }
 
 export function RequestReopenDialog({
@@ -24,13 +27,34 @@ export function RequestReopenDialog({
   onOpenChange,
   request,
   employees = [],
-  onSuccess
+  onSuccess,
+  editingReopenId = null,
+  editingReopenData = null,
+  onCancelEdit
 }: RequestReopenDialogProps) {
   const { toast } = useToast();
   const [reopenReason, setReopenReason] = useState("");
   const [newStartDate, setNewStartDate] = useState("");
   const [newEndDate, setNewEndDate] = useState("");
   const [newAssignedEmployee, setNewAssignedEmployee] = useState("");
+
+  const isEditing = editingReopenId !== null;
+
+  // Initialize form with editing data if in edit mode
+  useEffect(() => {
+    if (isEditing && editingReopenData) {
+      setReopenReason(editingReopenData.reason || "");
+      setNewStartDate(editingReopenData.newStartDate || "");
+      setNewEndDate(editingReopenData.newEndDate || "");
+      setNewAssignedEmployee(editingReopenData.reassignedEmployeeId?.toString() || "");
+    } else {
+      // Reset form for new reopen
+      setReopenReason("");
+      setNewStartDate("");
+      setNewEndDate("");
+      setNewAssignedEmployee("");
+    }
+  }, [isEditing, editingReopenData]);
 
   // Fetch audit logs for this request
   const { data: auditLogs = [] } = useQuery({
@@ -52,23 +76,32 @@ export function RequestReopenDialog({
       newEndDate?: string;
       newAssignedEmployee?: number;
     }) => {
-      const res = await apiRequest("POST", `/api/resource-requests/${request.id}/reopen`, data);
-      if (!res.ok) throw new Error("Failed to reopen request");
-      return res.json();
+      if (isEditing) {
+        // For editing, we update the existing reopen record
+        const res = await apiRequest("PUT", `/api/resource-requests/${request.id}/reopen`, data);
+        if (!res.ok) throw new Error("Failed to update reopen request");
+        return res.json();
+      } else {
+        // For new reopen
+        const res = await apiRequest("POST", `/api/resource-requests/${request.id}/reopen`, data);
+        if (!res.ok) throw new Error("Failed to reopen request");
+        return res.json();
+      }
     },
     onSuccess: () => {
       toast({
-        title: "Request reopened successfully",
-        description: "The request has been reopened with updated details.",
+        title: isEditing ? "Reopen record updated successfully" : "Request reopened successfully",
+        description: isEditing ? "The reopen record has been updated." : "The request has been reopened with updated details.",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/resource-requests/${request.id}/audit-logs`] });
       queryClient.invalidateQueries({ queryKey: ["/api/resource-requests"] });
       resetForm();
+      if (onCancelEdit) onCancelEdit(); // Clear editing state
       onSuccess();
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to reopen request",
+        title: isEditing ? "Failed to update reopen record" : "Failed to reopen request",
         description: error.message || "An unexpected error occurred.",
         variant: "destructive",
       });
@@ -149,7 +182,7 @@ export function RequestReopenDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <RefreshCw className="h-5 w-5" />
-            Reopen Request - {request.requestId}
+            {isEditing ? `Edit Reopen Record - ${request.requestId}` : `Reopen Request - ${request.requestId}`}
           </DialogTitle>
         </DialogHeader>
 
@@ -285,6 +318,7 @@ export function RequestReopenDialog({
                   variant="outline"
                   onClick={() => {
                     resetForm();
+                    if (onCancelEdit) onCancelEdit();
                     onOpenChange(false);
                   }}
                   className="flex-1"
@@ -296,7 +330,10 @@ export function RequestReopenDialog({
                   disabled={reopenMutation.isPending}
                   className="flex-1"
                 >
-                  {reopenMutation.isPending ? "Reopening..." : "Reopen Request"}
+                  {reopenMutation.isPending 
+                    ? (isEditing ? "Updating..." : "Reopening...") 
+                    : (isEditing ? "Update Reopen Record" : "Reopen Request")
+                  }
                 </Button>
               </div>
             </CardContent>
