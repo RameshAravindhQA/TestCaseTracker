@@ -984,21 +984,46 @@ function RequestFormsPageContent() {
 
                                               // Handle reopen specific fields with cleaner formatting
                                               if (log.action.toLowerCase().includes('reopen')) {
-                                                if (logDetails.newStartDate || logDetails.startDate) {
-                                                  formattedDetails.push(`• New Start Date: ${formatDate(logDetails.newStartDate || logDetails.startDate)}`);
+                                                // Check for dates in multiple possible locations
+                                                const newStartDate = logDetails.newStartDate || logDetails.startDate || 
+                                                                   selectedRequest.updatedStartDate || selectedRequest.startDate;
+                                                const newEndDate = logDetails.newEndDate || logDetails.endDate || 
+                                                                 selectedRequest.updatedEndDate || selectedRequest.endDate;
+                                                const reassignedEmpId = logDetails.reassignedEmployeeId || logDetails.newAssignedEmployee || 
+                                                                       selectedRequest.reassignedEmployeeId;
+
+                                                if (newStartDate) {
+                                                  formattedDetails.push(`• New Start Date: ${formatDate(newStartDate)}`);
                                                 }
-                                                if (logDetails.newEndDate || logDetails.endDate) {
-                                                  formattedDetails.push(`• New End Date: ${formatDate(logDetails.newEndDate || logDetails.endDate)}`);
+                                                if (newEndDate) {
+                                                  formattedDetails.push(`• New End Date: ${formatDate(newEndDate)}`);
                                                 }
-                                                if (logDetails.reassignedEmployeeId || logDetails.newAssignedEmployee) {
-                                                  const empId = logDetails.reassignedEmployeeId || logDetails.newAssignedEmployee;
-                                                  if (empId && empId !== '0') {
-                                                    const emp = employees.find(e => e.id === parseInt(empId));
+                                                
+                                                // Handle reassigned employee
+                                                if (reassignedEmpId) {
+                                                  if (reassignedEmpId !== '0' && reassignedEmpId !== 0) {
+                                                    const emp = employees.find(e => e.id === parseInt(reassignedEmpId.toString()));
                                                     if (emp) {
-                                                      formattedDetails.push(`• Reassigned to: ${emp.firstName} ${emp.lastName}`);
+                                                      formattedDetails.push(`• Reassigned to: ${emp.firstName} ${emp.lastName} (${emp.department || 'No Dept'})`);
+                                                    } else {
+                                                      formattedDetails.push(`• Reassigned to: Employee ID ${reassignedEmpId}`);
                                                     }
-                                                  } else if (empId === '0') {
+                                                  } else {
                                                     formattedDetails.push('• Employee assignment removed');
+                                                  }
+                                                } else {
+                                                  // Check if there's a current assignment to show
+                                                  const currentAssignedEmp = employees.find(e => e.id === selectedRequest.leadId);
+                                                  if (currentAssignedEmp) {
+                                                    formattedDetails.push(`• Assigned to: ${currentAssignedEmp.firstName} ${currentAssignedEmp.lastName} (${currentAssignedEmp.department || 'No Dept'})`);
+                                                  }
+                                                }
+
+                                                // Add duration information if dates are available
+                                                if (newStartDate && newEndDate) {
+                                                  const duration = calculateDuration(newStartDate, newEndDate);
+                                                  if (duration !== 'N/A') {
+                                                    formattedDetails.push(`• New Duration: ${duration} days`);
                                                   }
                                                 }
                                               }
@@ -1023,6 +1048,20 @@ function RequestFormsPageContent() {
                                                     formattedDetails.push(`• Reason: ${selectedRequest.reopenReason}`);
                                                   } else {
                                                     formattedDetails.push('• Request was reopened');
+                                                  }
+                                                  
+                                                  // Add additional reopen details from the request itself
+                                                  if (selectedRequest.updatedStartDate) {
+                                                    formattedDetails.push(`• New Start Date: ${formatDate(selectedRequest.updatedStartDate)}`);
+                                                  }
+                                                  if (selectedRequest.updatedEndDate) {
+                                                    formattedDetails.push(`• New End Date: ${formatDate(selectedRequest.updatedEndDate)}`);
+                                                  }
+                                                  if (selectedRequest.reassignedEmployeeId) {
+                                                    const reassignedEmp = employees.find(e => e.id === selectedRequest.reassignedEmployeeId);
+                                                    if (reassignedEmp) {
+                                                      formattedDetails.push(`• Reassigned to: ${reassignedEmp.firstName} ${reassignedEmp.lastName} (${reassignedEmp.department || 'No Dept'})`);
+                                                    }
                                                   }
                                                   break;
                                                 case 'created':
