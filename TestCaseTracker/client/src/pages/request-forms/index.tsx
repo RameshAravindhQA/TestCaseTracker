@@ -957,121 +957,70 @@ function RequestFormsPageContent() {
                                               }
                                             }
 
-                                            // Parse and format details
+                                            // Parse and format details - simplified approach
                                             console.log(`PDF Generation - Log details:`, log.details, typeof log.details);
                                             
-                                            if (log.details) {
-                                              try {
-                                                let logDetails;
-                                                if (typeof log.details === 'string') {
-                                                  try {
-                                                    logDetails = JSON.parse(log.details);
-                                                    console.log(`PDF Generation - Parsed JSON details:`, logDetails);
-                                                  } catch (e) {
-                                                    // If parsing fails, treat as plain text
-                                                    details = log.details;
-                                                    logDetails = null;
-                                                    console.log(`PDF Generation - Using plain text details:`, details);
-                                                  }
-                                                } else {
-                                                  logDetails = log.details;
-                                                  console.log(`PDF Generation - Using object details:`, logDetails);
-                                                }
+                                            // First, handle the simple case where details is a string
+                                            if (typeof log.details === 'string') {
+                                              details = log.details;
+                                              console.log(`PDF Generation - Using string details:`, details);
+                                            } else if (log.details && typeof log.details === 'object') {
+                                              // Handle object details
+                                              const logDetails = log.details;
+                                              console.log(`PDF Generation - Processing object details:`, logDetails);
 
-                                                if (logDetails && typeof logDetails === 'object') {
-                                                  console.log(`PDF Generation - Processing object details:`, Object.keys(logDetails));
-                                                  
-                                                  // Handle reason
-                                                  if (logDetails.reason) {
-                                                    details += `Reason: ${logDetails.reason}\n`;
-                                                    console.log(`PDF Generation - Added reason:`, logDetails.reason);
-                                                  }
+                                              // Build details string from object properties
+                                              const detailParts = [];
 
-                                                  // Handle date changes
-                                                  if (logDetails.dateChanges) {
-                                                    const dateChanges = logDetails.dateChanges;
-                                                    console.log(`PDF Generation - Processing date changes:`, dateChanges);
-                                                    if (dateChanges.originalStartDate && dateChanges.newStartDate && 
-                                                        dateChanges.originalStartDate !== dateChanges.newStartDate) {
-                                                      details += `Start Date: ${formatDate(dateChanges.originalStartDate)} → ${formatDate(dateChanges.newStartDate)}\n`;
-                                                    }
-                                                    if (dateChanges.originalEndDate && dateChanges.newEndDate && 
-                                                        dateChanges.originalEndDate !== dateChanges.newEndDate) {
-                                                      details += `End Date: ${formatDate(dateChanges.originalEndDate)} → ${formatDate(dateChanges.newEndDate)}\n`;
-                                                    }
-                                                  }
-
-                                                  // Handle employee changes
-                                                  if (logDetails.employeeChanges) {
-                                                    const empChanges = logDetails.employeeChanges;
-                                                    console.log(`PDF Generation - Processing employee changes:`, empChanges);
-                                                    if (empChanges.previousEmployeeName !== empChanges.newEmployeeName) {
-                                                      details += `Employee: ${empChanges.previousEmployeeName || 'None'} → ${empChanges.newEmployeeName || 'None'}\n`;
-                                                    }
-                                                  }
-
-                                                  // Handle direct date fields
-                                                  if (logDetails.newStartDate && !logDetails.dateChanges) {
-                                                    details += `New Start Date: ${formatDate(logDetails.newStartDate)}\n`;
-                                                    console.log(`PDF Generation - Added new start date:`, logDetails.newStartDate);
-                                                  }
-                                                  if (logDetails.newEndDate && !logDetails.dateChanges) {
-                                                    details += `New End Date: ${formatDate(logDetails.newEndDate)}\n`;
-                                                    console.log(`PDF Generation - Added new end date:`, logDetails.newEndDate);
-                                                  }
-
-                                                  // Handle reassigned employee
-                                                  if (logDetails.newAssignedEmployee || logDetails.reassignedEmployeeId) {
-                                                    const empId = logDetails.newAssignedEmployee || logDetails.reassignedEmployeeId;
-                                                    const emp = employees.find(e => e.id === empId);
-                                                    if (emp) {
-                                                      details += `Reassigned to: ${emp.firstName} ${emp.lastName}\n`;
-                                                      console.log(`PDF Generation - Added reassignment:`, emp.firstName, emp.lastName);
-                                                    }
-                                                  }
-
-                                                  // Handle message field
-                                                  if (logDetails.message && !details) {
-                                                    details = logDetails.message;
-                                                    console.log(`PDF Generation - Using message field:`, logDetails.message);
-                                                  }
-
-                                                  // Handle action-specific details based on log action
-                                                  if (!details || details.trim() === '') {
-                                                    switch (log.action.toLowerCase()) {
-                                                      case 'reopened':
-                                                      case 'reopen':
-                                                        if (logDetails.reason) {
-                                                          details = `Request reopened with reason: ${logDetails.reason}`;
-                                                        } else {
-                                                          details = 'Request was reopened';
-                                                        }
-                                                        console.log(`PDF Generation - Set reopen details:`, details);
-                                                        break;
-                                                      case 'reopen_updated':
-                                                        details = 'Reopen record was updated';
-                                                        console.log(`PDF Generation - Set reopen update details:`, details);
-                                                        break;
-                                                      default:
-                                                        // If still no details but object has content, format it
-                                                        if (Object.keys(logDetails).length > 0) {
-                                                          details = Object.entries(logDetails)
-                                                            .filter(([key, value]) => value !== null && value !== undefined && value !== '')
-                                                            .map(([key, value]) => `${key}: ${value}`)
-                                                            .join(', ');
-                                                          console.log(`PDF Generation - Generated generic details:`, details);
-                                                        }
-                                                        break;
-                                                    }
-                                                  }
-                                                }
-                                              } catch (error) {
-                                                console.error('PDF Generation - Error parsing audit log details:', error, log);
-                                                details = typeof log.details === 'string' ? log.details : 'Error parsing details';
+                                              if (logDetails.reason) {
+                                                detailParts.push(`Reason: ${logDetails.reason}`);
                                               }
+
+                                              if (logDetails.message) {
+                                                detailParts.push(logDetails.message);
+                                              }
+
+                                              // Handle date changes
+                                              if (logDetails.newStartDate) {
+                                                detailParts.push(`New Start Date: ${formatDate(logDetails.newStartDate)}`);
+                                              }
+                                              if (logDetails.newEndDate) {
+                                                detailParts.push(`New End Date: ${formatDate(logDetails.newEndDate)}`);
+                                              }
+
+                                              // Handle employee reassignment
+                                              if (logDetails.newAssignedEmployee || logDetails.reassignedEmployeeId) {
+                                                const empId = logDetails.newAssignedEmployee || logDetails.reassignedEmployeeId;
+                                                const emp = employees.find(e => e.id === empId);
+                                                if (emp) {
+                                                  detailParts.push(`Reassigned to: ${emp.firstName} ${emp.lastName}`);
+                                                }
+                                              }
+
+                                              // Handle nested date changes
+                                              if (logDetails.dateChanges) {
+                                                const dateChanges = logDetails.dateChanges;
+                                                if (dateChanges.originalStartDate && dateChanges.newStartDate) {
+                                                  detailParts.push(`Start Date: ${formatDate(dateChanges.originalStartDate)} → ${formatDate(dateChanges.newStartDate)}`);
+                                                }
+                                                if (dateChanges.originalEndDate && dateChanges.newEndDate) {
+                                                  detailParts.push(`End Date: ${formatDate(dateChanges.originalEndDate)} → ${formatDate(dateChanges.newEndDate)}`);
+                                                }
+                                              }
+
+                                              // Handle employee changes
+                                              if (logDetails.employeeChanges) {
+                                                const empChanges = logDetails.employeeChanges;
+                                                if (empChanges.previousEmployeeName !== empChanges.newEmployeeName) {
+                                                  detailParts.push(`Employee: ${empChanges.previousEmployeeName || 'None'} → ${empChanges.newEmployeeName || 'None'}`);
+                                                }
+                                              }
+
+                                              details = detailParts.length > 0 ? detailParts.join('; ') : '';
+                                              console.log(`PDF Generation - Built details from object:`, details);
                                             }
 
-                                            // Use action-specific fallbacks if no details
+                                            // Use action-specific fallbacks if no details found
                                             if (!details || details.trim() === '') {
                                               switch (log.action.toLowerCase()) {
                                                 case 'reopened':
@@ -1094,7 +1043,7 @@ function RequestFormsPageContent() {
                                                   details = 'Request was rejected';
                                                   break;
                                                 default:
-                                                  details = `Action performed: ${log.action}`;
+                                                  details = `Action: ${log.action}`;
                                               }
                                               console.log(`PDF Generation - Used fallback details:`, details);
                                             }
