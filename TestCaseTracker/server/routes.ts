@@ -5946,6 +5946,15 @@ export async function registerRoutes(app: Express): Server {
               githubIssueUrl: githubResult.data.url
             });
 
+            // Save GitHub issue record to prevent duplicates
+            await storage.createGitHubIssue({
+              bugId: bug.id,
+              githubIssueNumber: githubResult.data.number,
+              githubIssueId: githubResult.data.id || 0,
+              githubUrl: githubResult.data.html_url || githubResult.data.url,
+              status: 'open'
+            });
+
             console.log(`✅ GitHub issue #${githubResult.data.number} created for bug ${bug.bugId}`);
 
             // Update the bug object to return the GitHub info
