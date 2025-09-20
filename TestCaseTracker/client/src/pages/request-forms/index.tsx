@@ -740,6 +740,7 @@ function RequestFormsPageContent() {
                                     variant="outline"
                                     onClick={() => {
                                       startTransition(() => {
+                                        setEditingRequest(request);
                                         setSelectedRequest(request);
                                         setIsFormDialogOpen(true);
                                       });
@@ -824,8 +825,9 @@ function RequestFormsPageContent() {
                                         doc.setFontSize(10);
                                         doc.setFont('helvetica', 'normal');
 
-                                        // Get assigned employee details
-                                        const assignedEmployee = request.assignedToId ? employees.find(emp => emp.id === request.assignedToId) : null;
+                                        // Get assigned employee details - check both leadId and assignedToId
+                                        const assignedEmployee = request.leadId ? employees.find(emp => emp.id === request.leadId) : 
+                                                                (request.assignedToId ? employees.find(emp => emp.id === request.assignedToId) : null);
                                         const requestedByEmployee = employees.find(emp => emp.id === request.requestedById);
 
                                         const summaryItems = [
@@ -837,7 +839,7 @@ function RequestFormsPageContent() {
                                           ['Priority:', request.priority],
                                           ['Status:', request.status],
                                           ['Requested By:', requestedByEmployee ? `${requestedByEmployee.firstName} ${requestedByEmployee.lastName}` : 'Unknown'],
-                                          ['Assigned To:', assignedEmployee ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}` : 'Unassigned'],
+                                          ['Assigned To:', assignedEmployee ? `${assignedEmployee.firstName} ${assignedEmployee.lastName}` : 'Not Assigned'],
                                           ['Estimated Hours:', `${request.estimatedHours} hours`],
                                           ['Duration:', `${calculateDuration(request.startDate, request.endDate)} days`],
                                         ];
@@ -937,8 +939,25 @@ function RequestFormsPageContent() {
                                           // Prepare audit trail data for table
                                           const auditTableData = auditLogs.map((log, index) => {
                                             let details = '';
+                                            let actionBy = 'System';
+                                            
+                                            // Get user who performed the action
+                                            if (log.user) {
+                                              actionBy = `${log.user.firstName} ${log.user.lastName}`;
+                                            } else if (log.userId) {
+                                              const actionUser = employees.find(emp => emp.id === log.userId);
+                                              if (actionUser) {
+                                                actionBy = `${actionUser.firstName} ${actionUser.lastName}`;
+                                              }
+                                            }
+
                                             if (log.details) {
-                                              const logDetails = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
+                                              let logDetails;
+                                              try {
+                                                logDetails = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
+                                              } catch (e) {
+                                                logDetails = { message: log.details };
+                                              }
 
                                               if (logDetails.reason) {
                                                 details += `Reason: ${logDetails.reason}\n`;
@@ -967,13 +986,18 @@ function RequestFormsPageContent() {
                                               if (logDetails.newEndDate && !logDetails.dateChanges) {
                                                 details += `New End Date: ${formatDate(logDetails.newEndDate)}\n`;
                                               }
+
+                                              if (logDetails.message && !details) {
+                                                details = logDetails.message;
+                                              }
                                             }
 
                                             return [
                                               index + 1,
                                               log.action.toUpperCase(),
-                                              formatDate(log.createdAt),
-                                              details.trim() || 'No additional details'
+                                              formatDate(log.createdAt || log.timestamp),
+                                              actionBy,
+                                              details.trim() || log.details || 'No additional details'
                                             ];
                                           });
 
@@ -981,7 +1005,7 @@ function RequestFormsPageContent() {
                                           try {
                                             (doc as any).autoTable({
                                               startY: yPos,
-                                              head: [['#', 'Action', 'Date', 'Details']],
+                                              head: [['#', 'Action', 'Date', 'Performed By', 'Details']],
                                               body: auditTableData,
                                               theme: 'grid',
                                               headStyles: {
@@ -991,21 +1015,22 @@ function RequestFormsPageContent() {
                                                 fontStyle: 'bold'
                                               },
                                               bodyStyles: {
-                                                fontSize: 9,
-                                                cellPadding: 3
+                                                fontSize: 8,
+                                                cellPadding: 2
                                               },
                                               columnStyles: {
-                                                0: { cellWidth: 15 }, // # column
-                                                1: { cellWidth: 35 }, // Action column
-                                                2: { cellWidth: 35 }, // Date column
-                                                3: { cellWidth: 105 } // Details column
+                                                0: { cellWidth: 10 }, // # column
+                                                1: { cellWidth: 25 }, // Action column
+                                                2: { cellWidth: 25 }, // Date column
+                                                3: { cellWidth: 30 }, // Performed By column
+                                                4: { cellWidth: 100 } // Details column
                                               },
                                               margin: { left: 20, right: 20 },
                                               tableWidth: 'wrap',
                                               styles: {
                                                 overflow: 'linebreak',
                                                 cellPadding: 2,
-                                                fontSize: 9,
+                                                fontSize: 8,
                                                 valign: 'top'
                                               }
                                             });
