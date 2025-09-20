@@ -1152,7 +1152,6 @@ export function Messenger() {
                     onKeyPress={handleKeyPress}
                     className="min-h-[40px] max-h-[120px] resize-none pr-10 text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
                   />
-                </div>
                   <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
                     <PopoverTrigger asChild>
                       <Button
