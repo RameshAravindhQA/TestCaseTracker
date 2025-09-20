@@ -5619,7 +5619,7 @@ class MemStorage implements IStorage {
   }
 
   async getGitHubIntegration(projectId: number): Promise<any | undefined> {
-    return this.githubConfigs.find(config => config.projectId === projectId && config.isActive);
+    return this.githubConfigs.find(config => config.projectId === projectId && config.isEnabled);
   }
 }
 

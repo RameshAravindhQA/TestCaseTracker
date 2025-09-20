@@ -8830,7 +8830,7 @@ export async function registerRoutes(app: Express): Server {
       // Get GitHub integration for this project
       let githubIntegration;
       try {
-        githubIntegration = await storage.getGitHubConfig(bug.projectId);
+        githubIntegration = await storage.getGitHubIntegration(bug.projectId);
       } catch (error: any) {
         console.error("Error getting GitHub integration:", error);
         return res.status(500).json({ 

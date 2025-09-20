@@ -1,7 +1,7 @@
 modules = ["nodejs-20", "postgresql-16"]
 
 [workflows]
-runButton = "Run TestCase Tracker"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
@@ -16,13 +16,13 @@ args = "TestCaseTracker"
 name = "TestCaseTracker"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd TestCaseTracker && npm run dev"
 waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[workflows.workflow]]
 name = "Run TestCase Tracker"
