@@ -637,76 +637,6 @@ export interface IStorage {
   // RTM Status Synchronization
   syncRequirementStatusWithTestCases(functionalRequirementId: number): Promise<void>;
 
-  // GitHub Integration methods implementation
-  async getGitHubConfig(projectId: number): Promise<any | undefined> {
-    return this.githubConfigs.find(config => config.projectId === projectId);
-  }
-
-  async createGitHubConfig(data: any): Promise<any> {
-    const id = this.getNextId();
-    const config = {
-      id,
-      ...data,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.githubConfigs.push(config);
-    return config;
-  }
-
-  async updateGitHubConfig(id: number, data: any): Promise<any | null> {
-    const index = this.githubConfigs.findIndex(config => config.id === id);
-    if (index === -1) return null;
-
-    const updatedConfig = {
-      ...this.githubConfigs[index],
-      ...data,
-      updatedAt: new Date()
-    };
-    this.githubConfigs[index] = updatedConfig;
-    return updatedConfig;
-  }
-
-  async createGitHubIssue(data: any): Promise<any> {
-    const id = this.getNextId();
-    const issue = {
-      id,
-      ...data,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.githubIssues.push(issue);
-    return issue;
-  }
-
-  async getGitHubIssue(id: number): Promise<any | undefined> {
-    return this.githubIssues.find(issue => issue.id === id);
-  }
-
-  async getGitHubIssueByBugId(bugId: number): Promise<any | undefined> {
-    return this.githubIssues.find(issue => issue.bugId === bugId);
-  }
-
-  async getGitHubIssueByGitHubId(githubId: number): Promise<any | undefined> {
-    return this.githubIssues.find(issue => issue.githubIssueId === githubId);
-  }
-
-  async updateGitHubIssue(id: number, data: any): Promise<any | null> {
-    const index = this.githubIssues.findIndex(issue => issue.id === id);
-    if (index === -1) return null;
-
-    const updatedIssue = {
-      ...this.githubIssues[index],
-      ...data,
-      updatedAt: new Date()
-    };
-    this.githubIssues[index] = updatedIssue;
-    return updatedIssue;
-  }
-
-  async getGitHubIntegration(projectId: number): Promise<any | undefined> {
-    return this.githubConfigs.find(config => config.projectId === projectId && config.isActive);
-  }
 }
 
 /**
@@ -5619,6 +5549,77 @@ class MemStorage implements IStorage {
 
     // Update functional requirement status
     await this.updateFunctionalRequirement(functionalRequirementId, { status: overallStatus });
+  }
+
+  // GitHub Integration methods
+  async getGitHubConfig(projectId: number): Promise<any | undefined> {
+    return this.githubConfigs.find(config => config.projectId === projectId);
+  }
+
+  async createGitHubConfig(data: any): Promise<any> {
+    const id = this.getNextId();
+    const config = {
+      id,
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.githubConfigs.push(config);
+    return config;
+  }
+
+  async updateGitHubConfig(id: number, data: any): Promise<any | null> {
+    const index = this.githubConfigs.findIndex(config => config.id === id);
+    if (index === -1) return null;
+
+    const updatedConfig = {
+      ...this.githubConfigs[index],
+      ...data,
+      updatedAt: new Date()
+    };
+    this.githubConfigs[index] = updatedConfig;
+    return updatedConfig;
+  }
+
+  async createGitHubIssue(data: any): Promise<any> {
+    const id = this.getNextId();
+    const issue = {
+      id,
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.githubIssues.push(issue);
+    return issue;
+  }
+
+  async getGitHubIssue(id: number): Promise<any | undefined> {
+    return this.githubIssues.find(issue => issue.id === id);
+  }
+
+  async getGitHubIssueByBugId(bugId: number): Promise<any | undefined> {
+    return this.githubIssues.find(issue => issue.bugId === bugId);
+  }
+
+  async getGitHubIssueByGitHubId(githubId: number): Promise<any | undefined> {
+    return this.githubIssues.find(issue => issue.githubIssueId === githubId);
+  }
+
+  async updateGitHubIssue(id: number, data: any): Promise<any | null> {
+    const index = this.githubIssues.findIndex(issue => issue.id === id);
+    if (index === -1) return null;
+
+    const updatedIssue = {
+      ...this.githubIssues[index],
+      ...data,
+      updatedAt: new Date()
+    };
+    this.githubIssues[index] = updatedIssue;
+    return updatedIssue;
+  }
+
+  async getGitHubIntegration(projectId: number): Promise<any | undefined> {
+    return this.githubConfigs.find(config => config.projectId === projectId && config.isActive);
   }
 }
 
