@@ -462,20 +462,164 @@ router.post('/issues', requireAuth, async (req, res) => {
 
     logger.info('Pushing bug to GitHub:', { bugId });
 
-    // This would need to be implemented to fetch bug details from storage
-    // For now, return success with mock data
-    const mockResult = {
-      success: true,
-      message: 'Bug pushed to GitHub successfully',
-      data: {
-        number: Math.floor(Math.random() * 1000) + 1,
-        url: `https://github.com/owner/repo/issues/${Math.floor(Math.random() * 1000) + 1}`,
-        githubIssueNumber: Math.floor(Math.random() * 1000) + 1
-      }
-    };
+    // Fetch bug details from storage
+    const storage = require('../storage');
+    const bug = await storage.getBugById(bugId);
+    
+    if (!bug) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bug not found',
+      });
+    }
 
-    logger.info('Bug push result:', mockResult);
-    res.json(mockResult);
+    // Check if already has GitHub issue
+    const existingGithubIssue = await storage.getGitHubIssueByBugId(bugId);
+    if (existingGithubIssue) {
+      return res.json({
+        success: true,
+        message: 'Bug already has a GitHub issue',
+        githubIssueNumber: existingGithubIssue.githubIssueNumber,
+        githubUrl: existingGithubIssue.githubUrl,
+        data: {
+          number: existingGithubIssue.githubIssueNumber,
+          url: existingGithubIssue.githubUrl
+        }
+      });
+    }
+
+    // Get GitHub integration for this project
+    const integration = integrations.find(i => i.projectId === bug.projectId && i.isEnabled);
+    if (!integration) {
+      return res.status(400).json({
+        success: false,
+        message: 'No active GitHub integration found for this project',
+      });
+    }
+
+    // Extract owner and repo from integration URL
+    const urlMatch = integration.repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+    if (!urlMatch) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid repository URL in GitHub integration',
+      });
+    }
+
+    const [, owner, repo] = urlMatch;
+
+    // Configure GitHub service
+    githubService.setConfig({
+      owner,
+      repo,
+      token: integration.accessToken,
+      webhookSecret: integration.webhookSecret,
+    });
+
+    // Test connection
+    const connectionTest = await githubService.testConnection();
+    if (!connectionTest.success) {
+      return res.status(400).json({
+        success: false,
+        message: `GitHub connection failed: ${connectionTest.message}`,
+      });
+    }
+
+    // Create labels including bug tags, severity, and priority
+    const labels = ['bug'];
+    if (bug.severity) {
+      labels.push(`severity: ${bug.severity.toLowerCase()}`);
+    }
+    if (bug.priority) {
+      labels.push(`priority: ${bug.priority.toLowerCase()}`);
+    }
+    
+    // Add bug tags as GitHub labels
+    if (bug.tags && Array.isArray(bug.tags)) {
+      bug.tags.forEach((tag: any) => {
+        if (tag && typeof tag === 'string' && tag.trim()) {
+          labels.push(tag.trim().toLowerCase());
+        } else if (tag && typeof tag === 'object' && tag.name) {
+          labels.push(tag.name.trim().toLowerCase());
+        }
+      });
+    }
+
+    // Format bug for GitHub
+    const issueTitle = `[Bug] ${bug.title}`;
+    const issueBody = `## Bug Report
+
+**Bug ID:** ${bug.bugId}
+**Severity:** ${bug.severity || 'Not specified'}
+**Priority:** ${bug.priority || 'Not specified'}
+**Status:** ${bug.status}
+
+## Description
+${bug.description || 'No description provided'}
+
+## Steps to Reproduce
+${bug.stepsToReproduce || 'No steps provided'}
+
+## Expected Result
+${bug.expectedResult || 'No expected result provided'}
+
+## Actual Result
+${bug.actualResult || 'No actual result provided'}
+
+## Environment
+${bug.environment || 'No environment information provided'}
+
+## Pre-conditions
+${bug.preConditions || 'No pre-conditions specified'}
+
+${bug.comments ? `## Additional Comments\n${bug.comments}` : ''}
+
+---
+*This issue was automatically created from the Test Case Tracker bug system*`;
+
+    // Create GitHub issue
+    const result = await githubService.createIssue(issueTitle, issueBody, labels);
+
+    if (result.success && result.data) {
+      // Update bug with GitHub information
+      await storage.updateBug(bug.id, {
+        githubIssueNumber: result.data.number,
+        githubIssueUrl: result.data.url || result.data.html_url
+      });
+
+      // Save GitHub issue record to prevent duplicates
+      await storage.createGitHubIssue({
+        bugId: bug.id,
+        githubIssueNumber: result.data.number,
+        githubIssueId: result.data.id || 0,
+        githubUrl: result.data.html_url || result.data.url,
+        status: 'open'
+      });
+
+      logger.info('Bug pushed to GitHub successfully:', {
+        bugId: bug.id,
+        githubIssueNumber: result.data.number,
+        url: result.data.html_url || result.data.url
+      });
+
+      res.json({
+        success: true,
+        message: 'Bug pushed to GitHub successfully',
+        githubIssueNumber: result.data.number,
+        githubUrl: result.data.html_url || result.data.url,
+        data: {
+          number: result.data.number,
+          url: result.data.html_url || result.data.url,
+          labels: result.data.labels || labels
+        }
+      });
+    } else {
+      logger.error('Failed to create GitHub issue:', result.message);
+      res.status(400).json({
+        success: false,
+        message: result.message || 'Failed to create GitHub issue',
+      });
+    }
 
   } catch (error: any) {
     logger.error('Failed to push bug to GitHub:', error);

@@ -171,7 +171,7 @@ export class GitHubService {
         logger.info('Labels ensured, now creating issue...');
       }
 
-      // Create the issue with labels
+      // Create the issue with labels (labels are automatically applied during creation)
       const response = await this.octokit.rest.issues.create({
         owner: this.config.owner,
         repo: this.config.repo,
@@ -183,23 +183,9 @@ export class GitHubService {
       logger.info('GitHub issue created successfully:', {
         number: response.data.number,
         url: response.data.html_url,
-        labelsCount: response.data.labels?.length || 0
+        labelsCount: response.data.labels?.length || 0,
+        labelsApplied: response.data.labels?.map(l => typeof l === 'string' ? l : l.name) || []
       });
-
-      // If labels were provided but not attached, try to add them manually
-      if (labels && labels.length > 0) {
-        try {
-          await this.octokit.rest.issues.addLabels({
-            owner: this.config.owner,
-            repo: this.config.repo,
-            issue_number: response.data.number,
-            labels: labels,
-          });
-          logger.info('Labels added manually to issue:', labels);
-        } catch (labelError: any) {
-          logger.warn('Failed to add labels manually:', labelError.message);
-        }
-      }
 
       return {
         success: true,
@@ -398,9 +384,11 @@ export class GitHubService {
         branch: defaultBranch,
       });
 
-      // Get the raw URL for the uploaded file using the default branch
-      const rawUrl = `https://raw.githubusercontent.com/${this.config.owner}/${this.config.repo}/${defaultBranch}/${repoPath}`;
+      // Use GitHub's blob URL for better image display compatibility  
       const githubUrl = `https://github.com/${this.config.owner}/${this.config.repo}/blob/${defaultBranch}/${repoPath}`;
+      const rawUrl = `https://raw.githubusercontent.com/${this.config.owner}/${this.config.repo}/${defaultBranch}/${repoPath}`;
+      // Use GitHub's download URL for better image rendering in issues
+      const downloadUrl = response.data.download_url || rawUrl;
 
       logger.info('File uploaded to GitHub:', {
         fileName,
@@ -414,7 +402,7 @@ export class GitHubService {
         message: 'File uploaded successfully',
         data: {
           githubUrl,
-          rawUrl,
+          rawUrl: downloadUrl,
           repoPath,
           sha: response.data.content?.sha
         },

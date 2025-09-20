@@ -5935,6 +5935,17 @@ export async function registerRoutes(app: Express): Server {
           if (bug.priority) {
             labels.push(`priority: ${bug.priority.toLowerCase()}`);
           }
+          
+          // Add bug tags as GitHub labels
+          if (bug.tags && Array.isArray(bug.tags)) {
+            bug.tags.forEach((tag: any) => {
+              if (tag && typeof tag === 'string' && tag.trim()) {
+                labels.push(tag.trim().toLowerCase());
+              } else if (tag && typeof tag === 'object' && tag.name) {
+                labels.push(tag.name.trim().toLowerCase());
+              }
+            });
+          }
 
           // Create the GitHub issue
           const githubResult = await githubService.createIssue(issueTitle, issueBody, labels);
