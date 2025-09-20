@@ -465,6 +465,7 @@ export interface IStorage {
   createTrackerAuditLog(data: InsertTrackerAuditLog): Promise<TrackerAuditLog>;
   getTrackerAuditLogs(entityType?: string, entityId?: number): Promise<TrackerAuditLog[]>;
   getRequestAuditLogs(requestId: number): Promise<any[]>;
+  getRequestAuditLogs(requestId: number): Promise<any[]>;
 
   // Activity logging
   createActivity(activity: InsertActivity): Promise<Activity>;
@@ -2172,6 +2173,52 @@ class MemStorage implements IStorage {
     };
     this.activities.push(newActivity);
     return newActivity;
+  }
+
+  // Request audit log operations
+  async getRequestAuditLogs(requestId: number): Promise<any[]> {
+    // Filter activities related to this request
+    return this.activities
+      .filter(activity => 
+        activity.entityType === 'resource_request' && 
+        activity.entityId === requestId
+      )
+      .map(activity => ({
+        id: activity.id,
+        requestId: requestId,
+        userId: activity.userId,
+        action: activity.action.toUpperCase(),
+        details: activity.details || activity.action,
+        timestamp: activity.createdAt,
+        createdAt: activity.createdAt
+      }))
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+  async createRequestAuditLog(auditLog: any): Promise<any> {
+    try {
+      // Create activity record for audit trail
+      const activity = await this.createActivity({
+        userId: auditLog.userId,
+        entityType: 'resource_request',
+        entityId: auditLog.requestId,
+        action: auditLog.action.toLowerCase(),
+        details: auditLog.details
+      });
+
+      return {
+        id: activity.id,
+        requestId: auditLog.requestId,
+        userId: auditLog.userId,
+        action: auditLog.action,
+        details: auditLog.details,
+        timestamp: activity.createdAt,
+        createdAt: activity.createdAt
+      };
+    } catch (error) {
+      console.error('Error creating request audit log:', error);
+      throw error;
+    }
   }
 
   // CSV Export for Projects
