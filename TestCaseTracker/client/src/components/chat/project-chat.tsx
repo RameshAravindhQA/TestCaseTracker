@@ -192,7 +192,7 @@ export function ProjectChat({ projectId, currentUser }: ProjectChatProps) {
           >
             <Button
               onClick={() => setIsOpen(true)}
-              className="h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all duration-200"
+              className="hidden h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all duration-200"
               size="lg"
             >
               <MessageCircle className="h-6 w-6 text-white" />

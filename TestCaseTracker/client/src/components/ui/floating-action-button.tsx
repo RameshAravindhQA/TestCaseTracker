@@ -34,6 +34,7 @@ export function FloatingActionButton({ icon, onClick, className, ...props }: Flo
         "hidden fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 z-50",
         className
       )}
+      style={{ display: 'none !important' }}
       {...props}
     >
       {icon}
