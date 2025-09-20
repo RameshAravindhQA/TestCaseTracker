@@ -957,14 +957,26 @@ function RequestFormsPageContent() {
                                               }
                                             }
 
-                                            // Parse and format details - simplified approach
+                                            // Enhanced details processing
                                             console.log(`PDF Generation - Log details:`, log.details, typeof log.details);
                                             
                                             // First, handle the simple case where details is a string
                                             if (typeof log.details === 'string') {
-                                              details = log.details;
+                                              try {
+                                                // Try to parse as JSON in case it's a stringified object
+                                                const parsed = JSON.parse(log.details);
+                                                if (typeof parsed === 'object') {
+                                                  log.details = parsed;
+                                                } else {
+                                                  details = log.details;
+                                                }
+                                              } catch {
+                                                details = log.details;
+                                              }
                                               console.log(`PDF Generation - Using string details:`, details);
-                                            } else if (log.details && typeof log.details === 'object') {
+                                            }
+                                            
+                                            if (log.details && typeof log.details === 'object') {
                                               // Handle object details
                                               const logDetails = log.details;
                                               console.log(`PDF Generation - Processing object details:`, logDetails);
@@ -972,25 +984,48 @@ function RequestFormsPageContent() {
                                               // Build details string from object properties
                                               const detailParts = [];
 
+                                              // Handle reason field
                                               if (logDetails.reason) {
                                                 detailParts.push(`Reason: ${logDetails.reason}`);
                                               }
 
+                                              // Handle message field
                                               if (logDetails.message) {
                                                 detailParts.push(logDetails.message);
                                               }
 
+                                              // Handle reopen specific fields
+                                              if (log.action.toLowerCase().includes('reopen')) {
+                                                if (logDetails.newStartDate || logDetails.startDate) {
+                                                  detailParts.push(`New Start Date: ${formatDate(logDetails.newStartDate || logDetails.startDate)}`);
+                                                }
+                                                if (logDetails.newEndDate || logDetails.endDate) {
+                                                  detailParts.push(`New End Date: ${formatDate(logDetails.newEndDate || logDetails.endDate)}`);
+                                                }
+                                                if (logDetails.reassignedEmployeeId || logDetails.newAssignedEmployee) {
+                                                  const empId = logDetails.reassignedEmployeeId || logDetails.newAssignedEmployee;
+                                                  if (empId && empId !== '0') {
+                                                    const emp = employees.find(e => e.id === parseInt(empId));
+                                                    if (emp) {
+                                                      detailParts.push(`Reassigned to: ${emp.firstName} ${emp.lastName}`);
+                                                    }
+                                                  } else if (empId === '0') {
+                                                    detailParts.push('Employee assignment removed');
+                                                  }
+                                                }
+                                              }
+
                                               // Handle date changes
-                                              if (logDetails.newStartDate) {
+                                              if (logDetails.newStartDate && !log.action.toLowerCase().includes('reopen')) {
                                                 detailParts.push(`New Start Date: ${formatDate(logDetails.newStartDate)}`);
                                               }
-                                              if (logDetails.newEndDate) {
+                                              if (logDetails.newEndDate && !log.action.toLowerCase().includes('reopen')) {
                                                 detailParts.push(`New End Date: ${formatDate(logDetails.newEndDate)}`);
                                               }
 
                                               // Handle employee reassignment
-                                              if (logDetails.newAssignedEmployee || logDetails.reassignedEmployeeId) {
-                                                const empId = logDetails.newAssignedEmployee || logDetails.reassignedEmployeeId;
+                                              if (logDetails.newAssignedEmployee && !log.action.toLowerCase().includes('reopen')) {
+                                                const empId = logDetails.newAssignedEmployee;
                                                 const emp = employees.find(e => e.id === empId);
                                                 if (emp) {
                                                   detailParts.push(`Reassigned to: ${emp.firstName} ${emp.lastName}`);
@@ -1016,6 +1051,27 @@ function RequestFormsPageContent() {
                                                 }
                                               }
 
+                                              // Handle status changes
+                                              if (logDetails.oldStatus && logDetails.newStatus) {
+                                                detailParts.push(`Status: ${logDetails.oldStatus} → ${logDetails.newStatus}`);
+                                              }
+
+                                              // Handle comments
+                                              if (logDetails.comments) {
+                                                detailParts.push(`Comments: ${logDetails.comments}`);
+                                              }
+
+                                              // Handle any other fields in details
+                                              Object.keys(logDetails).forEach(key => {
+                                                if (!['reason', 'message', 'newStartDate', 'newEndDate', 'startDate', 'endDate', 
+                                                      'reassignedEmployeeId', 'newAssignedEmployee', 'dateChanges', 
+                                                      'employeeChanges', 'oldStatus', 'newStatus', 'comments'].includes(key)) {
+                                                  if (logDetails[key] && typeof logDetails[key] !== 'object') {
+                                                    detailParts.push(`${key}: ${logDetails[key]}`);
+                                                  }
+                                                }
+                                              });
+
                                               details = detailParts.length > 0 ? detailParts.join('; ') : '';
                                               console.log(`PDF Generation - Built details from object:`, details);
                                             }
@@ -1025,7 +1081,12 @@ function RequestFormsPageContent() {
                                               switch (log.action.toLowerCase()) {
                                                 case 'reopened':
                                                 case 'reopen':
-                                                  details = 'Request was reopened';
+                                                  // For reopen actions, try to get reason from request data
+                                                  if (selectedRequest.reopenReason) {
+                                                    details = `Reason: ${selectedRequest.reopenReason}`;
+                                                  } else {
+                                                    details = 'Request was reopened';
+                                                  }
                                                   break;
                                                 case 'reopen_updated':
                                                   details = 'Reopen record was updated';
@@ -1048,7 +1109,7 @@ function RequestFormsPageContent() {
                                               console.log(`PDF Generation - Used fallback details:`, details);
                                             }
 
-                                            const formattedDetails = details.trim() || 'No details available';
+                                            const formattedDetails = details.trim() || 'Request action performed';
                                             console.log(`PDF Generation - Final details for ${log.action}:`, formattedDetails);
 
                                             return [
