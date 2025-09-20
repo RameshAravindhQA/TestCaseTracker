@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { githubService } from '../github-service';
 import { logger } from '../logger';
+import { storage } from '../storage';
 // Auth middleware
 const requireAuth = (req: any, res: any, next: any) => {
   // Check for session-based auth first
@@ -167,6 +168,18 @@ router.post('/integrations', requireAuth, async (req, res) => {
     };
 
     integrations.push(integration);
+
+    // Also save to MemStorage so sync endpoint can find it
+    const storageData = {
+      projectId: parseInt(projectId),
+      githubUsername: username,
+      repositoryName: repository,
+      personalAccessToken: accessToken,
+      webhookSecret: webhookSecret || '',
+      isEnabled: isActive !== false
+    };
+    
+    await storage.createGitHubConfig(storageData);
 
     logger.info('GitHub integration created successfully:', {
       id: integration.id,
