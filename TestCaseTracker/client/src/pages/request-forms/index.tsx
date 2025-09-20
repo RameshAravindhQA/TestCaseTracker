@@ -826,7 +826,7 @@ function RequestFormsPageContent() {
                                         doc.setFont('helvetica', 'normal');
 
                                         // Get assigned employee details - check both leadId and assignedToId
-                                        const assignedEmployee = request.leadId ? employees.find(emp => emp.id === request.leadId) : 
+                                        const assignedEmployee = request.leadId ? employees.find(emp => emp.id === request.leadId) :
                                                                 (request.assignedToId ? employees.find(emp => emp.id === request.assignedToId) : null);
                                         const requestedByEmployee = employees.find(emp => emp.id === request.requestedById);
 
@@ -959,7 +959,7 @@ function RequestFormsPageContent() {
 
                                             // Enhanced details processing
                                             console.log(`PDF Generation - Log details:`, log.details, typeof log.details);
-                                            
+
                                             // First, handle the simple case where details is a string
                                             if (typeof log.details === 'string') {
                                               try {
@@ -975,7 +975,7 @@ function RequestFormsPageContent() {
                                               }
                                               console.log(`PDF Generation - Using string details:`, details);
                                             }
-                                            
+
                                             if (log.details && typeof log.details === 'object') {
                                               // Handle object details
                                               const logDetails = log.details;
@@ -1063,8 +1063,8 @@ function RequestFormsPageContent() {
 
                                               // Handle any other fields in details
                                               Object.keys(logDetails).forEach(key => {
-                                                if (!['reason', 'message', 'newStartDate', 'newEndDate', 'startDate', 'endDate', 
-                                                      'reassignedEmployeeId', 'newAssignedEmployee', 'dateChanges', 
+                                                if (!['reason', 'message', 'newStartDate', 'newEndDate', 'startDate', 'endDate',
+                                                      'reassignedEmployeeId', 'newAssignedEmployee', 'dateChanges',
                                                       'employeeChanges', 'oldStatus', 'newStatus', 'comments'].includes(key)) {
                                                   if (logDetails[key] && typeof logDetails[key] !== 'object') {
                                                     detailParts.push(`${key}: ${logDetails[key]}`);
@@ -1121,53 +1121,111 @@ function RequestFormsPageContent() {
                                             ];
                                           });
 
-                                          // Create audit trail table using autoTable
-                                          try {
-                                            (doc as any).autoTable({
-                                              startY: yPos,
-                                              head: [['#', 'Action', 'Date', 'Performed By', 'Details']],
-                                              body: auditTableData,
-                                              theme: 'grid',
-                                              headStyles: {
-                                                fillColor: [66, 139, 202],
-                                                textColor: 255,
-                                                fontSize: 10,
-                                                fontStyle: 'bold'
-                                              },
-                                              bodyStyles: {
-                                                fontSize: 8,
-                                                cellPadding: 2
-                                              },
-                                              columnStyles: {
-                                                0: { cellWidth: 10 }, // # column
-                                                1: { cellWidth: 25 }, // Action column
-                                                2: { cellWidth: 25 }, // Date column
-                                                3: { cellWidth: 30 }, // Performed By column
-                                                4: { cellWidth: 100 } // Details column
-                                              },
-                                              margin: { left: 20, right: 20 },
-                                              tableWidth: 'wrap',
-                                              styles: {
-                                                overflow: 'linebreak',
-                                                cellPadding: 2,
-                                                fontSize: 8,
-                                                valign: 'top'
-                                              }
-                                            });
-                                          } catch (tableError) {
-                                            console.warn('Could not create audit trail table, falling back to text format');
-                                            // Fallback to simple text format if autoTable fails
+                                          console.log('PDF Generation - Final audit table data:', auditTableData);
+
+                                          // Check if jspdf-autotable is available for table generation
+                                          if (typeof doc.autoTable === 'function') {
+                                            try {
+                                              doc.autoTable({
+                                                startY: yPos,
+                                                head: [['#', 'Action', 'Date', 'Performed By', 'Details']],
+                                                body: auditTableData,
+                                                theme: 'grid',
+                                                headStyles: {
+                                                  fillColor: [66, 139, 202],
+                                                  textColor: 255,
+                                                  fontSize: 10,
+                                                  fontStyle: 'bold'
+                                                },
+                                                bodyStyles: {
+                                                  fontSize: 8,
+                                                  cellPadding: 2
+                                                },
+                                                columnStyles: {
+                                                  0: { cellWidth: 10 }, // # column
+                                                  1: { cellWidth: 25 }, // Action column
+                                                  2: { cellWidth: 25 }, // Date column
+                                                  3: { cellWidth: 30 }, // Performed By column
+                                                  4: { cellWidth: 100 } // Details column
+                                                },
+                                                margin: { left: 20, right: 20 },
+                                                tableWidth: 'wrap',
+                                                styles: {
+                                                  overflow: 'linebreak',
+                                                  cellPadding: 2,
+                                                  fontSize: 8,
+                                                  valign: 'top'
+                                                }
+                                              });
+                                            } catch (tableError) {
+                                              console.warn('Could not create audit trail table, falling back to text format');
+                                              // Fallback to simple text format if autoTable fails
+                                              doc.setFontSize(10);
+                                              doc.setFont("helvetica", "normal");
+                                              auditTableData.forEach((row, index) => {
+                                                if (yPos > 270) {
+                                                  doc.addPage();
+                                                  yPos = 20;
+                                                }
+                                                doc.text(`${index + 1}. ${row[1]} - ${row[2]}`, 20, yPos); // Action and Performed By
+                                                yPos += 6;
+                                                doc.text(`   Date: ${row[3]}`, 25, yPos); // Date
+                                                yPos += 5;
+                                                if (row[4] && row[4].trim()) {
+                                                  const detailLines = doc.splitTextToSize(`   Details: ${row[4]}`, 170);
+                                                  doc.text(detailLines, 20, yPos);
+                                                  yPos += detailLines.length * 5 + 3;
+                                                }
+                                                yPos += 8; // Extra spacing between entries
+                                              });
+                                            }
+                                          } else {
+                                            // Fallback when autoTable is not available
+                                            console.log('PDF Generation - autoTable not available, using text fallback');
                                             doc.setFontSize(10);
                                             doc.setFont("helvetica", "normal");
-                                            auditLogs.forEach((log, index) => {
+                                            auditTableData.forEach((row, index) => {
                                               if (yPos > 270) {
                                                 doc.addPage();
                                                 yPos = 20;
                                               }
-                                              doc.text(`${index + 1}. ${log.action.toUpperCase()} - ${formatDate(log.createdAt)}`, 20, yPos);
-                                              yPos += 8;
+                                              doc.setFontSize(10);
+                                              doc.setFont("helvetica", "bold");
+                                              doc.text(`${index + 1}. ${row[1]}`, 20, yPos); // Action
+                                              yPos += 6;
+
+                                              doc.setFont("helvetica", "normal");
+                                              doc.text(`Performed by: ${row[3]}`, 25, yPos); // Performed By
+                                              yPos += 5;
+                                              doc.text(`Date: ${row[2]}`, 25, yPos); // Date
+                                              yPos += 5;
+
+                                              if (row[4] && row[4].trim()) { // Details
+                                                doc.text(`Details: ${row[4]}`, 25, yPos);
+                                                const detailLines = doc.splitTextToSize(row[4], 160);
+                                                yPos += detailLines.length * 5;
+                                              }
+                                              yPos += 8; // Extra spacing between entries
                                             });
                                           }
+
+                                          console.log('PDF Generation - Audit trail section completed');
+                                        } else {
+                                          console.log('PDF Generation - No audit logs found for this request');
+
+                                          // Add a note that no audit trail is available
+                                          if (yPos > 250) {
+                                            doc.addPage();
+                                            yPos = 20;
+                                          }
+                                          doc.setFontSize(14);
+                                          doc.setFont("helvetica", "bold");
+                                          doc.text('Audit Trail', 20, yPos);
+                                          yPos += 15;
+
+                                          doc.setFontSize(10);
+                                          doc.setFont("helvetica", "normal");
+                                          doc.text('No audit trail information available for this request.', 20, yPos);
                                         }
 
                                         // Save the PDF
@@ -1525,7 +1583,7 @@ function RequestFormsPageContent() {
                         <div>
                           <Label className="text-sm font-medium text-gray-600">Project</Label>
                           <p className="font-medium">
-                            {projects.find(p => p.id === selectedRequest.projectId)?.projectName || 
+                            {projects.find(p => p.id === selectedRequest.projectId)?.projectName ||
                              projects.find(p => p.id === selectedRequest.projectId)?.name || 'N/A'}
                           </p>
                         </div>
