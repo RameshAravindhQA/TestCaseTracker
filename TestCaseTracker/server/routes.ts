@@ -8756,6 +8756,50 @@ export async function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get messages between users
+  apiRouter.get('/messages', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { receiverId } = req.query;
+      
+      if (!receiverId) {
+        return res.status(400).json({ error: 'receiverId is required' });
+      }
+      
+      const messages = await storage.getMessagesBetweenUsers(userId, parseInt(receiverId as string));
+      res.json(messages);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+  });
+
+  // Get unread message count by sender
+  apiRouter.get('/messages/unread-count-by-sender', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const unreadCounts = await storage.getUnreadCountsBySender(userId);
+      res.json(unreadCounts);
+    } catch (error) {
+      console.error('Error fetching unread counts:', error);
+      res.status(500).json({ error: 'Failed to fetch unread counts' });
+    }
+  });
+
+  // Mark messages from a sender as read
+  apiRouter.post('/messages/mark-read/:senderId', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const senderId = parseInt(req.params.senderId);
+      
+      await storage.markMessagesAsRead(userId, senderId);
+      res.json({ success: true, message: 'Messages marked as read' });
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+      res.status(500).json({ error: 'Failed to mark messages as read' });
+    }
+  });
+
   // GitHub comments endpoint
   apiRouter.get("/github/issues/:issueNumber/comments", isAuthenticated, async (req, res) => {
     try {

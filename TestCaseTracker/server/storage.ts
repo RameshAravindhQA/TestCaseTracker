@@ -5627,6 +5627,8 @@ class MemStorage implements IStorage {
     const message = {
       id: this.data.messages.length + 1,
       ...messageData,
+      isRead: false,
+      readAt: null,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -5636,6 +5638,35 @@ class MemStorage implements IStorage {
 
   async getMessagesByChat(chatId: number): Promise<any[]> {
     return this.data.messages.filter(message => message.chatId === chatId);
+  }
+
+  async getMessagesBetweenUsers(userId: number, receiverId: number): Promise<any[]> {
+    return this.data.messages.filter(message => 
+      (message.senderId === userId && message.receiverId === receiverId) ||
+      (message.senderId === receiverId && message.receiverId === userId)
+    ).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  async getUnreadCountsBySender(userId: number): Promise<any> {
+    const unreadMessages = this.data.messages.filter(message => 
+      message.receiverId === userId && !message.isRead
+    );
+    
+    const counts = {};
+    unreadMessages.forEach(message => {
+      counts[message.senderId] = (counts[message.senderId] || 0) + 1;
+    });
+    
+    return counts;
+  }
+
+  async markMessagesAsRead(userId: number, senderId: number): Promise<void> {
+    this.data.messages.forEach(message => {
+      if (message.receiverId === userId && message.senderId === senderId) {
+        message.isRead = true;
+        message.readAt = new Date();
+      }
+    });
   }
 }
 
