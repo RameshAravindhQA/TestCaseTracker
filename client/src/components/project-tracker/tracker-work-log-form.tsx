@@ -1,0 +1,445 @@
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { DialogFooter } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, Clock, User } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+
+const workLogSchema = z.object({
+  workDate: z.string().min(1, 'Work date is required'),
+  hoursWorked: z.number().min(0.1, 'Hours worked must be greater than 0'),
+  description: z.string().min(1, 'Description is required'),
+  workType: z.string().min(1, 'Work type is required'),
+  status: z.enum(['In Progress', 'Completed', 'Blocked']),
+  assignedEmployeeId: z.union([z.number().positive(), z.undefined(), z.null()]).optional().nullable(),
+});
+
+type WorkLogFormData = z.infer<typeof workLogSchema>;
+
+interface TrackerWorkLogFormProps {
+  workLog?: any;
+  subFeature: any;
+  projectId: number;
+  onSubmit: (data: WorkLogFormData) => void;
+  onCancel: () => void;
+  isLoading: boolean;
+}
+
+export function TrackerWorkLogForm({
+  workLog,
+  subFeature,
+  projectId,
+  onSubmit,
+  onCancel,
+  isLoading,
+}: TrackerWorkLogFormProps) {
+  const [employeeSearchQuery, setEmployeeSearchQuery] = React.useState('');
+  const [selectedDepartmentFilter, setSelectedDepartmentFilter] = React.useState('all');
+
+  // Fetch employees data
+  const { data: employees = [] } = useQuery({
+    queryKey: ['/api/employees'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/employees');
+      if (!response.ok) throw new Error('Failed to fetch employees');
+      return response.json();
+    },
+  });
+
+  // Filter employees based on search and department
+  const filteredEmployees = employees.filter((employee: any) => {
+    const matchesSearch = employeeSearchQuery === '' || 
+      `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(employeeSearchQuery.toLowerCase()) ||
+      employee.email.toLowerCase().includes(employeeSearchQuery.toLowerCase());
+    
+    const matchesDepartment = selectedDepartmentFilter === 'all' || 
+      employee.department === selectedDepartmentFilter;
+    
+    return matchesSearch && matchesDepartment;
+  });
+
+  // Get unique departments from employees
+  const availableDepartments = [...new Set(employees.map((emp: any) => emp.department).filter(Boolean))];
+
+  const form = useForm<z.infer<typeof workLogSchema>>({
+    resolver: zodResolver(workLogSchema),
+    defaultValues: {
+      workDate: workLog?.workDate || new Date().toISOString().split('T')[0],
+      hoursWorked: workLog?.hoursWorked || 1,
+      description: workLog?.description || '',
+      workType: workLog?.workType || '',
+      status: workLog?.status || 'In Progress',
+      assignedEmployeeId: workLog?.assignedEmployeeId ? Number(workLog.assignedEmployeeId) : undefined,
+    },
+  });
+
+  const handleSubmit = (data: WorkLogFormData) => {
+    console.log('Form handleSubmit - raw data:', data);
+    console.log('Form handleSubmit - assignedEmployeeId from form:', data.assignedEmployeeId, 'type:', typeof data.assignedEmployeeId);
+    
+    // Ensure assignedEmployeeId is properly included in the submission
+    let processedAssignedEmployeeId = null;
+    if (data.assignedEmployeeId !== undefined && data.assignedEmployeeId !== null) {
+      processedAssignedEmployeeId = Number(data.assignedEmployeeId);
+      if (isNaN(processedAssignedEmployeeId)) {
+        processedAssignedEmployeeId = null;
+      }
+    }
+
+    const workLogData = {
+      ...data,
+      projectId: projectId,
+      subFeatureId: subFeature.id,
+      featureId: subFeature.featureId,
+      assignedEmployeeId: processedAssignedEmployeeId
+    };
+    
+    console.log('Form handleSubmit - processed work log data:', workLogData);
+    console.log('Form handleSubmit - final assignedEmployeeId:', processedAssignedEmployeeId, 'type:', typeof processedAssignedEmployeeId);
+    onSubmit(workLogData);
+  };
+
+  // Get previous work logs and date range for this sub-feature
+  const getDateInfo = () => {
+    const startDate = subFeature.startDate || 'Not set';
+    const endDate = subFeature.endDate || 'Not set';
+    const lastWorkDate = workLog?.workDate || 'No previous logs'; // This would come from actual work logs
+
+    return { startDate, endDate, lastWorkDate };
+  };
+
+  const { startDate, endDate, lastWorkDate } = getDateInfo();
+
+  return (
+    <div className="space-y-6">
+      {/* Sub-feature Info */}
+      <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+        <h3 className="font-semibold flex items-center gap-2">
+          <User className="h-4 w-4" />
+          Sub-Feature: {subFeature.name}
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-blue-500" />
+            <div>
+              <span className="text-muted-foreground">Planned Start:</span>
+              <p className="font-medium">{startDate}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-red-500" />
+            <div>
+              <span className="text-muted-foreground">Planned End:</span>
+              <p className="font-medium">{endDate}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-green-500" />
+            <div>
+              <span className="text-muted-foreground">Last Work Log:</span>
+              <p className="font-medium">{lastWorkDate}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <Badge variant="outline">{subFeature.status}</Badge>
+          <Badge variant="outline">{subFeature.workType}</Badge>
+          {subFeature.estimatedHours && (
+            <Badge variant="outline">{subFeature.estimatedHours}h estimated</Badge>
+          )}
+        </div>
+      </div>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="workDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Work Date *</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="hoursWorked"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Hours Worked *</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.25"
+                      min="0.25"
+                      max="24"
+                      placeholder="Enter hours worked"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="workType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Work Type</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select work type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Development">Development</SelectItem>
+                      <SelectItem value="QA">QA</SelectItem>
+                      <SelectItem value="DevOps">DevOps</SelectItem>
+                      <SelectItem value="Designing">Designing</SelectItem>
+                      <SelectItem value="Analysis">Analysis</SelectItem>
+                      <SelectItem value="Documentation">Documentation</SelectItem>
+                      <SelectItem value="User Story">User Story</SelectItem>
+                      <SelectItem value="Change Request">Change Request</SelectItem>
+                      <SelectItem value="Bug Fix">Bug Fix</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="In Progress">In Progress</SelectItem>
+                      <SelectItem value="Completed">Completed</SelectItem>
+                      <SelectItem value="Blocked">Blocked</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="assignedEmployeeId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Select Employee Who Worked
+                  </FormLabel>
+                  <div className="space-y-3">
+                    {/* Show assigned employees from sub-feature */}
+                    {subFeature.assignedEmployeeIds && subFeature.assignedEmployeeIds.length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Assigned to this sub-feature:
+                        </p>
+                        <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
+                          {employees
+                            .filter((emp: any) => subFeature.assignedEmployeeIds.includes(emp.id))
+                            .map((employee: any) => (
+                              <div key={employee.id} className="flex items-center space-x-2">
+                                <input
+                                  type="radio"
+                                  id={`assigned-${employee.id}`}
+                                  name="assignedEmployee"
+                                  checked={Number(field.value) === Number(employee.id)}
+                                  onChange={() => field.onChange(Number(employee.id))}
+                                  className="rounded"
+                                />
+                                <label 
+                                  htmlFor={`assigned-${employee.id}`} 
+                                  className="text-sm font-medium cursor-pointer flex items-center gap-2 flex-1"
+                                >
+                                  {employee.profilePicture ? (
+                                    <img
+                                      src={employee.profilePicture}
+                                      alt={`${employee.firstName} ${employee.lastName}`}
+                                      className="h-6 w-6 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">
+                                      {employee.firstName?.[0]}{employee.lastName?.[0]}
+                                    </div>
+                                  )}
+                                  <span>{employee.firstName} {employee.lastName}</span>
+                                  {employee.department && (
+                                    <span className="text-xs text-green-600 bg-green-50 px-1 rounded">
+                                      {employee.department}
+                                    </span>
+                                  )}
+                                </label>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Option to select other employees */}
+                    <div className="border-t pt-3">
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Or select another employee:
+                      </p>
+                      <div className="space-y-2">
+                        <Input
+                          placeholder="Search employees by name or email..."
+                          value={employeeSearchQuery}
+                          onChange={(e) => setEmployeeSearchQuery(e.target.value)}
+                          className="text-sm"
+                        />
+                        <Select value={selectedDepartmentFilter} onValueChange={setSelectedDepartmentFilter}>
+                          <SelectTrigger className="text-sm">
+                            <SelectValue placeholder="Filter by department" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Departments</SelectItem>
+                            {availableDepartments.map((dept) => (
+                              <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        
+                        <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-2">
+                          {filteredEmployees
+                            .filter((emp: any) => !subFeature.assignedEmployeeIds?.includes(emp.id))
+                            .map((employee: any) => (
+                              <div key={employee.id} className="flex items-center space-x-2">
+                                <input
+                                  type="radio"
+                                  id={`other-${employee.id}`}
+                                  name="assignedEmployee"
+                                  checked={Number(field.value) === Number(employee.id)}
+                                  onChange={() => field.onChange(Number(employee.id))}
+                                  className="rounded"
+                                />
+                                <label 
+                                  htmlFor={`other-${employee.id}`} 
+                                  className="text-sm font-medium cursor-pointer flex items-center gap-2 flex-1"
+                                >
+                                  {employee.profilePicture ? (
+                                    <img
+                                      src={employee.profilePicture}
+                                      alt={`${employee.firstName} ${employee.lastName}`}
+                                      className="h-6 w-6 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="h-6 w-6 rounded-full bg-gray-300 flex items-center justify-center text-xs">
+                                      {employee.firstName?.[0]}{employee.lastName?.[0]}
+                                    </div>
+                                  )}
+                                  <span>{employee.firstName} {employee.lastName}</span>
+                                  {employee.department && (
+                                    <span className="text-xs text-gray-500">({employee.department})</span>
+                                  )}
+                                </label>
+                              </div>
+                            ))}
+                          {filteredEmployees.filter((emp: any) => !subFeature.assignedEmployeeIds?.includes(emp.id)).length === 0 && employeeSearchQuery && (
+                            <p className="text-sm text-gray-500 text-center py-4">
+                              No other employees found matching "{employeeSearchQuery}"
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Clear selection option */}
+                    <div className="flex items-center space-x-2 pt-2 border-t">
+                      <input
+                        type="radio"
+                        id="clear-selection"
+                        name="assignedEmployee"
+                        checked={field.value === undefined || field.value === null}
+                        onChange={() => field.onChange(undefined)}
+                        className="rounded"
+                      />
+                      <label htmlFor="clear-selection" className="text-sm text-gray-500 cursor-pointer">
+                        No specific employee (unassigned)
+                      </label>
+                    </div>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Work Description *</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Describe the work completed, issues encountered, next steps, etc."
+                    className="min-h-[100px]"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Saving...' : (workLog ? 'Save Changes' : 'Add Work Log')}
+            </Button>
+          </DialogFooter>
+        </form>
+      </Form>
+    </div>
+  );
+}

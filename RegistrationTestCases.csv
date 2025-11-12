@@ -1,0 +1,14 @@
+
+testCaseId,moduleId,feature,testObjective,preConditions,testSteps,expectedResult,actualResult,status,priority,comments
+BEG-REG-TC-002,BEG-REG-MOD-01,User Registration,Validate mandatory fields on registration form,User lands on registration page,1. Leave all mandatory fields blank. 2. Click Submit,Error messages shown for all mandatory fields,,Not Executed,High,
+BEG-REG-TC-003,BEG-REG-MOD-01,User Registration,Verify successful registration with valid data,User on registration page with all required info,1. Enter valid details 2. Submit form,User is successfully registered and redirected,,Not Executed,High,
+BEG-REG-TC-004,BEG-REG-MOD-01,User Registration,Check validation for invalid email format,User on registration page,1. Enter invalid email format 2. Submit,Proper validation message for email,,Not Executed,High,
+BEG-REG-TC-005,BEG-REG-MOD-01,User Registration,Ensure password strength rules are enforced,User on registration page,1. Enter weak password 2. Submit,Error shown for weak password,,Not Executed,High,
+BEG-REG-TC-006,BEG-REG-MOD-01,User Registration,Check duplicate email registration attempt,User already registered,1. Try registering with same email,Error message for duplicate email,,Not Executed,High,
+BEG-REG-TC-007,BEG-REG-MOD-01,User Registration,Verify password and confirm password match,User on registration page,1. Enter mismatching passwords 2. Submit,Error for password mismatch,,Not Executed,High,
+BEG-REG-TC-008,BEG-REG-MOD-01,User Registration,Validate optional fields left blank,User on registration page,1. Leave optional fields blank 2. Submit,Registration succeeds without optional fields,,Not Executed,High,
+BEG-REG-TC-009,BEG-REG-MOD-01,User Registration,Check form reset functionality,User on registration page,1. Enter data 2. Click reset,Form fields cleared,,Not Executed,High,
+BEG-REG-TC-010,BEG-REG-MOD-01,User Registration,Test registration form responsiveness,Access form on mobile browser,1. Open form on mobile device,Form layout adjusts to screen,,Not Executed,High,
+BEG-REG-TC-011,BEG-REG-MOD-01,User Registration,Verify terms & conditions checkbox validation,User on registration page,1. Leave T&C unchecked 2. Submit,Error shown asking to accept terms,,Not Executed,High,
+BEG-REG-TC-012,BEG-REG-MOD-01,User Registration,Test registration without internet connection,No internet connection,1. Fill form 2. Submit,Error shown about no internet connectivity,,Not Executed,High,
+BEG-REG-TC-013,BEG-REG-MOD-01,User Registration,Ensure language localization in registration form,User switches language setting,1. Switch language 2. Open form,Form displays text in selected language,,Not Executed,High,

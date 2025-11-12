@@ -1,0 +1,125 @@
+{% extends 'layout.html' %}
+
+{% block title %}Bug Reports{% endblock %}
+
+{% block content %}
+<div class="row" style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>Bug Reports</h1>
+    <button id="add-bug-btn" class="btn btn-primary">
+        <i data-feather="plus"></i> Add Bug
+    </button>
+</div>
+
+<!-- Filters -->
+<div class="card" style="margin-bottom: 20px;">
+    <div class="card-header">
+        Filters
+    </div>
+    <div class="card-body">
+        <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+            <div style="min-width: 200px;">
+                <label for="status-filter">Status:</label>
+                <select id="status-filter" class="status-select">
+                    <option value="All">All Status</option>
+                    <option value="Open">Open</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Resolved">Resolved</option>
+                    <option value="Closed">Closed</option>
+                </select>
+            </div>
+            <div style="min-width: 200px;">
+                <label for="project-filter">Project:</label>
+                <select id="project-filter" class="form-control">
+                    <option value="All">All Projects</option>
+                    <!-- Projects will be populated via JavaScript -->
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bug List -->
+<div class="card">
+    <div class="card-header">
+        Bug List
+    </div>
+    <div class="card-body">
+        <div style="overflow-x: auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Status</th>
+                        <th>Severity</th>
+                        <th>Project</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="bugs-table-body">
+                    <!-- Bug rows will be populated via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Bug Modal -->
+<div id="bug-modal" class="modal">
+    <div class="modal-content">
+        <span class="modal-close">&times;</span>
+        <div class="modal-header">
+            <h2 id="bug-modal-title">Add New Bug</h2>
+        </div>
+        <form id="bug-form">
+            <input type="hidden" id="bug-id">
+            
+            <div class="form-group">
+                <label for="bug-title">Title*</label>
+                <input type="text" id="bug-title" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="bug-description">Description*</label>
+                <textarea id="bug-description" class="form-control" rows="4" required></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="bug-status">Status*</label>
+                <select id="bug-status" class="status-select" required>
+                    <option value="Open">Open</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Resolved">Resolved</option>
+                    <option value="Closed">Closed</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="bug-severity">Severity*</label>
+                <select id="bug-severity" class="form-control" required>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="bug-project">Project*</label>
+                <select id="bug-project" class="form-control" required>
+                    <!-- Projects will be populated via JavaScript -->
+                </select>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/bugs.js') }}"></script>
+{% endblock %}

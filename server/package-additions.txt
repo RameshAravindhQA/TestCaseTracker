@@ -1,0 +1,4 @@
+
+Add to package.json dependencies:
+"ws": "^8.14.2"
+"@types/ws": "^8.5.8"
