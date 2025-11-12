@@ -1,6 +1,9 @@
 
 #!/usr/bin/env node
 
+// skdsdn
+
+
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
